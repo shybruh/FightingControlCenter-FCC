@@ -2,6 +2,8 @@
 
 FCC talks to keyboards that use the Sonix-based HE firmware behind the VTER / driveall.cn web driver. The list below is extracted from that driver (see `app/src/devices/catalog.json`).
 
+It also supports some Royal Kludge boards over RK's own protocol; see [Royal Kludge](#royal-kludge) at the end.
+
 ## Verified (1)
 
 Tested end to end on real hardware.
@@ -172,3 +174,17 @@ Wireless dongles use a different (32-byte) packet format, and a few boards have 
 | X85 | `0c45:8006` | 4.00 mm | 0.08–4.00 mm |
 
 Several models share a USB id; FCC tells them apart by the USB product name and asks when it can't. You can always change the model in Settings → Device.
+
+## Royal Kludge
+
+Older Royal Kludge boards (Sinowealth, the "legacy" RK software) use a different, write-only protocol, documented in
+[PROTOCOL-RK.md](PROTOCOL-RK.md). FCC supports keymap, lighting modes, per-key RGB and the sleep timer on them. They
+open **read-only** until you choose *Allow changes*, and since they can't be read back, FCC shows your saved profile.
+Generated from RK's layout files by `tools/catalog/build-rk.js` (`app/src/devices/rk-catalog.json`).
+
+| Model | USB id | Keys |
+|---|---|---|
+| RK M75 | `258a:0147` | 81 |
+| RK M75 RGB (new layout) | `258a:0163` | 81 |
+| RK M75 ISO | `258a:0175` | 82 |
+| RK M75N ISO | `258a:01ac` | 82 |

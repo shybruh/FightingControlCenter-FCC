@@ -3,7 +3,7 @@
 # Fighting Control Center
 
 **A fast, modern configurator for hall-effect keyboards.**
-Built for the Fekker × VTER **Fighting68 HE**, with support for ~150 Sonix-based HE boards.
+Built for the Fekker × VTER **Fighting68 HE**, with support for ~150 Sonix-based HE boards and the Royal Kludge **M75**.
 
 Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
 
@@ -88,9 +88,11 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 |---|---|---|
 | ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Tested end to end on real hardware |
 | ⚠️ Untested | 135 wired boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, Royal Kludge RK-series, MCHOSE, Looting, QSENN, Epomaker HE80, LEOBOG… | Detected automatically; open **read-only** until you choose *Allow changes* |
+| 🧪 Untested | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
-They all use the same Sonix-based firmware behind the official driver, so they *should* work. The full list with
+The HE boards use the same Sonix-based firmware behind the official driver, so they *should* work. The M75 uses Royal
+Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)); its packets match existing open-source RK tools byte for byte. The full list with
 USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. If you try FCC on one of them, please open an
 issue saying whether it worked so it can be marked verified.
 
@@ -115,7 +117,7 @@ npm --prefix app run desktop          # desktop app with hot reload
 npm --prefix app run desktop:build    # release build + installer (app/src-tauri/target/release/bundle/nsis)
 ```
 
-No keyboard handy? Click **Try demo mode** for a simulated board.
+No keyboard handy? Click **Try demo mode** for a simulated board (or **Demo: Royal Kludge M75**).
 
 ## Safety
 
@@ -136,11 +138,16 @@ app/src/hid/        protocol, transports (WebHID / Tauri / demo), device queue, 
 app/src/devices/    keyboard catalogue + detection
 app/src/components/ pages and UI
 app/src-tauri/      desktop shell: native HID bridge, tray, hotkeys, popup
-docs/               protocol notes, supported devices, screenshots
+docs/               protocol notes (Sonix, Royal Kludge), supported devices, screenshots
 tools/catalog/      scripts that regenerate the device catalogue
 ```
 
+## Credits
+
+The Royal Kludge packet layout was learned from the open-source projects **Rangoli** and **Kludge Knight**; FCC's
+implementation is its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
+
 ## Disclaimer
 
-Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix or any keyboard
+Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, Royal Kludge or any keyboard
 brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.

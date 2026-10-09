@@ -1,9 +1,11 @@
 import { create } from 'zustand'
-import { Keyboard, type RegionData } from './hid/device'
+import { Keyboard, type KeyboardDriver, type RegionData } from './hid/device'
 import { MockTransport } from './hid/mock'
+import { MockRkTransport, RkKeyboard } from './hid/rk'
+import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
-import { TauriTransport, isTauri } from './hid/tauri'
-import { WebHidTransport, type DeviceIdentity } from './hid/transport'
+import { isTauri } from './hid/tauri'
+import type { DeviceIdentity } from './hid/transport'
 import { DEVICES, FIGHTING68, activateDevice, detect, deviceById, type DeviceDef } from './devices/registry'
 
 export type ProfileData = Record<ProfileRegion, number[]>
@@ -30,7 +32,7 @@ interface State {
   demo: boolean
   /** desktop auto-connect; paused after a manual disconnect */
   autoConnect: boolean
-  kb: Keyboard | null
+  kb: KeyboardDriver | null
   regions: RegionData | null
   loadProgress: number
   pendingWrites: number
@@ -47,7 +49,10 @@ interface State {
   /** untested boards start read-only until the user allows changes */
   readOnly: boolean
 
-  connect(demo?: boolean): Promise<void>
+  /** demo: true = demo Fighting68, a device id = demo of that model */
+  connect(demo?: boolean | string): Promise<void>
+  /** Writes the whole active profile to the keyboard (useful for write-only boards). */
+  pushProfile(): Promise<void>
   tryReconnect(): Promise<void>
   disconnect(): Promise<void>
   update(region: RegionName, bytes: Uint8Array): void
@@ -217,15 +222,35 @@ export const useStore = create<State>((set, get) => {
     set({ profiles, activeProfileId })
   }
 
-  const loadDevice = async (kb: Keyboard, demo: boolean) => {
-    set({ kb, demo, status: 'loading', loadProgress: 0, error: null })
+  const loadDevice = async (source: Opened | KeyboardDriver, demo: boolean | string) => {
+    set({ demo: !!demo, status: 'loading', loadProgress: 0, error: null })
     // which model is this? a remembered choice wins over detection
-    const id = kb.transport.identity
+    const id = 'kind' in source ? source.transport.identity : source.identity
     const det = detect(id.vendorId, id.productId, id.productName)
     const remembered = deviceById(readJson<Record<string, string>>(CHOICES_KEY, {})[identityKey(id)])
-    const device = demo ? FIGHTING68 : (remembered ?? det.device)
+    const device = demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : (remembered ?? det.device)
+    if ('kind' in source && source.kind === 'rk' && !device?.rk) {
+      await source.transport.close()
+      throw new Error("this Royal Kludge model isn't supported yet")
+    }
+    // the protocol decides the driver; the model decides layout and limits
+    const kb: KeyboardDriver = !('kind' in source)
+      ? source
+      : source.kind === 'sonix'
+        ? new Keyboard(source.transport)
+        : new RkKeyboard(source.transport, device!)
+    set({ kb })
     applyDevice(device)
-    set({ deviceChoices: !demo && !remembered && (!det.certain || !det.device) ? (det.candidates.length ? det.candidates : DEVICES.filter((d) => d.transport === 'wired')) : null })
+    const sameFamily = (d: DeviceDef) => d.transport === 'wired' && d.protocol === (device?.protocol ?? 'sonix')
+    set({
+      deviceChoices:
+        !demo && !remembered && (!det.certain || !det.device) ? (det.candidates.length ? det.candidates : DEVICES.filter(sameFamily)) : null,
+    })
+    // write-only boards can't report their settings: they start from the saved profile
+    if (kb instanceof RkKeyboard) {
+      const active = get().profiles.find((p) => p.id === get().activeProfileId)
+      if (active) kb.seed(Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Uint8Array.from(active.data[r])])))
+    }
     kb.disconnected.on(() => {
       if (get().kb === kb) {
         set({ kb: null, regions: null, status: 'idle', error: 'Keyboard disconnected.' })
@@ -233,7 +258,7 @@ export const useStore = create<State>((set, get) => {
     })
     const regions = await kb.readAll((_, i, total) => set({ loadProgress: i / total }))
 
-    if (!demo) {
+    if (!demo && device?.caps.readBack !== false) {
       const backup: Backup = {
         at: Date.now(),
         firmware: `${regions.info[9]}.${regions.info[8].toString(16)}`,
@@ -276,12 +301,19 @@ export const useStore = create<State>((set, get) => {
     async connect(demo = false) {
       set({ status: 'connecting', error: null, autoConnect: !demo })
       try {
-        const transport = demo ? new MockTransport() : isTauri() ? await TauriTransport.open() : await WebHidTransport.request()
-        if (!transport) {
+        const demoDevice = typeof demo === 'string' ? deviceById(demo) : undefined
+        const opened: Opened | null = demoDevice?.protocol === 'rk'
+          ? { kind: 'rk', transport: new MockRkTransport(demoDevice) }
+          : demo
+            ? { kind: 'sonix', transport: new MockTransport() }
+            : isTauri()
+              ? await openDesktop()
+              : await requestKeyboard()
+        if (!opened) {
           set({ status: 'idle' })
           return
         }
-        await loadDevice(new Keyboard(transport), demo)
+        await loadDevice(opened, demo)
       } catch (e) {
         await get().kb?.close().catch(() => undefined)
         set({ status: 'idle', kb: null, error: `Could not connect: ${errMsg(e)}` })
@@ -292,14 +324,8 @@ export const useStore = create<State>((set, get) => {
       if (get().status !== 'idle') return
       try {
         // Desktop: connect whenever the keyboard is plugged in. Browser: only to an already-authorised device.
-        const transport = isTauri()
-          ? (await TauriTransport.available())
-            ? await TauriTransport.open()
-            : null
-          : 'hid' in navigator
-            ? await WebHidTransport.reconnect()
-            : null
-        if (transport) await loadDevice(new Keyboard(transport), false)
+        const opened = isTauri() ? await openDesktop() : await reconnectKeyboard()
+        if (opened) await loadDevice(opened, false)
       } catch {
         set({ status: 'idle', kb: null })
       }
@@ -351,7 +377,7 @@ export const useStore = create<State>((set, get) => {
       const { kb } = get()
       if (!kb) return
       await get().flush()
-      await loadDevice(kb, get().demo)
+      await loadDevice(kb, get().demo ? (get().device?.id ?? true) : false)
     },
 
     createProfile(name) {
@@ -464,11 +490,27 @@ export const useStore = create<State>((set, get) => {
       // demo mode pretends to be a Fighting68, so its picks must not stick to the real board's identity
       if (kb && !get().demo) {
         const choices = readJson<Record<string, string>>(CHOICES_KEY, {})
-        writeJson(CHOICES_KEY, { ...choices, [identityKey(kb.transport.identity)]: id })
+        writeJson(CHOICES_KEY, { ...choices, [identityKey(kb.identity)]: id })
       }
       applyDevice(device)
       if (regions) adoptKeyboard(regions)
       set({ deviceChoices: null })
+    },
+
+    async pushProfile() {
+      const { kb, regions } = get()
+      if (!kb || !regions || blocked()) return
+      await get().flush()
+      const job = (async () => {
+        try {
+          for (const r of PROFILE_REGIONS) await kb.writeRegion(r, regions[r])
+          await kb.commit()
+          get().showToast('Profile written to the keyboard')
+        } catch (e) {
+          set({ error: `Writing the profile failed: ${errMsg(e)}` })
+        }
+      })()
+      await track(job)
     },
 
     allowWrites() {

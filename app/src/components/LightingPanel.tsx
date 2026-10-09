@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { CUSTOM_EFFECT, EFFECTS, decodeColor, decodeLed, encodeLed, withColor, withColorMap, type Led } from '../hid/codec'
+import { CUSTOM_EFFECT, EFFECTS, SONIX_CUSTOM, decodeColor, decodeLed, encodeLed, withColor, withColorMap, type Led } from '../hid/codec'
 import { hidFromCode } from '../data/keycodes'
 import { KEYS, LAYOUT_HEIGHT, LAYOUT_WIDTH } from '../data/layout'
 import { COLOR_PRESETS, presetColors, type ColorPreset } from '../lighting/presets'
@@ -117,7 +117,7 @@ export function LightingPanel() {
               <Button
                 key={e.id}
                 variant={led.effect === e.id ? 'secondary' : 'ghost'}
-                className={cn('justify-start', led.effect === e.id && 'ring-1 ring-ring')}
+                className={cn('h-auto min-h-8 justify-start py-1.5 text-left leading-tight whitespace-normal', led.effect === e.id && 'ring-1 ring-ring')}
                 onClick={() => set({ effect: e.id })}
               >
                 {e.name}
@@ -216,7 +216,9 @@ function LivePreview({
 }) {
   const custom = led.effect === CUSTOM_EFFECT
   // while painting, show the true colours without animation so selection is easy to read
-  const frame = useLedPreview(led, colors, custom)
+  const def = EFFECTS.find((e) => e.id === led.effect)
+  const shown = custom ? { ...led, effect: SONIX_CUSTOM } : def?.preview ? { ...led, effect: def.preview } : led
+  const frame = useLedPreview(shown, colors, custom)
   return (
     <Keyboard
       tintMix={88}

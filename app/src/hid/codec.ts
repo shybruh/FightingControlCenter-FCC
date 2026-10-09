@@ -201,9 +201,14 @@ export interface EffectDef {
   color: boolean
   speed: boolean
   direction: boolean
+  /** Fighting68 effect id used to approximate this effect in the on-screen preview (other boards' modes) */
+  preview?: number
 }
 
-export const EFFECTS: EffectDef[] = [
+/** Effect id of the Fighting68's custom per-key mode; the preview always uses this id for per-key colours. */
+export const SONIX_CUSTOM = 0x80
+
+export const SONIX_EFFECTS: EffectDef[] = [
   { id: 0x01, name: 'Static', color: true, speed: false, direction: false },
   { id: 0x07, name: 'Breathing', color: true, speed: true, direction: false },
   { id: 0x08, name: 'Spectrum cycle', color: false, speed: true, direction: false },
@@ -226,7 +231,14 @@ export const EFFECTS: EffectDef[] = [
   { id: 0x80, name: 'Custom per-key', color: false, speed: false, direction: false },
 ]
 
-export const CUSTOM_EFFECT = 0x80
+/** Live bindings: the active board's effect list and its per-key mode (set via setEffects). */
+export let EFFECTS: EffectDef[] = SONIX_EFFECTS
+export let CUSTOM_EFFECT = SONIX_CUSTOM
+
+export function setEffects(list: EffectDef[], customId: number) {
+  EFFECTS = list
+  CUSTOM_EFFECT = customId
+}
 
 export interface Led {
   effect: number

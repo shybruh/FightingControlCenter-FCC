@@ -1,6 +1,7 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
+import type { FeatureTransport } from './rk'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export function isTauri(): boolean {
@@ -59,5 +60,42 @@ export class TauriTransport implements Transport {
   async close() {
     this.unlisten?.()
     await invoke('hid_close')
+  }
+}
+
+/** Desktop transport for Royal Kludge legacy boards: feature reports through the Rust bridge (src-tauri/src/rk.rs). */
+export class TauriRkTransport implements FeatureTransport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: DeviceInfo) {
+    this.name = info.name || 'Royal Kludge keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('rk_available')
+  }
+
+  static async open(): Promise<TauriRkTransport> {
+    const info = await invoke<DeviceInfo>('rk_open')
+    const t = new TauriRkTransport(info)
+    t.unlisten = await listen('rk-disconnected', () => t.disconnects.emit())
+    return t
+  }
+
+  sendFeature(reportId: number, data: Uint8Array) {
+    return invoke<void>('rk_send_feature', { data: [reportId, ...data] })
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('rk_close')
   }
 }

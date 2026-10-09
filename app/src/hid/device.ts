@@ -10,7 +10,7 @@ import {
   type ParsedReply,
   type RegionName,
 } from './protocol'
-import { Emitter, type Transport } from './transport'
+import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export type RegionData = Record<RegionName, Uint8Array>
 
@@ -39,7 +39,23 @@ export interface SensorEvent {
  * Every transfer waits for the device to echo the command before the next chunk is sent,
  * and only one operation runs at a time, so writes can never interleave.
  */
-export class Keyboard {
+/** What the app needs from a connected keyboard, whatever protocol it speaks. */
+export interface KeyboardDriver {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  /** live sensor packets (calibration mode); never fires on boards without a sensor stream */
+  readonly sensor: Emitter<SensorEvent>
+  readonly disconnected: Emitter<void>
+  readAll(onProgress?: (region: RegionName, index: number, total: number) => void): Promise<RegionData>
+  readRegion(name: RegionName): Promise<Uint8Array>
+  writeRegion(name: RegionName, data: Uint8Array): Promise<void>
+  commit(): Promise<unknown>
+  command(cmd: number, args?: number[]): Promise<void>
+  close(): Promise<void>
+}
+
+/** Sonix HE driver (Fighting68 family). */
+export class Keyboard implements KeyboardDriver {
   private queue: Promise<unknown> = Promise.resolve()
   private waiter: { cmd: number; resolve: (r: ParsedReply) => void } | null = null
   private unsubs: Array<() => void> = []
@@ -54,6 +70,10 @@ export class Keyboard {
       transport.onReport((raw) => this.handleReport(raw)),
       transport.onDisconnect(() => this.disconnected.emit()),
     )
+  }
+
+  get identity() {
+    return this.transport.identity
   }
 
   get name() {

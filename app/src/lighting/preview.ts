@@ -2,7 +2,7 @@
 // The keyboard renders the real thing; this only has to look like it.
 
 import { KEYS, LAYOUT_HEIGHT, LAYOUT_WIDTH, type KeyDef } from '../data/layout'
-import { CUSTOM_EFFECT, type Led } from '../hid/codec'
+import { SONIX_CUSTOM, type Led } from '../hid/codec'
 
 export type RGB = [number, number, number]
 
@@ -171,7 +171,7 @@ export function renderEffect(led: Led, t: number, presses: PressEvent[], custom:
         c = scale(tone(k), v)
         break
       }
-      case CUSTOM_EFFECT:
+      case SONIX_CUSTOM:
         c = custom(k.id)
         break
       default:

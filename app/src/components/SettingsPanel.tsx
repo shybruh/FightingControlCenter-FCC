@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DownloadIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react'
+import { DownloadIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { POLLING_RATES, decodeInfo, decodeSettings, encodeSettings, type Settings } from '../hid/codec'
+import { RK_SLEEP_BYTE, RK_SLEEP_DEFAULT } from '../hid/rk'
 import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -22,6 +23,73 @@ import { StatusBadge } from './DeviceGate'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
+  const rk = useStore((s) => s.device?.protocol === 'rk')
+  return rk ? <RkSettingsPanel /> : <SonixSettingsPanel />
+}
+
+const RK_SLEEP = [
+  { value: 1, label: '5 min' },
+  { value: 2, label: '10 min' },
+  { value: 3, label: '20 min' },
+  { value: 4, label: '30 min' },
+  { value: 5, label: 'Never' },
+]
+
+/** Royal Kludge boards: no read-back, so the saved profile is the source of truth. */
+function RkSettingsPanel() {
+  const regions = useStore((s) => s.regions)!
+  const update = useStore((s) => s.update)
+  const pushProfile = useStore((s) => s.pushProfile)
+  const device = useStore((s) => s.device)!
+  const sleep = regions.led[RK_SLEEP_BYTE] || RK_SLEEP_DEFAULT
+  const setSleep = (v: number) => {
+    const led = Uint8Array.from(regions.led)
+    led[RK_SLEEP_BYTE] = v
+    update('led', led)
+  }
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyboard</CardTitle>
+          <CardDescription>Sleep is sent together with the lighting, so it is saved per profile.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Field label="Lights sleep after">
+            <Segmented value={sleep} options={RK_SLEEP} onChange={setSleep} />
+          </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Device</CardTitle>
+          <CardDescription>
+            This keyboard can't report its settings back, so FCC shows the active profile. If it was changed elsewhere (Fn shortcuts, the official
+            app), write the profile again to bring them back in line.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ModelPicker />
+          <Separator />
+          <Stat label="USB ID">
+            {device.vendorId.toString(16).padStart(4, '0')}:{device.productId.toString(16).padStart(4, '0')}
+          </Stat>
+          <Separator />
+          <div>
+            <Button variant="outline" onClick={pushProfile}>
+              <UploadIcon data-icon="inline-start" />
+              Write profile to keyboard
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function SonixSettingsPanel() {
   const regions = useStore((s) => s.regions)!
   const update = useStore((s) => s.update)
   const downloadBackup = useStore((s) => s.downloadBackup)
@@ -141,8 +209,9 @@ export function SettingsPanel() {
 function ModelPicker() {
   const device = useStore((s) => s.device)
   const chooseDevice = useStore((s) => s.chooseDevice)
-  const pid = useStore((s) => s.kb?.transport.identity.productId)
-  const wired = DEVICES.filter((d) => d.transport === 'wired')
+  const pid = useStore((s) => s.kb?.identity.productId)
+  // only models that speak the same protocol as the connected board
+  const wired = DEVICES.filter((d) => d.transport === 'wired' && d.protocol === (device?.protocol ?? 'sonix'))
   const same = wired.filter((d) => d.productId === pid)
   const others = wired.filter((d) => d.productId !== pid)
   const items = Object.fromEntries(wired.map((d) => [d.id, d.name]))

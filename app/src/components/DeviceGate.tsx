@@ -25,14 +25,16 @@ export function ReadOnlyBanner() {
   const readOnly = useStore((s) => s.readOnly)
   const device = useStore((s) => s.device)
   const allowWrites = useStore((s) => s.allowWrites)
+  const writeOnly = device?.caps.readBack === false
   if (!readOnly) return null
   return (
     <div className="swap-in flex flex-wrap items-center gap-3 border-b border-amber-400/20 bg-amber-400/[0.06] px-4 py-2.5 text-sm md:px-6">
       <ShieldAlertIcon className="size-4 shrink-0 text-amber-300" />
       <span className="min-w-0 flex-1 text-muted-foreground">
         <span className="font-medium text-foreground">{device ? `${device.name} hasn't been tested with FCC yet.` : 'Unknown keyboard.'}</span>{' '}
-        Its settings are read and backed up, but changes are off until you allow them. It uses the same protocol as the Fighting68, so it should
-        work. Tell us if it does!
+        {writeOnly
+          ? "It can't report its settings, so FCC shows your saved profile. Changes are off until you allow them; the protocol matches existing Royal Kludge tools, so it should work. Tell us if it does!"
+          : 'Its settings are read and backed up, but changes are off until you allow them. It uses the same protocol as the Fighting68, so it should work. Tell us if it does!'}
       </span>
       {device && (
         <Button size="sm" variant="outline" onClick={allowWrites}>

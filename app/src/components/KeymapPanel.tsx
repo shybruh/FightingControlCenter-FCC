@@ -23,6 +23,7 @@ export function KeymapPanel() {
   const [layer, setLayer] = useState<'base' | 'fn'>('base')
   const [group, setGroup] = useState(KEY_GROUPS[0].name)
   const [mods, setMods] = useState(0)
+  const mouseOk = useStore((s) => s.device?.caps.mouseBindings !== false)
 
   const id = selected.size === 1 ? [...selected][0] : null
   const key = id != null ? KEY_BY_ID.get(id) : null
@@ -51,7 +52,8 @@ export function KeymapPanel() {
     }
   }
 
-  const g = KEY_GROUPS.find((x) => x.name === group)!
+  const groups = KEY_GROUPS.filter((x) => mouseOk || (x.kind !== 'mouse' && x.kind !== 'wheel'))
+  const g = groups.find((x) => x.name === group) ?? groups[0]
 
   return (
     <div className="flex flex-col gap-4">
@@ -114,7 +116,7 @@ export function KeymapPanel() {
               <CardContent className="flex flex-col gap-4">
                 <Tabs value={group} onValueChange={(v) => setGroup(v as string)}>
                   <TabsList className="h-auto flex-wrap">
-                    {KEY_GROUPS.map((x) => (
+                    {groups.map((x) => (
                       <TabsTrigger key={x.name} value={x.name}>
                         {x.name}
                       </TabsTrigger>

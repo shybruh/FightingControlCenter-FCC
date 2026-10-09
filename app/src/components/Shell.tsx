@@ -29,6 +29,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils'
 import { decodeInfo } from '../hid/codec'
 import { isTauri } from '../hid/tauri'
+import type { Capabilities } from '../devices/registry'
 import { useStore } from '../store'
 import { AdvancedPanel } from './AdvancedPanel'
 import { DesktopPanel } from './DesktopPanel'
@@ -42,6 +43,8 @@ import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
 import { SettingsPanel } from './SettingsPanel'
 
 interface Page {
+  /** capability the board needs for this page */
+  needs?: keyof Capabilities
   id: string
   label: string
   icon: LucideIcon
@@ -49,11 +52,11 @@ interface Page {
 }
 
 const PAGES: Page[] = [
-  { id: 'performance', label: 'Performance', icon: GaugeIcon, render: () => <PerformancePanel /> },
+  { id: 'performance', label: 'Performance', icon: GaugeIcon, needs: 'performance', render: () => <PerformancePanel /> },
   { id: 'lighting', label: 'Lighting', icon: SunIcon, render: () => <LightingPanel /> },
   { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, render: () => <KeymapPanel /> },
-  { id: 'advanced', label: 'Advanced', icon: ZapIcon, render: () => <AdvancedPanel /> },
-  { id: 'macros', label: 'Macros', icon: ListVideoIcon, render: () => <MacroPanel /> },
+  { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', render: () => <AdvancedPanel /> },
+  { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', render: () => <MacroPanel /> },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, render: () => <SettingsPanel /> },
   ...(isTauri() ? [{ id: 'desktop', label: 'Desktop', icon: MonitorIcon, render: () => <DesktopPanel /> }] : []),
 ]
@@ -71,9 +74,11 @@ function readCollapsed() {
 }
 
 export function Main() {
+  const caps = useStore((s) => s.device?.caps)
+  const pages = PAGES.filter((p) => !p.needs || caps?.[p.needs] !== false)
   const [page, setPage] = useState(PAGES[0].id)
   const [collapsed, setCollapsed] = useState(readCollapsed)
-  const current = PAGES.find((p) => p.id === page) ?? PAGES[0]
+  const current = pages.find((p) => p.id === page) ?? pages[0]
 
   const toggle = () => {
     setCollapsed(!collapsed)
@@ -86,7 +91,7 @@ export function Main() {
 
   return (
     <div className="flex h-full">
-      <Sidebar page={page} setPage={setPage} collapsed={collapsed} onToggle={toggle} />
+      <Sidebar pages={pages} page={current.id} setPage={setPage} collapsed={collapsed} onToggle={toggle} />
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
         <TopBar title={current.label} />
         <ReadOnlyBanner />
@@ -106,6 +111,7 @@ function TopBar({ title }: { title: string }) {
   const demo = useStore((s) => s.demo)
   const kbName = useStore((s) => s.device?.name ?? s.kb?.name)
   const info = decodeInfo(useStore((s) => s.regions)!.info)
+  const readBack = useStore((s) => s.device?.caps.readBack !== false)
   const disconnect = useStore((s) => s.disconnect)
 
   return (
@@ -115,7 +121,7 @@ function TopBar({ title }: { title: string }) {
         <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
           <StatusDot
             state={pending ? 'busy' : 'ok'}
-            label={pending ? 'Saving to keyboard…' : `Synced · firmware ${info.firmware}`}
+            label={pending ? 'Saving to keyboard…' : readBack ? `Synced · firmware ${info.firmware}` : 'Changes sent to the keyboard'}
           />
           <span className="hidden sm:inline">{kbName}</span>
           {demo && <Badge variant="secondary">demo</Badge>}
@@ -178,11 +184,13 @@ function RailItem({
 }
 
 function Sidebar({
+  pages,
   page,
   setPage,
   collapsed,
   onToggle,
 }: {
+  pages: Page[]
   page: string
   setPage(id: string): void
   collapsed: boolean
@@ -219,9 +227,9 @@ function Sidebar({
         <div
           aria-hidden
           className="nav-indicator absolute top-1 right-0 left-0 h-8 rounded-md bg-sidebar-accent"
-          style={{ transform: `translateY(${Math.max(0, PAGES.findIndex((p) => p.id === page)) * 34}px)` }}
+          style={{ transform: `translateY(${Math.max(0, pages.findIndex((p) => p.id === page)) * 34}px)` }}
         />
-        {PAGES.map((p) => (
+        {pages.map((p) => (
           <RailItem key={p.id} plain collapsed={collapsed} label={p.label} active={page === p.id} onClick={() => setPage(p.id)}>
             <p.icon className="size-4 shrink-0" />
             <span className="rail-label truncate">{p.label}</span>

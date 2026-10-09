@@ -38,14 +38,14 @@ export function webHidSupported(): boolean {
 }
 
 // every wired board in the catalogue, on its config interface
-const FILTERS: HIDDeviceFilter[] = WIRED_IDS.map(({ vendorId, productId }) => ({
+export const FILTERS: HIDDeviceFilter[] = WIRED_IDS.map(({ vendorId, productId }) => ({
   vendorId,
   productId,
   usagePage: CONFIG_USAGE_PAGE,
   usage: CONFIG_USAGE,
 }))
 
-function isConfigInterface(d: HIDDevice): boolean {
+export function isConfigInterface(d: HIDDevice): boolean {
   return (
     WIRED_IDS.some((w) => w.vendorId === d.vendorId && w.productId === d.productId) &&
     d.collections.some((c) => c.usagePage === CONFIG_USAGE_PAGE && c.usage === CONFIG_USAGE)
@@ -88,7 +88,7 @@ export class WebHidTransport implements Transport {
     return dev ? WebHidTransport.open(dev) : null
   }
 
-  private static async open(dev: HIDDevice) {
+  static async open(dev: HIDDevice) {
     if (!dev.opened) await dev.open()
     return new WebHidTransport(dev)
   }
