@@ -1,0 +1,626 @@
+[
+ [
+  {
+   "className": "Esc isbg",
+   "value": 0,
+   "name": "Esc",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 41,
+   "keyCode": "Escape"
+  },
+  {
+   "className": "",
+   "value": 17,
+   "name": "1 !",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 30,
+   "keyCode": "Digit1"
+  },
+  {
+   "className": "",
+   "value": 18,
+   "name": "2 @",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 31,
+   "keyCode": "Digit2"
+  },
+  {
+   "className": "",
+   "value": 19,
+   "name": "3 #",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 32,
+   "keyCode": "Digit3"
+  },
+  {
+   "className": "",
+   "value": 20,
+   "name": "4 $",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 33,
+   "keyCode": "Digit4"
+  },
+  {
+   "className": "",
+   "value": 21,
+   "name": "5 %",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 34,
+   "keyCode": "Digit5"
+  },
+  {
+   "className": "",
+   "value": 22,
+   "name": "6 ^",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 35,
+   "keyCode": "Digit6"
+  },
+  {
+   "className": "",
+   "value": 23,
+   "name": "7 &",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 36,
+   "keyCode": "Digit7"
+  },
+  {
+   "className": "",
+   "value": 24,
+   "name": "8 *",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 37,
+   "keyCode": "Digit8"
+  },
+  {
+   "className": "",
+   "value": 25,
+   "name": "9 (",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 38,
+   "keyCode": "Digit9"
+  },
+  {
+   "className": "",
+   "value": 26,
+   "name": "0 )",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 39,
+   "keyCode": "Digit0"
+  },
+  {
+   "className": "",
+   "value": 27,
+   "name": "ˉ -",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 45,
+   "keyCode": "Minus"
+  },
+  {
+   "className": "",
+   "value": 28,
+   "name": "= +",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 46,
+   "keyCode": "Equal"
+  },
+  {
+   "className": "Backspace isbg",
+   "value": 92,
+   "name": "Backspace",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 42,
+   "keyCode": "Backspace"
+  },
+  {
+   "className": "isbg",
+   "value": 103,
+   "name": "Ins",
+   "isBorder": false,
+   "hegith": 0,
+   "keyType": 1,
+   "key": 73,
+   "keyCode": "Insert"
+  }
+ ],
+ [
+  {
+   "className": "Tab isbg",
+   "value": 32,
+   "name": "Tab",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 43,
+   "keyCode": "Tab"
+  },
+  {
+   "className": "",
+   "value": 33,
+   "name": "Q",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 20,
+   "keyCode": "KeyQ"
+  },
+  {
+   "className": "",
+   "value": 34,
+   "name": "W",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 26,
+   "keyCode": "KeyW"
+  },
+  {
+   "className": "",
+   "value": 35,
+   "name": "E",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 8,
+   "keyCode": "KeyE"
+  },
+  {
+   "className": "",
+   "value": 36,
+   "name": "R",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 21,
+   "keyCode": "KeyR"
+  },
+  {
+   "className": "",
+   "value": 37,
+   "name": "T",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 23,
+   "keyCode": "KeyT"
+  },
+  {
+   "className": "",
+   "value": 38,
+   "name": "Y",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 28,
+   "keyCode": "KeyY"
+  },
+  {
+   "className": "",
+   "value": 39,
+   "name": "U",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 24,
+   "keyCode": "KeyU"
+  },
+  {
+   "className": "",
+   "value": 40,
+   "name": "I",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 12,
+   "keyCode": "KeyI"
+  },
+  {
+   "className": "",
+   "value": 41,
+   "name": "O",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 18,
+   "keyCode": "KeyO"
+  },
+  {
+   "className": "",
+   "value": 42,
+   "name": "P",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 19,
+   "keyCode": "KeyP"
+  },
+  {
+   "className": "",
+   "value": 43,
+   "name": "[ {",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 47,
+   "keyCode": "BracketLeft"
+  },
+  {
+   "className": "",
+   "value": 44,
+   "name": "] }",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 48,
+   "keyCode": "BracketRight"
+  },
+  {
+   "className": "key-line",
+   "value": 60,
+   "name": "\\ | ",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 49,
+   "keyCode": "Backslash"
+  },
+  {
+   "className": "isbg",
+   "value": 106,
+   "name": "Del",
+   "isBorder": false,
+   "hegith": 0,
+   "keyType": 1,
+   "key": 76,
+   "keyCode": "Delete"
+  }
+ ],
+ [
+  {
+   "className": "Caps isbg",
+   "value": 48,
+   "name": "Caps",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 57,
+   "keyCode": "CapsLock"
+  },
+  {
+   "className": "",
+   "value": 49,
+   "name": "A",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 4,
+   "keyCode": "KeyA"
+  },
+  {
+   "className": "",
+   "value": 50,
+   "name": "S",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 22,
+   "keyCode": "KeyS"
+  },
+  {
+   "className": "",
+   "value": 51,
+   "name": "D",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 7,
+   "keyCode": "KeyD"
+  },
+  {
+   "className": "",
+   "value": 52,
+   "name": "F",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 9,
+   "keyCode": "KeyF"
+  },
+  {
+   "className": "",
+   "value": 53,
+   "name": "G",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 10,
+   "keyCode": "KeyG"
+  },
+  {
+   "className": "",
+   "value": 54,
+   "name": "H",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 11,
+   "keyCode": "KeyH"
+  },
+  {
+   "className": "",
+   "value": 55,
+   "name": "J",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 13,
+   "keyCode": "KeyJ"
+  },
+  {
+   "className": "",
+   "value": 56,
+   "name": "K",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 14,
+   "keyCode": "KeyK"
+  },
+  {
+   "className": "",
+   "value": 57,
+   "name": "L",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 15,
+   "keyCode": "KeyL"
+  },
+  {
+   "className": "",
+   "value": 58,
+   "name": "; :",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 51,
+   "keyCode": "Semicolon"
+  },
+  {
+   "className": "",
+   "value": 59,
+   "name": "' \"",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 56,
+   "keyCode": "Quote"
+  },
+  {
+   "className": "Enter isbg",
+   "value": 76,
+   "name": "Enter",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 40,
+   "keyCode": "Enter"
+  },
+  {
+   "className": "isbg",
+   "value": 105,
+   "name": "PgUp",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 75,
+   "keyCode": "PageUp"
+  }
+ ],
+ [
+  {
+   "className": "ShiftMax isbg",
+   "value": 64,
+   "name": "Shift",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 225,
+   "keyCode": "ShiftLeft"
+  },
+  {
+   "className": "",
+   "value": 65,
+   "name": "Z",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 29,
+   "keyCode": "KeyZ"
+  },
+  {
+   "className": "",
+   "value": 66,
+   "name": "X",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 27,
+   "keyCode": "KeyX"
+  },
+  {
+   "className": "",
+   "value": 67,
+   "name": "C",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 6,
+   "keyCode": "KeyC"
+  },
+  {
+   "className": "",
+   "value": 68,
+   "name": "V",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 25,
+   "keyCode": "KeyV"
+  },
+  {
+   "className": "",
+   "value": 69,
+   "name": "B",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 5,
+   "keyCode": "KeyB"
+  },
+  {
+   "className": "",
+   "value": 70,
+   "name": "N",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 17,
+   "keyCode": "KeyN"
+  },
+  {
+   "className": "",
+   "value": 71,
+   "name": "M",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 16,
+   "keyCode": "KeyM"
+  },
+  {
+   "className": "",
+   "value": 72,
+   "name": ", <",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 54,
+   "keyCode": "Comma"
+  },
+  {
+   "className": "",
+   "value": 73,
+   "name": ". >",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 55,
+   "keyCode": "Period"
+  },
+  {
+   "className": "",
+   "value": 74,
+   "name": "/ ?",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 56,
+   "keyCode": "Slash"
+  },
+  {
+   "className": "Shift isbg",
+   "value": 75,
+   "name": "Shift",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 229,
+   "keyCode": "ShiftRight"
+  },
+  {
+   "className": "operate up isbg",
+   "value": 90,
+   "name": "↑",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 82,
+   "keyCode": "ArrowUp"
+  },
+  {
+   "className": "isbg",
+   "value": 108,
+   "name": "PgDn",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 78,
+   "keyCode": "PageDown"
+  }
+ ],
+ [
+  {
+   "className": "ctrl isbg w55",
+   "value": 80,
+   "name": "Ctrl",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 224,
+   "keyCode": "ControlLeft"
+  },
+  {
+   "className": "isbg w55",
+   "value": 81,
+   "name": "Win",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 227,
+   "keyCode": "MetaLeft"
+  },
+  {
+   "className": "isbg w55",
+   "value": 82,
+   "name": "Alt",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 226,
+   "keyCode": "AltLeft"
+  },
+  {
+   "className": "Spacebar-68",
+   "value": 83,
+   "name": "Spacebar",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 44,
+   "keyCode": "Space"
+  },
+  {
+   "className": " isbg ",
+   "value": 84,
+   "name": "Alt",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 230,
+   "keyCode": "AltRight"
+  },
+  {
+   "className": " isbg",
+   "value": 85,
+   "name": "Fn",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 0,
+   "keyCode": "-1"
+  },
+  {
+   "className": " isbg  ",
+   "value": 87,
+   "name": "Ctrl",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 228,
+   "keyCode": "ControlRight"
+  },
+  {
+   "className": "w50 isbg",
+   "value": 88,
+   "name": "←",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 80,
+   "keyCode": "ArrowLeft"
+  },
+  {
+   "className": " up",
+   "value": 89,
+   "name": "↓",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 81,
+   "keyCode": "ArrowDown"
+  },
+  {
+   "className": "w50 isbg",
+   "value": 91,
+   "name": "→",
+   "isBorder": false,
+   "hegith": 0,
+   "key": 79,
+   "keyCode": "ArrowRight"
+  }
+ ]
+]

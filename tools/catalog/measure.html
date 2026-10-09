@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="app.css">
+<style>html{font-size:400px!important} body{margin:0} .key-body{position:absolute;left:0;top:0} .keyboard-item *{display:none}</style>
+</head><body><div id="out"></div>
+<script>
+async function run() {
+  const { layouts } = await (await fetch('devices-raw.json')).json()
+  const result = {}
+  for (const [name, rows] of Object.entries(layouts)) {
+    if (!Array.isArray(rows) || !rows.every(Array.isArray)) continue
+    const body = document.createElement('div'); body.className = 'key-body'
+    body.style.cssText = 'position:absolute;left:0;top:0;text-align:center;display:flex;justify-content:center'
+    const kb = document.createElement('div'); kb.className = 'keyboard'; body.appendChild(kb)
+    const els = []
+    rows.forEach((row, r) => {
+      const rowEl = document.createElement('div'); rowEl.className = 'flex keyboard-list'
+      row.forEach((k) => {
+        const el = document.createElement('div')
+        el.className = 'keyboard-item no-select flex fvertical ' + (k.className || '')
+        rowEl.appendChild(el); els.push({ el, k, r })
+      })
+      kb.appendChild(rowEl)
+    })
+    document.body.appendChild(body)
+    const rects = els.map(({ el, k, r }) => ({ k, r, b: el.getBoundingClientRect() }))
+    // horizontal pitch: distance between consecutive plain keys in the same row
+    const pitches = []
+    for (let i = 1; i < rects.length; i++) {
+      const a = rects[i - 1], b = rects[i]
+      if (a.r === b.r && !a.k.className && !b.k.className) pitches.push(b.b.left - a.b.left)
+    }
+    pitches.sort((x, y) => x - y)
+    const pitch = pitches[Math.floor(pitches.length / 2)] || rects[0].b.width
+    const plainH = rects.filter((x) => !x.k.className).map((x) => x.b.height).sort((x, y) => x - y)
+    const keyH = plainH[Math.floor(plainH.length / 2)] || rects[0].b.height
+    const gap = pitch - rects.find((x) => !x.k.className)?.b.width
+    const x0 = Math.min(...rects.map((x) => x.b.left))
+    const rowTops = rows.map((_, r) => Math.min(...rects.filter((x) => x.r === r).map((x) => x.b.top)))
+    const rowPitch = rowTops.length > 1 ? (rowTops[rowTops.length - 1] - rowTops[0]) / (rowTops.length - 1) : keyH
+    const q = (v) => Math.round(v * 4) / 4 // quarter units
+    result[name] = rects.map(({ k, r, b }) => ({
+      id: k.value, name: k.name, hid: k.key, code: k.keyCode, cls: k.className || '', disabled: !!k.disabled,
+      x: q((b.left - x0) / pitch), y: r, w: q((b.width + gap) / pitch), h: Math.max(1, Math.round((b.height + (rowPitch - keyH)) / rowPitch)),
+    }))
+    body.remove()
+  }
+  window.__result = result
+  document.getElementById('out').textContent = 'done ' + Object.keys(result).length
+}
+run()
+</script></body></html>

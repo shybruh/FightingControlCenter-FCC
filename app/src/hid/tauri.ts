@@ -1,0 +1,63 @@
+import { Channel, invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { PACKET_LEN } from './protocol'
+import { Emitter, type DeviceIdentity, type Transport } from './transport'
+
+export function isTauri(): boolean {
+  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
+}
+
+interface DeviceInfo {
+  name: string
+  vendor_id: number
+  product_id: number
+}
+
+/** Desktop transport: native hidapi in the Rust backend (src-tauri/src/hid.rs). */
+export class TauriTransport implements Transport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private reports = new Emitter<Uint8Array>()
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: DeviceInfo) {
+    this.name = info.name || 'Keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('hid_available')
+  }
+
+  static async open(): Promise<TauriTransport> {
+    let transport: TauriTransport | null = null
+    const channel = new Channel<ArrayBuffer>()
+    // Each message carries one or more 64-byte reports.
+    channel.onmessage = (buf) => {
+      const bytes = new Uint8Array(buf)
+      for (let o = 0; o + PACKET_LEN <= bytes.length; o += PACKET_LEN) transport?.reports.emit(bytes.slice(o, o + PACKET_LEN))
+    }
+    const info = await invoke<DeviceInfo>('hid_open', { onReport: channel })
+    transport = new TauriTransport(info)
+    transport.unlisten = await listen('hid-disconnected', () => transport?.disconnects.emit())
+    return transport
+  }
+
+  send(packet: Uint8Array) {
+    return invoke<void>('hid_write', { data: Array.from(packet) })
+  }
+
+  onReport(l: (d: Uint8Array) => void) {
+    return this.reports.on(l)
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('hid_close')
+  }
+}

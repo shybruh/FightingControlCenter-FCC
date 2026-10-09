@@ -1,0 +1,115 @@
+/* Flat keyboard. Positions are in key units derived from the container width. */
+
+.kb-wrap {
+  container-type: inline-size;
+  width: 100%;
+  touch-action: none;
+  user-select: none;
+}
+.kb {
+  --u: calc(100cqw / var(--cols));
+  position: relative;
+  width: 100%;
+  height: calc(var(--u) * var(--rows));
+}
+.key {
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h, 1) * var(--u));
+  padding: calc(var(--u) * 0.035);
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.key-cap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: calc(var(--u) * 0.1) calc(var(--u) * 0.12);
+  border-radius: calc(var(--u) * 0.1);
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--tint) var(--tint-mix, 40%), var(--secondary));
+  color: var(--foreground);
+  text-align: left;
+  overflow: hidden;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.key:hover .key-cap {
+  background: color-mix(in oklch, var(--tint) var(--tint-mix, 40%), color-mix(in oklch, var(--secondary), var(--foreground) 8%));
+}
+.key:focus-visible {
+  outline: none;
+}
+.key:focus-visible .key-cap {
+  border-color: var(--ring);
+}
+.key.marked .key-cap {
+  border-color: color-mix(in oklch, var(--foreground) 35%, transparent);
+}
+.key.sel .key-cap {
+  border-color: color-mix(in oklch, var(--primary) 55%, transparent);
+  background: color-mix(in oklch, var(--tint) var(--tint-mix, 40%), color-mix(in oklch, var(--secondary), var(--foreground) 10%));
+}
+.key-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: color-mix(in oklch, var(--foreground) 22%, transparent);
+  pointer-events: none;
+}
+.key-main {
+  position: relative;
+  font-size: max(9px, calc(var(--u) * 0.19));
+  font-weight: 500;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.key-sub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: max(8px, calc(var(--u) * 0.15));
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rt-badge {
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--foreground);
+  color: var(--background);
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+/* ---------- motion ---------- */
+
+/* keys ripple in diagonally when a keyboard view mounts */
+.key {
+  animation: fcc-key-in 420ms var(--ease-out, ease-out) both;
+  animation-delay: calc(var(--x) * 14ms + var(--y) * 28ms);
+}
+.key-cap {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 160ms var(--ease-out, ease-out);
+}
+.key:active .key-cap {
+  transform: scale(0.95);
+  transition-duration: 60ms;
+}
+.key-fill {
+  transition: height 60ms linear;
+}

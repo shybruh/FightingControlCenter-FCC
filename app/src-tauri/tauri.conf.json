@@ -1,0 +1,67 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Fighting Control Center",
+  "version": "0.1.0",
+  "identifier": "com.fcc.fighting68",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5174",
+    "beforeDevCommand": "npm run dev -- --port 5174 --strictPort",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Fighting Control Center",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 900,
+        "minHeight": 620,
+        "resizable": true,
+        "center": true,
+        "backgroundColor": "#0a0a0a",
+        "visible": false,
+        "backgroundThrottling": "disabled",
+        "theme": "Dark"
+      },
+      {
+        "label": "osd",
+        "url": "index.html?osd",
+        "title": "FCC overlay",
+        "width": 340,
+        "height": 84,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false,
+        "focus": false,
+        "focusable": false,
+        "shadow": false,
+        "backgroundThrottling": "disabled"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "android": {
+      "debugApplicationIdSuffix": ".debug"
+    },
+    "shortDescription": "Configurator for the Fighting68 HE keyboard"
+  }
+}

@@ -1,0 +1,16 @@
+# dependencies & build output
+node_modules/
+dist/
+app/src-tauri/target/
+app/src-tauri/gen/
+
+# local tooling
+*.log
+.DS_Store
+Thumbs.db
+
+# catalogue tooling inputs/outputs (vendor bundle is not redistributed)
+tools/catalog/app*.js
+tools/catalog/app*.css
+tools/catalog/devices-raw.json
+tools/catalog/measured.json
