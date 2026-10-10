@@ -3,7 +3,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
-import { RY_VENDOR_IDS } from '../devices/registry'
+import { RK_PRODUCT_IDS, RY_VENDOR_IDS } from '../devices/registry'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export function isTauri(): boolean {
@@ -119,11 +119,11 @@ export class TauriRkTransport implements FeatureTransport {
   }
 
   static available(): Promise<boolean> {
-    return invoke<boolean>('rk_available')
+    return invoke<boolean>('rk_available', { products: RK_PRODUCT_IDS })
   }
 
   static async open(): Promise<TauriRkTransport> {
-    const info = await invoke<DeviceInfo>('rk_open')
+    const info = await invoke<DeviceInfo>('rk_open', { products: RK_PRODUCT_IDS })
     const t = new TauriRkTransport(info)
     t.unlisten = await listen('rk-disconnected', () => t.disconnects.emit())
     return t

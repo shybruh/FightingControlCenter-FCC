@@ -31,25 +31,29 @@ pub struct RkInfo {
     product_id: u16,
 }
 
-fn find(api: &HidApi) -> Option<&hidapi::DeviceInfo> {
-    api.device_list()
-        .find(|d| d.vendor_id() == RK_VENDOR_ID && d.usage_page() == USAGE_PAGE && d.usage() == USAGE)
+/// 0x258a is Sinowealth's generic vendor id, shared by many keyboards and mice: a known RK model wins over anything else.
+fn find<'a>(api: &'a HidApi, products: &[u16]) -> Option<&'a hidapi::DeviceInfo> {
+    let matches = || {
+        api.device_list()
+            .filter(|d| d.vendor_id() == RK_VENDOR_ID && d.usage_page() == USAGE_PAGE && d.usage() == USAGE)
+    };
+    matches().find(|d| products.contains(&d.product_id())).or_else(|| matches().next())
 }
 
 #[tauri::command]
-pub fn rk_available() -> Result<bool, String> {
+pub fn rk_available(products: Vec<u16>) -> Result<bool, String> {
     let api = HidApi::new().map_err(|e| e.to_string())?;
-    Ok(find(&api).is_some())
+    Ok(find(&api, &products).is_some())
 }
 
 #[tauri::command]
-pub fn rk_open(app: AppHandle, state: State<RkState>) -> Result<RkInfo, String> {
+pub fn rk_open(app: AppHandle, state: State<RkState>, products: Vec<u16>) -> Result<RkInfo, String> {
     let mut slot = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(old) = slot.take() {
         old.stop.store(true, Ordering::Relaxed);
     }
     let api = HidApi::new().map_err(|e| e.to_string())?;
-    let info = find(&api).ok_or("Royal Kludge keyboard not found. Is it plugged in with the USB cable?")?;
+    let info = find(&api, &products).ok_or("Royal Kludge keyboard not found. Is it plugged in with the USB cable?")?;
     let device = info.open_device(&api).map_err(|e| format!("Could not open keyboard: {e}"))?;
     let out = RkInfo {
         name: info.product_string().unwrap_or("").to_string(),

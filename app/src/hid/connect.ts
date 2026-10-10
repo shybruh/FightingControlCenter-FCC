@@ -1,5 +1,5 @@
 // Finds a supported keyboard over WebHID (browser) or the native bridge (desktop) and says which protocol it speaks.
-import { RK_FILTER, RK_VENDOR_ID, RY_FILTERS, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS } from '../devices/registry'
+import { RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_FILTERS, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS } from '../devices/registry'
 import { WebHidRkTransport, type FeatureTransport } from './rk'
 import { WebHidRyTransport, type RyTransport } from './ry'
 import { TauriRkTransport, TauriRyTransport, TauriTransport, isTauri } from './tauri'
@@ -19,7 +19,8 @@ const isRyInterface = (d: HIDDevice) =>
 async function openHid(devices: HIDDevice[]): Promise<Opened | null> {
   const sonix = devices.find(isConfigInterface)
   if (sonix) return { kind: 'sonix', transport: await WebHidTransport.open(sonix) }
-  const rk = devices.find(isRkInterface)
+  // 0x258a is shared by many Sinowealth devices: a known RK model wins
+  const rk = devices.find((d) => isRkInterface(d) && RK_PRODUCT_IDS.includes(d.productId)) ?? devices.find(isRkInterface)
   if (rk) return { kind: 'rk', transport: await WebHidRkTransport.open(rk) }
   const ry = devices.find(isRyInterface)
   if (ry) return { kind: 'ry', transport: await WebHidRyTransport.open(ry) }

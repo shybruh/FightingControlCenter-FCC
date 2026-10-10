@@ -253,7 +253,7 @@ export const useStore = create<State>((set, get) => {
     if ('kind' in source && source.kind === 'rk' && !device?.rk) {
       await source.transport.close()
       const usb = `${id.vendorId.toString(16).padStart(4, '0')}:${id.productId.toString(16).padStart(4, '0')}`
-      throw new Error(`this Royal Kludge model (USB id ${usb}${id.productName ? `, "${id.productName}"` : ''}) isn't supported yet`)
+      throw new Error(`this Royal Kludge model (USB id ${usb}${id.productName ? `, "${id.productName}"` : ''}) isn't supported yet. If your Royal Kludge keyboard is plugged in by cable, this is probably another device (mouse, receiver) that shares its USB vendor id`)
     }
     if (probe && !device?.ry) {
       if ('kind' in source) await source.transport.close()
