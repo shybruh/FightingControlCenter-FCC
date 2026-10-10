@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { isTauri } from './hid/tauri'
 import { webHidSupported } from './hid/transport'
 import { useStore } from './store'
+import { Diagnostics, useDiagnostics } from './components/Diagnostics'
 import { useDesktopIntegration } from './desktop/integration'
 import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
@@ -27,6 +28,7 @@ export default function App() {
     <TooltipProvider>
       {status === 'ready' ? <Main /> : <Connect />}
       <Notices />
+      <Diagnostics />
       <Toaster theme="dark" position="bottom-right" />
     </TooltipProvider>
   )
@@ -87,9 +89,14 @@ function Connect() {
                 {status === 'connecting' ? 'Waiting for permission…' : 'Connect keyboard'}
               </Button>
               {!supported && <p className="text-xs text-destructive">This browser has no WebHID. Use Chrome or Edge.</p>}
-              <Button variant="ghost" onClick={() => connect(true)}>
-                Try demo mode
-              </Button>
+              <div className="flex flex-wrap justify-center gap-1">
+                <Button variant="ghost" onClick={() => connect(true)}>
+                  Try demo mode
+                </Button>
+                <Button variant="ghost" className="text-muted-foreground" onClick={() => useDiagnostics.getState().show('devices')}>
+                  Not detected? Diagnostics
+                </Button>
+              </div>
             </>
           )}
         </CardContent>

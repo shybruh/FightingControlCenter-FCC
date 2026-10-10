@@ -3,8 +3,9 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
-import { MC_IDS, RK_PRODUCT_IDS, RY_VENDOR_IDS } from '../devices/registry'
+import { MC_IDS, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
 import type { McExpect, McTransport } from './mc'
+import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export function isTauri(): boolean {
@@ -15,6 +16,8 @@ interface DeviceInfo {
   name: string
   vendor_id: number
   product_id: number
+  /** RK: the collections opened on the configuration interface */
+  collections?: string[]
 }
 
 /** Desktop transport: native hidapi in the Rust backend (src-tauri/src/hid.rs). */
@@ -116,11 +119,11 @@ export class TauriRyTransport implements RyTransport {
   }
 
   static available(): Promise<boolean> {
-    return invoke<boolean>('ry_available', { vendors: RY_VENDOR_IDS })
+    return invoke<boolean>('ry_available', { ids: RY_IDS })
   }
 
   static async open(): Promise<TauriRyTransport> {
-    const info = await invoke<DeviceInfo>('ry_open', { vendors: RY_VENDOR_IDS })
+    const info = await invoke<DeviceInfo>('ry_open', { ids: RY_IDS })
     const t = new TauriRyTransport(info)
     t.unlisten = await listen('ry-disconnected', () => t.disconnects.emit())
     return t
@@ -162,6 +165,7 @@ export class TauriRkTransport implements FeatureTransport {
 
   static async open(): Promise<TauriRkTransport> {
     const info = await invoke<DeviceInfo>('rk_open', { products: RK_PRODUCT_IDS })
+    log.info('rk', `opened ${info.collections?.length ?? 0} collection(s) on the configuration interface`, info.collections)
     const t = new TauriRkTransport(info)
     t.unlisten = await listen('rk-disconnected', () => t.disconnects.emit())
     return t

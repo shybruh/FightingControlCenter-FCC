@@ -5,6 +5,12 @@
 - **MCHOSE magnetic boards** (ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87 …, 28 models): lighting, per-key RGB,
   keymap, actuation, rapid trigger, mod-tap, toggle, macros and settings, with each board's real layout. Untested so far.
 - Royal Kludge: a known M75 is picked over other devices that share the Sinowealth USB vendor id.
+- Royal Kludge (Windows): settings go to whichever collection of the config interface accepts them.
+- **Diagnostics** (connect page → *Not detected? Diagnostics*, or Settings → *Diagnostics*):
+  - *Devices*: every HID device and collection the PC sees, the reports each one declares, and whether (and why) FCC
+    would use it. *Listen* shows a collection's live input reports. *Copy scan* for sharing.
+  - *Log*: a detailed, timestamped log of detection, connecting, reading, writing (every packet) and errors. Copy or save it.
+- RongYuan: only listed keyboards are picked up, never a RongYuan mouse or receiver.
 
 ## 0.2.0
 

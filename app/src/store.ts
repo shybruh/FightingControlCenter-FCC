@@ -4,6 +4,8 @@ import { MockTransport } from './hid/mock'
 import { MockRkTransport, RkKeyboard } from './hid/rk'
 import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
 import { McKeyboard, MockMcTransport } from './hid/mc'
+import { errorText, log } from './diag/log'
+import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
 import { isTauri } from './hid/tauri'
@@ -206,6 +208,7 @@ export const useStore = create<State>((set, get) => {
       await kb.writeRegion(region, regions[region])
       if (region === 'rt') await kb.commit()
     } catch (e) {
+      log.error('write', `writing ${region} failed`, errorText(e))
       set({ error: `Write to ${region} failed: ${errMsg(e)}. Re-reading from keyboard.` })
       try {
         const fresh = await kb.readRegion(region)
@@ -242,15 +245,24 @@ export const useStore = create<State>((set, get) => {
 
   const loadDevice = async (source: Opened | KeyboardDriver, demo: boolean | string) => {
     set({ demo: !!demo, status: 'loading', loadProgress: 0, error: null })
+    if ('kind' in source) source = withLogging(source)
     // which model is this? a remembered choice wins over detection
     const id = 'kind' in source ? source.transport.identity : source.identity
     // RY boards say exactly which model they are
     let probe: RyProbe | undefined
     if ('kind' in source && source.kind === 'ry') probe = await RyKeyboard.probe(source.transport)
     else if (source instanceof RyKeyboard) probe = source.probe
+    if (probe) log.info('ry', `board reports model id ${probe.deviceId}, firmware 0x${probe.version.toString(16)}`)
     const det = detect(id.vendorId, id.productId, id.productName, probe?.deviceId)
     const remembered = deviceById(readJson<Record<string, string>>(CHOICES_KEY, {})[identityKey(id)])
     const device = demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : (remembered ?? det.device)
+    log.info('connect', `detected: ${device?.name ?? 'no model'}${det.certain ? ' (certain)' : ''}${remembered ? ' (remembered choice)' : ''}`, {
+      usb: id,
+      kind: 'kind' in source ? source.kind : 'existing driver',
+      candidates: det.candidates.map((d) => d.id),
+      device: device && { id: device.id, protocol: device.protocol, status: device.status },
+      demo,
+    })
     if ('kind' in source && source.kind === 'rk' && !device?.rk) {
       await source.transport.close()
       const usb = `${id.vendorId.toString(16).padStart(4, '0')}:${id.productId.toString(16).padStart(4, '0')}`
@@ -293,7 +305,12 @@ export const useStore = create<State>((set, get) => {
         set({ kb: null, regions: null, status: 'idle', error: 'Keyboard disconnected.' })
       }
     })
-    const regions = await kb.readAll((_, i, total) => set({ loadProgress: i / total }))
+    const started = performance.now()
+    const regions = await kb.readAll((region, i, total) => {
+      log.debug('connect', `reading ${region} (${i}/${total})`)
+      set({ loadProgress: i / total })
+    })
+    log.info('connect', `read the keyboard in ${Math.round(performance.now() - started)} ms`, Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, v.length])))
 
     if (!demo && device?.caps.readBack !== false) {
       const backup: Backup = {
@@ -343,6 +360,7 @@ export const useStore = create<State>((set, get) => {
     readOnly: false,
 
     async connect(demo = false) {
+      log.info('connect', demo ? `demo: ${demo === true ? 'Fighting68' : demo}` : 'connect requested')
       // let a background auto-connect finish first; it may already have found the keyboard
       if (reconnecting) await reconnecting
       if (!demo && get().status === 'ready') return
@@ -367,6 +385,7 @@ export const useStore = create<State>((set, get) => {
         await loadDevice(opened, demo)
       } catch (e) {
         await get().kb?.close().catch(() => undefined)
+        log.error('connect', 'connect failed', errorText(e))
         set({ status: 'idle', kb: null, error: `Could not connect: ${errMsg(e)}` })
       }
     },
@@ -627,5 +646,16 @@ export const useStore = create<State>((set, get) => {
       set({ toast: msg })
       toastTimer = setTimeout(() => set({ toast: null }), 2500)
     },
+  }
+})
+
+// every error the app shows, every status change and every write the app makes, in the diagnostic log
+useStore.subscribe((s, prev) => {
+  if (s.error && s.error !== prev.error) log.error('app', s.error)
+  if (s.status !== prev.status) log.info('app', `status: ${prev.status} → ${s.status}`)
+  if (s.device !== prev.device && s.device) log.info('app', `model: ${s.device.name} (${s.device.id}, ${s.device.protocol})`)
+  if (s.readOnly !== prev.readOnly) log.info('app', s.readOnly ? 'read-only (untested board)' : 'changes allowed')
+  if (s.regions && prev.regions && s.regions !== prev.regions && s.kb === prev.kb) {
+    for (const k of Object.keys(s.regions) as (keyof typeof s.regions)[]) if (s.regions[k] !== prev.regions[k]) log.debug('write', `${k} changed in the app`)
   }
 })

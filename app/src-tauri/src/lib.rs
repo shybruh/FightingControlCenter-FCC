@@ -4,6 +4,7 @@ mod mc;
 mod osd;
 mod portable;
 mod rk;
+mod scan;
 mod ry;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -29,6 +30,7 @@ pub fn run() {
     .manage(rk::RkState::default())
     .manage(ry::RyState::default())
     .manage(mc::McState::default())
+    .manage(scan::ScanState::default())
     .invoke_handler(tauri::generate_handler![
       hid::hid_available,
       hid::hid_open,
@@ -52,6 +54,9 @@ pub fn run() {
       mc::mc_open,
       mc::mc_request,
       mc::mc_close,
+      scan::hid_scan,
+      scan::scan_listen,
+      scan::scan_stop,
     ])
     .on_window_event(|window, event| {
       if window.label() != "main" {

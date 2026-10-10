@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { DownloadIcon, RefreshCwIcon, SparklesIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { BugIcon, DownloadIcon, RefreshCwIcon, SparklesIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +23,7 @@ import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
 import { ReportButton } from './ReportDialog'
+import { useDiagnostics } from './Diagnostics'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
@@ -181,6 +182,10 @@ function DeviceCard({ children }: { children: ReactNode }) {
           </Button>
           <ReportButton variant="ghost" />
           <IntroButton />
+          <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
+            <BugIcon data-icon="inline-start" />
+            Diagnostics
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -30,25 +30,26 @@ pub struct RyInfo {
     product_id: u16,
 }
 
-fn find<'a>(api: &'a HidApi, vendors: &[u16]) -> Option<&'a hidapi::DeviceInfo> {
+/// Only listed keyboards: RongYuan mice and receivers expose the same collection.
+fn find<'a>(api: &'a HidApi, ids: &[(u16, u16)]) -> Option<&'a hidapi::DeviceInfo> {
     api.device_list()
-        .find(|d| vendors.contains(&d.vendor_id()) && d.usage_page() == USAGE_PAGE && d.usage() == USAGE)
+        .find(|d| ids.contains(&(d.vendor_id(), d.product_id())) && d.usage_page() == USAGE_PAGE && d.usage() == USAGE)
 }
 
 #[tauri::command]
-pub fn ry_available(vendors: Vec<u16>) -> Result<bool, String> {
+pub fn ry_available(ids: Vec<(u16, u16)>) -> Result<bool, String> {
     let api = HidApi::new().map_err(|e| e.to_string())?;
-    Ok(find(&api, &vendors).is_some())
+    Ok(find(&api, &ids).is_some())
 }
 
 #[tauri::command]
-pub fn ry_open(app: AppHandle, state: State<RyState>, vendors: Vec<u16>) -> Result<RyInfo, String> {
+pub fn ry_open(app: AppHandle, state: State<RyState>, ids: Vec<(u16, u16)>) -> Result<RyInfo, String> {
     let mut slot = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(old) = slot.take() {
         old.stop.store(true, Ordering::Relaxed);
     }
     let api = HidApi::new().map_err(|e| e.to_string())?;
-    let info = find(&api, &vendors).ok_or("Keyboard not found. Is it plugged in with the USB cable?")?;
+    let info = find(&api, &ids).ok_or("Keyboard not found. Is it plugged in with the USB cable?")?;
     let device = info.open_device(&api).map_err(|e| format!("Could not open keyboard: {e}"))?;
     let out = RyInfo {
         name: info.product_string().unwrap_or("").to_string(),

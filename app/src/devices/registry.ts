@@ -593,6 +593,9 @@ export const RY_USAGE_PAGE = 0xffff
 export const RY_USAGE = 0x02
 export const RY_VENDOR_IDS = [...new Set(RY_DEVICES.map((d) => d.vendorId))]
 export const RY_FILTERS = RY_VENDOR_IDS.map((vendorId) => ({ vendorId, usagePage: RY_USAGE_PAGE, usage: RY_USAGE }))
+/** RongYuan mice and receivers share the vendor id and the config collection: only listed keyboards count */
+export const RY_IDS = [...new Map(RY_DEVICES.map((d) => [`${d.vendorId}:${d.productId}`, [d.vendorId, d.productId] as const])).values()]
+export const isRyId = (vendorId: number, productId: number) => RY_IDS.some(([v, p]) => v === vendorId && p === productId)
 
 /** MCHOSE boards talk on a generic-desktop collection with usage 0. */
 export const MC_USAGE_PAGE = 0x0001
