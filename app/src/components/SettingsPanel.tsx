@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DownloadIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, RefreshCwIcon, SparklesIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,7 @@ import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
+import { ReportButton } from './ReportDialog'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
@@ -77,11 +78,13 @@ function RkSettingsPanel() {
             {device.vendorId.toString(16).padStart(4, '0')}:{device.productId.toString(16).padStart(4, '0')}
           </Stat>
           <Separator />
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={pushProfile}>
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
+            <ReportButton variant="ghost" />
+            <IntroButton />
           </div>
         </CardContent>
       </Card>
@@ -164,6 +167,8 @@ function SonixSettingsPanel() {
                 <RefreshCwIcon data-icon="inline-start" />
                 Re-read from keyboard
               </Button>
+              <ReportButton variant="ghost" />
+              <IntroButton />
             </div>
           </CardContent>
         </Card>
@@ -202,6 +207,16 @@ function SonixSettingsPanel() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function IntroButton() {
+  const openIntro = useStore((s) => s.openIntro)
+  return (
+    <Button variant="ghost" onClick={openIntro}>
+      <SparklesIcon data-icon="inline-start" />
+      Show intro
+    </Button>
   )
 }
 

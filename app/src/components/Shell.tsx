@@ -41,6 +41,7 @@ import { PageScroll } from './ScrollArea'
 import { StatusDot } from './StatusDot'
 import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
 import { SettingsPanel } from './SettingsPanel'
+import { Onboarding } from './Onboarding'
 
 interface Page {
   /** capability the board needs for this page */
@@ -48,17 +49,19 @@ interface Page {
   id: string
   label: string
   icon: LucideIcon
+  /** one line for the intro tour */
+  blurb: string
   render(): ReactNode
 }
 
 const PAGES: Page[] = [
-  { id: 'performance', label: 'Performance', icon: GaugeIcon, needs: 'performance', render: () => <PerformancePanel /> },
-  { id: 'lighting', label: 'Lighting', icon: SunIcon, render: () => <LightingPanel /> },
-  { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, render: () => <KeymapPanel /> },
-  { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', render: () => <AdvancedPanel /> },
-  { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', render: () => <MacroPanel /> },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon, render: () => <SettingsPanel /> },
-  ...(isTauri() ? [{ id: 'desktop', label: 'Desktop', icon: MonitorIcon, render: () => <DesktopPanel /> }] : []),
+  { id: 'performance', label: 'Performance', icon: GaugeIcon, needs: 'performance', blurb: 'Actuation, rapid trigger and live key travel', render: () => <PerformancePanel /> },
+  { id: 'lighting', label: 'Lighting', icon: SunIcon, blurb: 'Effects, colours and per-key lighting', render: () => <LightingPanel /> },
+  { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, blurb: 'Remap keys, media keys and shortcuts', render: () => <KeymapPanel /> },
+  { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', blurb: 'DKS, mod-tap, toggle and SOCD', render: () => <AdvancedPanel /> },
+  { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', blurb: 'Record and edit macros', render: () => <MacroPanel /> },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon, blurb: 'Model, keyboard options, backup and reports', render: () => <SettingsPanel /> },
+  ...(isTauri() ? [{ id: 'desktop', label: 'Desktop', icon: MonitorIcon, blurb: 'Tray, hotkeys, start with Windows, per-game profiles', render: () => <DesktopPanel /> }] : []),
 ]
 
 const COLLAPSED_KEY = 'fcc.sidebar.collapsed'
@@ -96,6 +99,7 @@ export function Main() {
         <TopBar title={current.label} />
         <ReadOnlyBanner />
         <DeviceChoiceDialog />
+      <Onboarding pages={pages} />
         <PageScroll resetKey={current.id}>
           <div key={current.id} className="page-enter mx-auto w-full max-w-6xl p-4 pb-16 md:p-6 md:pb-16">
             {current.render()}

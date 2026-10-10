@@ -1,0 +1,4 @@
+{
+  "note": "Boards confirmed working from board reports. Add an id here to mark it verified (tools/report/decode.js --verify does it for you).",
+  "verified": ["fighting68"]
+}

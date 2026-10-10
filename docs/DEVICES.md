@@ -14,7 +14,7 @@ Tested end to end on real hardware.
 
 ## Untested (135)
 
-Wired boards that speak the same protocol. FCC detects them, reads and backs up their settings, and opens them **read-only** until you choose *Allow changes*. If yours works (or doesn't), please open an issue so it can be marked verified.
+Wired boards that speak the same protocol. FCC detects them, reads and backs up their settings, and opens them **read-only** until you choose *Allow changes*. If yours works (or doesn't), send a report from the app (*Settings → Report this keyboard*) so it can be marked verified.
 
 | Model | USB id | Travel | Rapid trigger |
 |---|---|---|---|

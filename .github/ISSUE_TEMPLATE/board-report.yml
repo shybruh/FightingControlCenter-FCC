@@ -1,0 +1,18 @@
+name: Board report
+description: Tell us how FCC works on your keyboard. Create it from the app with "Report this keyboard".
+title: "Board report: "
+labels: ["board report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! In FCC, open **Settings → Report this keyboard** (or the button on the yellow banner) and
+        press **Open GitHub issue**. If the box below is empty, the report is on your clipboard: paste it in.
+        Then tick what worked and describe anything that didn't.
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: The report from FCC, including the "Raw data" section at the end.
+    validations:
+      required: true

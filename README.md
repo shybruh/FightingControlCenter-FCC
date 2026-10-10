@@ -2,8 +2,9 @@
 
 # Fighting Control Center
 
-**A fast, modern configurator for hall-effect keyboards.**
-Built for the Fekker × VTER **Fighting68 HE**, with support for ~150 Sonix-based HE boards and the Royal Kludge **M75**.
+**A fast, modern configurator for Hall-effect keyboards with Sonix chips.**
+Works with ~135 wired boards from MCHOSE, AULA, Ajazz, Epomaker and more.
+Tested end to end on the Fekker × VTER **Fighting68 HE** so far: [report yours](#report-your-keyboard) to get it verified.
 
 Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
 
@@ -17,8 +18,8 @@ Windows desktop app (Tauri, ~2 MB) and a web version (Chrome / Edge)
 
 ## Why
 
-The official VTER web driver works, but it's slow, cluttered and easy to get lost in. FCC is a from-scratch
-replacement: the same keyboard protocol (reverse-engineered and documented in [docs/PROTOCOL.md](docs/PROTOCOL.md)),
+Most Sonix-based HE keyboards are configured through the same official web driver. It works, but it's slow, cluttered
+and easy to get lost in. FCC is a from-scratch replacement: the same keyboard protocol (reverse-engineered and documented in [docs/PROTOCOL.md](docs/PROTOCOL.md)),
 wrapped in a clean, dark, keyboard-first UI, plus the things a desktop app should have: profiles you can switch
 mid-game, a tray icon, hotkeys and per-game auto-switching.
 
@@ -88,13 +89,21 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 |---|---|---|
 | ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Tested end to end on real hardware |
 | ⚠️ Untested | 135 wired boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, Royal Kludge RK-series, MCHOSE, Looting, QSENN, Epomaker HE80, LEOBOG… | Detected automatically; open **read-only** until you choose *Allow changes* |
-| 🧪 Untested | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
+| 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
-The HE boards use the same Sonix-based firmware behind the official driver, so they *should* work. The M75 uses Royal
-Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)); its packets match existing open-source RK tools byte for byte. The full list with
-USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. If you try FCC on one of them, please open an
-issue saying whether it worked so it can be marked verified.
+The HE boards use the same Sonix-based firmware behind the official driver, so they *should* work. The full list with
+USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. The M75 is a side project for a non-HE board
+that speaks Royal Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)).
+
+## Report your keyboard
+
+Tried FCC on a board that isn't verified yet? In the app, open **Settings → Report this keyboard** (or use the button
+on the yellow banner) and press **Open GitHub issue**. The report holds what's needed to verify or fix your board:
+USB id, firmware and the settings read from it (macro contents are left out). Tick what worked, add notes, submit.
+
+For maintainers: `node tools/report/decode.js <issue.md>` summarises a report, `--dump <dir>` extracts the raw
+regions and `--verify` marks the board verified in `app/src/devices/verified.json`.
 
 ## Install
 
@@ -108,8 +117,8 @@ The installer isn't code-signed yet, so SmartScreen may warn you: *More info →
 Requirements: Node.js 20+, and for the desktop app, Rust and the Microsoft C++ build tools.
 
 ```bash
-git clone https://github.com/shybruh/FightingControlCenter.git
-cd FightingControlCenter
+git clone https://github.com/shybruh/FightingControlCenter---FCC.git
+cd FightingControlCenter---FCC
 npm --prefix app install
 
 npm --prefix app run dev              # web version on http://localhost:5174
@@ -140,6 +149,7 @@ app/src/components/ pages and UI
 app/src-tauri/      desktop shell: native HID bridge, tray, hotkeys, popup
 docs/               protocol notes (Sonix, Royal Kludge), supported devices, screenshots
 tools/catalog/      scripts that regenerate the device catalogue
+tools/report/       board report decoder
 ```
 
 ## Credits

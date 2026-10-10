@@ -14,6 +14,7 @@ pub fn run() {
   tauri::Builder::default()
     // must be first: a second launch just brings the running window forward
     .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| desktop::show_main(app)))
+    .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_autostart::init(
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -31,6 +32,7 @@ pub fn run() {
       desktop::set_tray_profiles,
       desktop::set_close_to_tray,
       desktop::list_window_apps,
+      desktop::open_project_page,
       osd::show_osd,
       rk::rk_available,
       rk::rk_open,

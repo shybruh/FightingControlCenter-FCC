@@ -34,6 +34,12 @@ interface State {
   autoConnect: boolean
   kb: KeyboardDriver | null
   regions: RegionData | null
+  /** settings exactly as read when the keyboard connected (for board reports) */
+  readAtConnect: RegionData | null
+  /** first-run walkthrough */
+  introOpen: boolean
+  openIntro(): void
+  closeIntro(): void
   loadProgress: number
   pendingWrites: number
   error: string | null
@@ -106,6 +112,14 @@ function writeJson(key: string, value: unknown) {
 }
 const identityKey = (i: DeviceIdentity) => `${i.vendorId}:${i.productId}:${i.productName}`
 const BACKUPS_KEY = 'fcc.backups.v1'
+const INTRO_KEY = 'fcc.introSeen.v1'
+const introSeen = () => {
+  try {
+    return localStorage.getItem(INTRO_KEY) === '1'
+  } catch {
+    return true
+  }
+}
 const WRITE_DEBOUNCE_MS = 120
 
 function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null } {
@@ -157,6 +171,8 @@ let switchChain: Promise<void> = Promise.resolve()
 const timers = new Map<RegionName, ReturnType<typeof setTimeout>>()
 const inflight = new Set<Promise<unknown>>()
 let toastTimer: ReturnType<typeof setTimeout> | undefined
+/** the auto-connect attempt in flight, if any */
+let reconnecting: Promise<void> | null = null
 
 export const useStore = create<State>((set, get) => {
   const initial = loadProfiles()
@@ -273,7 +289,12 @@ export const useStore = create<State>((set, get) => {
     }
 
     adoptKeyboard(regions)
-    set({ regions, status: 'ready', loadProgress: 1 })
+    set({
+      regions,
+      readAtConnect: device?.caps.readBack === false ? null : Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, v.slice()])) as RegionData,
+      status: 'ready',
+      loadProgress: 1,
+    })
   }
 
   /** Blocks keyboard writes while read-only; returns true when blocked. */
@@ -289,6 +310,8 @@ export const useStore = create<State>((set, get) => {
     autoConnect: true,
     kb: null,
     regions: null,
+    readAtConnect: null,
+    introOpen: !introSeen(),
     loadProgress: 0,
     pendingWrites: 0,
     error: null,
@@ -299,6 +322,9 @@ export const useStore = create<State>((set, get) => {
     readOnly: false,
 
     async connect(demo = false) {
+      // let a background auto-connect finish first; it may already have found the keyboard
+      if (reconnecting) await reconnecting
+      if (!demo && get().status === 'ready') return
       set({ status: 'connecting', error: null, autoConnect: !demo })
       try {
         const demoDevice = typeof demo === 'string' ? deviceById(demo) : undefined
@@ -320,15 +346,23 @@ export const useStore = create<State>((set, get) => {
       }
     },
 
-    async tryReconnect() {
-      if (get().status !== 'idle') return
-      try {
-        // Desktop: connect whenever the keyboard is plugged in. Browser: only to an already-authorised device.
-        const opened = isTauri() ? await openDesktop() : await reconnectKeyboard()
-        if (opened) await loadDevice(opened, false)
-      } catch {
-        set({ status: 'idle', kb: null })
-      }
+    tryReconnect() {
+      // one attempt at a time: status only leaves 'idle' once the device is open, and a cold first start can take
+      // longer than the auto-connect poll, which used to open (and load) the keyboard twice
+      if (get().status !== 'idle') return Promise.resolve()
+      reconnecting ??= (async () => {
+        try {
+          // Desktop: connect whenever the keyboard is plugged in. Browser: only to an already-authorised device.
+          const opened = isTauri() ? await openDesktop() : await reconnectKeyboard()
+          // the handle is shared with any newer connection, so a late result is dropped, not closed
+          if (opened && get().status === 'idle') await loadDevice(opened, false)
+        } catch {
+          set({ status: 'idle', kb: null })
+        } finally {
+          reconnecting = null
+        }
+      })()
+      return reconnecting
     },
 
     async disconnect() {
@@ -495,6 +529,19 @@ export const useStore = create<State>((set, get) => {
       applyDevice(device)
       if (regions) adoptKeyboard(regions)
       set({ deviceChoices: null })
+    },
+
+    openIntro() {
+      set({ introOpen: true })
+    },
+
+    closeIntro() {
+      try {
+        localStorage.setItem(INTRO_KEY, '1')
+      } catch {
+        /* shown again next time */
+      }
+      set({ introOpen: false })
     },
 
     async pushProfile() {

@@ -214,3 +214,15 @@ mod win {
         Vec::new()
     }
 }
+
+/// Only pages of FCC's own GitHub repo (issues, releases) may be opened from the app.
+const PROJECT_URL: &str = "https://github.com/shybruh/FightingControlCenter---FCC/";
+
+#[tauri::command]
+pub fn open_project_page(app: AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    if !url.starts_with(PROJECT_URL) {
+        return Err("only FCC's GitHub pages can be opened".into());
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+}

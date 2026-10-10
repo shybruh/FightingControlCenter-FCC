@@ -62,6 +62,6 @@
     "android": {
       "debugApplicationIdSuffix": ".debug"
     },
-    "shortDescription": "Configurator for the Fighting68 HE keyboard"
+    "shortDescription": "Configurator for Sonix-based Hall-effect keyboards"
   }
 }

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { DeviceDef } from '../devices/registry'
 import { useStore } from '../store'
+import { ReportButton } from './ReportDialog'
 
 export function StatusBadge({ status }: { status: DeviceDef['status'] }) {
   if (status === 'verified') return <Badge className="bg-emerald-500/15 text-emerald-400">Verified</Badge>
@@ -34,12 +35,15 @@ export function ReadOnlyBanner() {
         <span className="font-medium text-foreground">{device ? `${device.name} hasn't been tested with FCC yet.` : 'Unknown keyboard.'}</span>{' '}
         {writeOnly
           ? "It can't report its settings, so FCC shows your saved profile. Changes are off until you allow them; the protocol matches existing Royal Kludge tools, so it should work. Tell us if it does!"
-          : 'Its settings are read and backed up, but changes are off until you allow them. It uses the same protocol as the Fighting68, so it should work. Tell us if it does!'}
+          : 'Its settings are read and backed up, but changes are off until you allow them. It uses the same protocol as the boards FCC is tested on, so it should work. Tell us if it does!'}
       </span>
       {device && (
-        <Button size="sm" variant="outline" onClick={allowWrites}>
-          Allow changes
-        </Button>
+        <div className="flex gap-2">
+          <ReportButton size="sm" variant="ghost" />
+          <Button size="sm" variant="outline" onClick={allowWrites}>
+            Allow changes
+          </Button>
+        </div>
       )}
     </div>
   )

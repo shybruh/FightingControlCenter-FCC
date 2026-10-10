@@ -9,10 +9,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { isTauri } from './hid/tauri'
 import { webHidSupported } from './hid/transport'
-import { RK_DEVICES } from './devices/registry'
 import { useStore } from './store'
-
-const RK_DEMO_ID = RK_DEVICES[0]?.id ?? ''
 import { useDesktopIntegration } from './desktop/integration'
 import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
@@ -64,7 +61,7 @@ function Connect() {
         <CardHeader>
           <BrandMark className="mb-2" />
           <CardTitle>Fighting Control Center</CardTitle>
-          <CardDescription>For the Fighting68 HE, other Sonix-based HE keyboards and the Royal Kludge M75</CardDescription>
+          <CardDescription>Configurator for Hall-effect keyboards with Sonix chips. Tested on the Fighting68 HE so far.</CardDescription>
           <CardAction>
             <StatusDot
               state={status === 'idle' ? 'offline' : 'busy'}
@@ -90,14 +87,9 @@ function Connect() {
                 {status === 'connecting' ? 'Waiting for permission…' : 'Connect keyboard'}
               </Button>
               {!supported && <p className="text-xs text-destructive">This browser has no WebHID. Use Chrome or Edge.</p>}
-              <div className="flex flex-wrap justify-center gap-1">
-                <Button variant="ghost" onClick={() => connect(true)}>
-                  Try demo mode
-                </Button>
-                <Button variant="ghost" className="text-muted-foreground" onClick={() => connect(RK_DEMO_ID)}>
-                  Demo: Royal Kludge M75
-                </Button>
-              </div>
+              <Button variant="ghost" onClick={() => connect(true)}>
+                Try demo mode
+              </Button>
             </>
           )}
         </CardContent>

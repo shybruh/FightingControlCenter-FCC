@@ -1,6 +1,6 @@
 // Device registry.
 // - Sonix HE boards: every keyboard the official VTER/driveall driver knows (catalog.json). Only the Fighting68 is
-//   verified; other wired boards share its protocol and are "untested"; wireless dongles are not supported yet.
+//   verified on real hardware so far (verified.json lists confirmed boards); other wired boards share its protocol and are "untested"; wireless dongles are not supported yet.
 // - Royal Kludge "legacy" boards (Sinowealth, VID 0x258a; rk-catalog.json): a different, write-only protocol with
 //   keymap and lighting only. Untested.
 
@@ -9,6 +9,11 @@ import { FIGHTING68_KEYS, setLayout, type KeyDef } from '../data/layout'
 import { SONIX_CUSTOM, SONIX_EFFECTS, setEffects, setRtLimits, type EffectDef, type RtLimits } from '../hid/codec'
 import catalog from './catalog.json'
 import rkCatalog from './rk-catalog.json'
+import verifiedList from './verified.json'
+
+/** boards confirmed working through board reports */
+const VERIFIED = new Set(verifiedList.verified)
+const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.has(id) ? 'verified' : status)
 
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
@@ -96,6 +101,7 @@ const data = catalog as unknown as { devices: SonixEntry[]; layouts: Record<stri
 
 const SONIX_DEVICES: DeviceDef[] = data.devices.map((d) => ({
   ...d,
+  status: statusOf(d.id, d.status),
   limits: { ...d.limits, actuationMin: 10, actuationMax: d.limits.travel },
   protocol: 'sonix' as const,
   caps: SONIX_CAPS,
@@ -126,7 +132,7 @@ export const RK_DEVICES: DeviceDef[] = RK_DATA.map((d) => ({
   layout: `rk:${d.id}`,
   fnLayout: null,
   transport: 'wired' as const,
-  status: 'untested' as const,
+  status: statusOf(d.id, 'untested'),
   // not a hall-effect board: travel limits are unused
   limits: { travel: 0, actuationMin: 0, actuationMax: 0, actuationDefault: 0, sensMin: 0, sensMax: 0, sensDefault: 0 },
   protocol: 'rk' as const,
