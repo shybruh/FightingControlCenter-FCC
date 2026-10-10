@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "desktop": "tauri dev",
-    "desktop:build": "tauri build"
+    "desktop:build": "tauri build",
+    "desktop:portable": "tauri build && node scripts/make-portable.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

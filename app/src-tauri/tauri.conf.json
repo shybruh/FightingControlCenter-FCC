@@ -13,6 +13,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Fighting Control Center",
         "width": 1280,
         "height": 860,
@@ -27,6 +28,7 @@
       },
       {
         "label": "osd",
+        "create": false,
         "url": "index.html?osd",
         "title": "FCC overlay",
         "width": 340,

@@ -1,6 +1,7 @@
 mod desktop;
 mod hid;
 mod osd;
+mod portable;
 mod rk;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -52,6 +53,7 @@ pub fn run() {
       }
     })
     .setup(|app| {
+      portable::create_windows(app)?;
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
