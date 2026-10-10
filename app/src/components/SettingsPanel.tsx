@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { DownloadIcon, RefreshCwIcon, SparklesIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { POLLING_RATES, decodeInfo, decodeSettings, encodeSettings, type Settings } from '../hid/codec'
 import { RK_SLEEP_BYTE, RK_SLEEP_DEFAULT } from '../hid/rk'
+import { RY_POLLING, RyKeyboard, decodeRySettings, encodeRySettings, type RySettings } from '../hid/ry'
 import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -24,8 +25,8 @@ import { ReportButton } from './ReportDialog'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
-  const rk = useStore((s) => s.device?.protocol === 'rk')
-  return rk ? <RkSettingsPanel /> : <SonixSettingsPanel />
+  const protocol = useStore((s) => s.device?.protocol)
+  return protocol === 'rk' ? <RkSettingsPanel /> : protocol === 'ry' ? <RySettingsPanel /> : <SonixSettingsPanel />
 }
 
 const RK_SLEEP = [
@@ -95,11 +96,6 @@ function RkSettingsPanel() {
 function SonixSettingsPanel() {
   const regions = useStore((s) => s.regions)!
   const update = useStore((s) => s.update)
-  const downloadBackup = useStore((s) => s.downloadBackup)
-  const factoryReset = useStore((s) => s.factoryReset)
-  const refresh = useStore((s) => s.refresh)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-
   const s = decodeSettings(regions.settings)
   const info = decodeInfo(regions.info)
   const set = (p: Partial<Settings>) => update('settings', encodeSettings(regions.settings, { ...s, ...p }))
@@ -143,68 +139,137 @@ function SonixSettingsPanel() {
       </Card>
 
       <div className="flex flex-col gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Device</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <ModelPicker />
-            <Separator />
-            <div className="flex flex-col gap-1.5">
-              <Stat label="Firmware">v{info.firmware}</Stat>
-              <Stat label="USB ID">
-                {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
-              </Stat>
-              <Stat label="Macro memory">{info.macroCapacity} bytes</Stat>
-            </div>
-            <Separator />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={downloadBackup}>
-                <DownloadIcon data-icon="inline-start" />
-                Download full backup
-              </Button>
-              <Button variant="ghost" onClick={refresh}>
-                <RefreshCwIcon data-icon="inline-start" />
-                Re-read from keyboard
-              </Button>
-              <ReportButton variant="ghost" />
-              <IntroButton />
-            </div>
-          </CardContent>
-        </Card>
+        <DeviceCard>
+          <Stat label="Firmware">v{info.firmware}</Stat>
+          <Stat label="USB ID">
+            {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
+          </Stat>
+          <Stat label="Macro memory">{info.macroCapacity} bytes</Stat>
+        </DeviceCard>
+        <DangerCard />
+      </div>
+    </div>
+  )
+}
 
-        <Card className="border-destructive/40">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger zone</CardTitle>
-            <CardDescription>Wipes every setting on the keyboard: keymap, lighting, RT, macros. Saved profiles in this app are kept.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-              <AlertDialogTrigger render={<Button variant="destructive" />}>
-                <TriangleAlertIcon data-icon="inline-start" />
-                Factory reset keyboard
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Factory reset the keyboard?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your profiles in this app stay, so you can
-                    re-apply one afterwards.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction variant="destructive" onClick={() => {
-                      setConfirmOpen(false)
-                      factoryReset()
-                    }}>
-                    Factory reset
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
+/** Model, identity and the keyboard-wide actions. */
+function DeviceCard({ children }: { children: ReactNode }) {
+  const downloadBackup = useStore((s) => s.downloadBackup)
+  const refresh = useStore((s) => s.refresh)
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Device</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <ModelPicker />
+        <Separator />
+        <div className="flex flex-col gap-1.5">{children}</div>
+        <Separator />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={downloadBackup}>
+            <DownloadIcon data-icon="inline-start" />
+            Download full backup
+          </Button>
+          <Button variant="ghost" onClick={refresh}>
+            <RefreshCwIcon data-icon="inline-start" />
+            Re-read from keyboard
+          </Button>
+          <ReportButton variant="ghost" />
+          <IntroButton />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function DangerCard() {
+  const factoryReset = useStore((s) => s.factoryReset)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  return (
+    <Card className="border-destructive/40">
+      <CardHeader>
+        <CardTitle className="text-destructive">Danger zone</CardTitle>
+        <CardDescription>Wipes every setting on the keyboard: keymap, lighting, RT, macros. Saved profiles in this app are kept.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogTrigger render={<Button variant="destructive" />}>
+            <TriangleAlertIcon data-icon="inline-start" />
+            Factory reset keyboard
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Factory reset the keyboard?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your profiles in this app stay, so you can
+                re-apply one afterwards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                onClick={() => {
+                  setConfirmOpen(false)
+                  factoryReset()
+                }}
+              >
+                Factory reset
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
+  )
+}
+
+const RT_STABILITY = [0, 1, 2, 3, 4, 5].map((v) => ({ value: v, label: v ? `${v * 25} ms` : 'Off' }))
+
+/** RongYuan RY5088 boards (MonsGeek FUN60 …). */
+function RySettingsPanel() {
+  const regions = useStore((s) => s.regions)!
+  const update = useStore((s) => s.update)
+  const kb = useStore((s) => s.kb)
+  const s = decodeRySettings(regions.settings)
+  const info = decodeInfo(regions.info)
+  const set = (p: Partial<RySettings>) => update('settings', encodeRySettings(regions.settings, { ...s, ...p }))
+  const probe = kb instanceof RyKeyboard ? kb.probe : null
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyboard</CardTitle>
+          <CardDescription>Global settings, shared by every profile.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Field label="Polling rate">
+            <Segmented value={s.polling} options={RY_POLLING} onChange={(v) => set({ polling: v })} />
+          </Field>
+          <Field label="Debounce" value={`${s.debounce} ms`}>
+            <Slider min={0} max={20} value={s.debounce} onChange={(v) => set({ debounce: v })} />
+          </Field>
+          <Field label="Rapid trigger stability">
+            <Segmented value={s.rtStability} options={RT_STABILITY} onChange={(v) => set({ rtStability: v })} />
+          </Field>
+          <div className="flex flex-col">
+            <SwitchRow label="Anti-mistouch" checked={s.antiMistouch} onChange={(v) => set({ antiMistouch: v })} />
+            <SwitchRow label="Swap WASD and arrows" hint="Same as Fn + W on the keyboard." checked={s.wasdSwap} onChange={(v) => set({ wasdSwap: v })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col gap-4">
+        <DeviceCard>
+          <Stat label="Firmware">v{info.firmware}</Stat>
+          <Stat label="USB ID">
+            {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
+          </Stat>
+          {probe && <Stat label="Model ID">{probe.deviceId}</Stat>}
+        </DeviceCard>
+        <DangerCard />
       </div>
     </div>
   )
@@ -262,7 +327,10 @@ function ModelPicker() {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <p className="text-xs text-muted-foreground">Detected from the USB id and name. Change it if the layout looks wrong; each model keeps its own profiles.</p>
+      <p className="text-xs text-muted-foreground">
+        {device?.protocol === 'ry' ? 'Reported by the keyboard itself.' : 'Detected from the USB id and name.'} Change it if the layout looks
+        wrong; each model keeps its own profiles.
+      </p>
     </div>
   )
 }

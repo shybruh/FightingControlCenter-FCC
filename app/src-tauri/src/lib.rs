@@ -3,6 +3,7 @@ mod hid;
 mod osd;
 mod portable;
 mod rk;
+mod ry;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{Manager, WindowEvent};
@@ -25,6 +26,7 @@ pub fn run() {
     .manage(desktop::CloseToTray(AtomicBool::new(true)))
     .manage(osd::OsdGeneration::default())
     .manage(rk::RkState::default())
+    .manage(ry::RyState::default())
     .invoke_handler(tauri::generate_handler![
       hid::hid_available,
       hid::hid_open,
@@ -39,6 +41,11 @@ pub fn run() {
       rk::rk_open,
       rk::rk_send_feature,
       rk::rk_close,
+      ry::ry_available,
+      ry::ry_open,
+      ry::ry_send,
+      ry::ry_receive,
+      ry::ry_close,
     ])
     .on_window_event(|window, event| {
       if window.label() != "main" {

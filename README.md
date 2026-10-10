@@ -2,8 +2,8 @@
 
 # Fighting Control Center
 
-**A fast, modern configurator for Hall-effect keyboards with Sonix chips.**
-Works with ~135 wired boards from MCHOSE, AULA, Ajazz, Epomaker and more.
+**A fast, modern configurator for Hall-effect keyboards.**
+Works with ~135 Sonix-based boards (MCHOSE, AULA, Ajazz, Epomaker …) and ~280 RongYuan-based ones (MonsGeek FUN60, FUN68, M1 V5 HE, Akko …).
 Tested end to end on the Fekker × VTER **Fighting68 HE** so far: [report yours](#report-your-keyboard) to get it verified.
 
 Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
@@ -89,10 +89,12 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 |---|---|---|
 | ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Tested end to end on real hardware |
 | ⚠️ Untested | 135 wired boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, Royal Kludge RK-series, MCHOSE, Looting, QSENN, Epomaker HE80, LEOBOG… | Detected automatically; open **read-only** until you choose *Allow changes* |
+| ⚠️ Untested | 285 RongYuan RY5088 boards: **MonsGeek FUN60** / FUN68 / M1 V5 HE, Akko MOD007B HE, … | Every feature, over MonsGeek's own protocol. The board reports its exact model. Read-only until *Allow changes* |
 | 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
-The HE boards use the same Sonix-based firmware behind the official driver, so they *should* work. The full list with
+The Sonix boards use the same firmware family as the Fighting68, and the RongYuan boards follow MonsGeek's own driver
+([docs/PROTOCOL-RY.md](docs/PROTOCOL-RY.md)), so they *should* work. The full list with
 USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. The M75 is a side project for a non-HE board
 that speaks Royal Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)).
 
@@ -151,17 +153,18 @@ app/src/hid/        protocol, transports (WebHID / Tauri / demo), device queue, 
 app/src/devices/    keyboard catalogue + detection
 app/src/components/ pages and UI
 app/src-tauri/      desktop shell: native HID bridge, tray, hotkeys, popup
-docs/               protocol notes (Sonix, Royal Kludge), supported devices, screenshots
+docs/               protocol notes (Sonix, RongYuan, Royal Kludge), supported devices, screenshots
 tools/catalog/      scripts that regenerate the device catalogue
 tools/report/       board report decoder
 ```
 
 ## Credits
 
-The Royal Kludge packet layout was learned from the open-source projects **Rangoli** and **Kludge Knight**; FCC's
-implementation is its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
+The RongYuan protocol notes of **monsgeek-akko-linux** were the starting point for the RY5088 driver, checked against
+MonsGeek's web driver. The Royal Kludge packet layout was learned from the open-source projects **Rangoli** and
+**Kludge Knight**. FCC's implementations are its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
 
 ## Disclaimer
 
-Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, Royal Kludge or any keyboard
+Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, Royal Kludge or any keyboard
 brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.

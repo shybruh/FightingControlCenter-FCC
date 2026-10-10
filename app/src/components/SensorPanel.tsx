@@ -33,6 +33,8 @@ const mm = (v: number) => (v / 100).toFixed(2)
 export function SensorPanel() {
   const kb = useStore((s) => s.kb)
   const readOnly = useStore((s) => s.readOnly)
+  // RY boards report travel without entering calibration
+  const calibrates = useStore((s) => s.device?.protocol !== 'ry')
   const rt = useStore((s) => s.regions!.rt)
   const [active, setActive] = useState(false)
   const [snap, setSnap] = useState<Map<number, KeyLive>>(new Map())
@@ -88,11 +90,13 @@ export function SensorPanel() {
   return (
     <Card className="lg:col-span-2">
       <CardHeader>
-        <CardTitle>Live key travel &amp; calibration</CardTitle>
+        <CardTitle>{calibrates ? 'Live key travel & calibration' : 'Live key travel'}</CardTitle>
         <CardDescription>
-          {active
-            ? 'Press keys to see their travel. Press each key fully to recalibrate it.'
-            : 'Live per-key travel in 0.01 mm. Runs in calibration mode, so it also recalibrates the keys you press fully.'}
+          {!calibrates
+            ? 'Live per-key travel in 0.01 mm. Press keys to see how far they go.'
+            : active
+              ? 'Press keys to see their travel. Press each key fully to recalibrate it.'
+              : 'Live per-key travel in 0.01 mm. Runs in calibration mode, so it also recalibrates the keys you press fully.'}
         </CardDescription>
         <CardAction>
           {active ? (
@@ -112,8 +116,9 @@ export function SensorPanel() {
       <CardContent className="flex flex-col gap-5">
         {!active ? (
           <p className="text-xs text-muted-foreground">
-            The keyboard only reports travel in calibration mode. Stopping saves calibration, which only ever keeps the deepest press per key, so just
-            looking can't make it worse. Typing in this window is paused while it runs.
+            {calibrates
+              ? "The keyboard only reports travel in calibration mode. Stopping saves calibration, which only ever keeps the deepest press per key, so just looking can't make it worse. Typing in this window is paused while it runs."
+              : 'Typing in this window is paused while it runs.'}
           </p>
         ) : (
           <div className="swap-in flex flex-col gap-5">

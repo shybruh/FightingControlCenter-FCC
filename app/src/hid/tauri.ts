@@ -2,6 +2,8 @@ import { Channel, invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
+import type { RyTransport } from './ry'
+import { RY_VENDOR_IDS } from '../devices/registry'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export function isTauri(): boolean {
@@ -60,6 +62,47 @@ export class TauriTransport implements Transport {
   async close() {
     this.unlisten?.()
     await invoke('hid_close')
+  }
+}
+
+/** Desktop transport for RongYuan RY5088 boards: feature report 0 through the Rust bridge (src-tauri/src/ry.rs). */
+export class TauriRyTransport implements RyTransport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: DeviceInfo) {
+    this.name = info.name || 'Keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('ry_available', { vendors: RY_VENDOR_IDS })
+  }
+
+  static async open(): Promise<TauriRyTransport> {
+    const info = await invoke<DeviceInfo>('ry_open', { vendors: RY_VENDOR_IDS })
+    const t = new TauriRyTransport(info)
+    t.unlisten = await listen('ry-disconnected', () => t.disconnects.emit())
+    return t
+  }
+
+  sendReport(data: Uint8Array) {
+    return invoke<void>('ry_send', { data: Array.from(data) })
+  }
+
+  async receiveReport() {
+    return Uint8Array.from(await invoke<number[]>('ry_receive'))
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('ry_close')
   }
 }
 

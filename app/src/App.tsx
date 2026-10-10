@@ -61,7 +61,7 @@ function Connect() {
         <CardHeader>
           <BrandMark className="mb-2" />
           <CardTitle>Fighting Control Center</CardTitle>
-          <CardDescription>Configurator for Hall-effect keyboards with Sonix chips</CardDescription>
+          <CardDescription>Configurator for Hall-effect keyboards</CardDescription>
           <CardAction>
             <StatusDot
               state={status === 'idle' ? 'offline' : 'busy'}

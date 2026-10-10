@@ -99,6 +99,7 @@ function describe(e: AdvancedEntry): string {
 export function AdvancedPanel() {
   const regions = useStore((s) => s.regions)!
   const updateMany = useStore((s) => s.updateMany)
+  const kinds = useStore((s) => s.device?.caps.advanced)
   const [draft, setDraft] = useState<Draft | null>(null)
   const [picked, setPicked] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -247,7 +248,7 @@ export function AdvancedPanel() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                {ADVANCED_TYPES.map((t) => (
+                {ADVANCED_TYPES.filter((t) => !kinds || kinds.includes(t)).map((t) => (
                   <button
                     key={t}
                     className="lift flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm hover:bg-muted/50"
@@ -308,7 +309,7 @@ function Editor({ draft, setDraft }: { draft: Draft; setDraft(d: Draft): void })
       return (
         <PairKeys ids={draft.ids}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {SOCD_MODES.map((m) => (
+            {SOCD_MODES.filter((m) => useStore.getState().device?.caps.socdModes.includes(m.value) ?? true).map((m) => (
               <button
                 key={m.value}
                 className={cn(

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { Keyboard, type KeyboardDriver, type RegionData } from './hid/device'
 import { MockTransport } from './hid/mock'
 import { MockRkTransport, RkKeyboard } from './hid/rk'
+import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
 import { isTauri } from './hid/tauri'
@@ -242,19 +243,31 @@ export const useStore = create<State>((set, get) => {
     set({ demo: !!demo, status: 'loading', loadProgress: 0, error: null })
     // which model is this? a remembered choice wins over detection
     const id = 'kind' in source ? source.transport.identity : source.identity
-    const det = detect(id.vendorId, id.productId, id.productName)
+    // RY boards say exactly which model they are
+    let probe: RyProbe | undefined
+    if ('kind' in source && source.kind === 'ry') probe = await RyKeyboard.probe(source.transport)
+    else if (source instanceof RyKeyboard) probe = source.probe
+    const det = detect(id.vendorId, id.productId, id.productName, probe?.deviceId)
     const remembered = deviceById(readJson<Record<string, string>>(CHOICES_KEY, {})[identityKey(id)])
     const device = demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : (remembered ?? det.device)
     if ('kind' in source && source.kind === 'rk' && !device?.rk) {
       await source.transport.close()
       throw new Error("this Royal Kludge model isn't supported yet")
     }
+    if (probe && !device?.ry) {
+      if ('kind' in source) await source.transport.close()
+      throw new Error(`this keyboard (model ${probe.deviceId}) isn't in FCC's list yet. Please send a board report`)
+    }
     // the protocol decides the driver; the model decides layout and limits
     const kb: KeyboardDriver = !('kind' in source)
-      ? source
+      ? source instanceof RyKeyboard && source.model !== device
+        ? source.forDevice(device!)
+        : source
       : source.kind === 'sonix'
         ? new Keyboard(source.transport)
-        : new RkKeyboard(source.transport, device!)
+        : source.kind === 'rk'
+          ? new RkKeyboard(source.transport, device!)
+          : new RyKeyboard(source.transport, device!, probe!)
     set({ kb })
     applyDevice(device)
     const sameFamily = (d: DeviceDef) => d.transport === 'wired' && d.protocol === (device?.protocol ?? 'sonix')
@@ -330,7 +343,9 @@ export const useStore = create<State>((set, get) => {
         const demoDevice = typeof demo === 'string' ? deviceById(demo) : undefined
         const opened: Opened | null = demoDevice?.protocol === 'rk'
           ? { kind: 'rk', transport: new MockRkTransport(demoDevice) }
-          : demo
+          : demoDevice?.protocol === 'ry'
+            ? { kind: 'ry', transport: new MockRyTransport(demoDevice) }
+            : demo
             ? { kind: 'sonix', transport: new MockTransport() }
             : isTauri()
               ? await openDesktop()
@@ -526,9 +541,14 @@ export const useStore = create<State>((set, get) => {
         const choices = readJson<Record<string, string>>(CHOICES_KEY, {})
         writeJson(CHOICES_KEY, { ...choices, [identityKey(kb.identity)]: id })
       }
+      set({ deviceChoices: null })
+      // RY translation depends on the model's key matrix: read the board again as the chosen model
+      if (kb instanceof RyKeyboard) {
+        void get().refresh()
+        return
+      }
       applyDevice(device)
       if (regions) adoptKeyboard(regions)
-      set({ deviceChoices: null })
     },
 
     openIntro() {

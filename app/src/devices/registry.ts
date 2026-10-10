@@ -9,6 +9,7 @@ import { FIGHTING68_KEYS, setLayout, type KeyDef } from '../data/layout'
 import { SONIX_CUSTOM, SONIX_EFFECTS, setEffects, setRtLimits, type EffectDef, type RtLimits } from '../hid/codec'
 import catalog from './catalog.json'
 import rkCatalog from './rk-catalog.json'
+import ryCatalog from './ry-catalog.json'
 import verifiedList from './verified.json'
 
 /** boards confirmed working through board reports */
@@ -18,7 +19,9 @@ const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.h
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
 /** Which keyboard protocol a board speaks. */
-export type Protocol = 'sonix' | 'rk'
+export type Protocol = 'sonix' | 'rk' | 'ry'
+
+export type AdvancedKind = 'rs' | 'socd' | 'dks' | 'modtap' | 'toggle'
 
 /** What the app can do with a board; pages and controls follow these. */
 export interface Capabilities {
@@ -34,6 +37,12 @@ export interface Capabilities {
   sleepInLighting: boolean
   mouseBindings: boolean
   perKeyRgb: boolean
+  /** continuous RT, bottom optimisation and rampage switches */
+  rtFlags: boolean
+  /** advanced key types the firmware has */
+  advanced: AdvancedKind[]
+  /** SOCD resolution modes (see SOCD_MODES) */
+  socdModes: number[]
 }
 
 const SONIX_CAPS: Capabilities = {
@@ -45,6 +54,9 @@ const SONIX_CAPS: Capabilities = {
   sleepInLighting: false,
   mouseBindings: true,
   perKeyRgb: true,
+  rtFlags: true,
+  advanced: ['rs', 'socd', 'dks', 'modtap', 'toggle'],
+  socdModes: [3, 1, 2, 4],
 }
 const RK_CAPS: Capabilities = {
   readBack: false,
@@ -55,6 +67,24 @@ const RK_CAPS: Capabilities = {
   sleepInLighting: true,
   mouseBindings: false,
   perKeyRgb: true,
+  rtFlags: false,
+  advanced: [],
+  socdModes: [],
+}
+const RY_CAPS: Capabilities = {
+  readBack: true,
+  performance: true,
+  advancedKeys: true,
+  macros: true,
+  // the RY settings live on their own card
+  keyboardSettings: false,
+  sleepInLighting: false,
+  mouseBindings: true,
+  perKeyRgb: true,
+  rtFlags: false,
+  // snap tap is "last input wins"; there's no rappy-snappy
+  advanced: ['socd', 'dks', 'modtap', 'toggle'],
+  socdModes: [3],
 }
 
 export interface RkMode {
@@ -89,6 +119,31 @@ export interface DeviceDef {
   protocol: Protocol
   caps: Capabilities
   rk?: RkInfo
+  ry?: RyInfo
+}
+
+/** Lighting constants of an RY5088 model (they differ between model classes). */
+export interface RyLight {
+  /** mode index -> official mode name */
+  list: Record<string, string> | null
+  maxSpeed: number
+  /** option low nibble for rainbow ("dazzle") and single colour */
+  dazzle: number
+  normal: number
+  types: { type: string; options: number; rgb: boolean; dazzle: boolean; speed: boolean }[] | null
+}
+
+export interface RyInfo {
+  /** model id the board reports (command 0x8F) */
+  deviceId: number
+  /** key matrix positions */
+  positions: number
+  /** factory key matrix, 4 bytes per position */
+  matrix: Uint8Array
+  light: RyLight
+  maxMacro: number
+  /** onboard profiles */
+  profiles: number
 }
 
 // ---------- Sonix HE ----------
@@ -146,7 +201,79 @@ export const RK_DEVICES: DeviceDef[] = RK_DATA.map((d) => ({
   },
 }))
 
-export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES]
+// ---------- RongYuan RY5088 (MonsGeek FUN60 / FUN68 / M1 V5 HE, Akko …) ----------
+
+interface RyCatalog {
+  devices: {
+    id: number
+    name: string
+    displayName: string
+    company?: string
+    vendorId: number
+    productId: number
+    magnetism: boolean
+    layers: number
+    maxMacro?: number
+    travel?: { max?: number; min?: number; def?: number; step?: number; rtMin?: number; rtMax?: number }
+    matrix: number
+    positions: number
+    keys: number
+    light: number
+  }[]
+  /** sparse factory matrices: [position, b0, b1, b2, b3] */
+  matrices: [number, number, number, number, number][][]
+  /** [position, hid, x, y, w, h] */
+  layouts: RkKey[][]
+  lights: RyLight[]
+}
+const RY_DATA = ryCatalog as unknown as RyCatalog
+const RY_LAYOUTS = new Map<string, RkKey[]>()
+
+const ryMatrix = (sparse: [number, number, number, number, number][], positions: number) => {
+  const m = new Uint8Array(positions * 4)
+  for (const [p, a, b, c, d] of sparse) m.set([a, b, c, d], p * 4)
+  return m
+}
+
+export const RY_DEVICES: DeviceDef[] = RY_DATA.devices
+  .filter((d) => d.magnetism)
+  .map((d) => {
+    const id = `ry-${d.id}`
+    RY_LAYOUTS.set(id, RY_DATA.layouts[d.keys])
+    const t = d.travel ?? {}
+    const travel = Math.round((t.max ?? 3.4) * 100)
+    return {
+      id,
+      name: d.displayName,
+      vendorId: d.vendorId,
+      productId: d.productId,
+      layout: id,
+      fnLayout: null,
+      transport: 'wired' as const,
+      status: statusOf(id, 'untested'),
+      limits: {
+        travel,
+        actuationMin: Math.round((t.min ?? 0.1) * 100),
+        actuationMax: travel,
+        actuationDefault: Math.round((t.def ?? 2) * 100),
+        sensMin: Math.max(1, Math.round((t.rtMin ?? 0.01) * 100)),
+        sensMax: Math.round((t.rtMax ?? 2) * 100),
+        sensDefault: 30,
+      },
+      protocol: 'ry' as const,
+      caps: RY_CAPS,
+      ry: {
+        deviceId: d.id,
+        positions: d.positions,
+        matrix: ryMatrix(RY_DATA.matrices[d.matrix], d.positions),
+        light: RY_DATA.lights[d.light],
+        maxMacro: d.maxMacro ?? 50,
+        profiles: Math.max(1, d.layers),
+      },
+    }
+  })
+
+export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES]
 
 export const FIGHTING68 = DEVICES.find((d) => d.id === 'fighting68')!
 
@@ -169,8 +296,8 @@ const SHIFTED: Record<number, string> = {
 /** Key geometry for a device. The official Sonix data's HID codes have a few mistakes, so the browser key code wins. */
 export function layoutFor(device: DeviceDef): KeyDef[] {
   if (device.layout === 'fighting68-fcc') return FIGHTING68_KEYS
-  if (device.protocol === 'rk') {
-    return (RK_LAYOUTS.get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
+  if (device.protocol === 'rk' || device.protocol === 'ry') {
+    return ((device.protocol === 'rk' ? RK_LAYOUTS : RY_LAYOUTS).get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
       id: slot,
       label: LEGEND[hid] ?? hidName(hid),
       sub: SHIFTED[hid],
@@ -230,11 +357,65 @@ function rkEffects(rk: RkInfo): EffectDef[] {
     }))
 }
 
+/** RY5088 lighting modes: friendly name and the closest Fighting68 animation for the preview. */
+const RY_MODES: Record<string, [string, number]> = {
+  LightAlwaysOn: ['Static', 0x01],
+  LightBreath: ['Breathing', 0x07],
+  LightNeon: ['Neon', 0x08],
+  LightWave: ['Wave', 0x0b],
+  LightRipple: ['Ripple', 0x0f],
+  LightRaindrop: ['Raindrop', 0x05],
+  LightSnake: ['Snake', 0x0c],
+  LightPressAction: ['Reactive', 0x02],
+  LightConverage: ['Converge', 0x09],
+  LightSineWave: ['Sine wave', 0x0b],
+  LightKaleidoscope: ['Kaleidoscope', 0x06],
+  LightLineWave: ['Line wave', 0x10],
+  LightUserPicture: ['Custom per-key', SONIX_CUSTOM],
+  LightLaser: ['Laser', 0x0a],
+  LightCircleWave: ['Circle wave', 0x06],
+  LightDazzing: ['Rainbow', 0x08],
+  LightRainDown: ['Rain down', 0x12],
+  LightMeteor: ['Meteor', 0x12],
+  LightPressActionOff: ['Reactive off', 0x03],
+  LightTrain: ['Train', 0x13],
+  LightFireWorks: ['Fireworks', 0x0d],
+}
+/** RY5088 default mode list (models can override it). */
+const RY_LIGHT_LIST: Record<string, string> = Object.fromEntries(
+  ['LightOff', 'LightAlwaysOn', 'LightBreath', 'LightNeon', 'LightWave', 'LightRipple', 'LightRaindrop', 'LightSnake', 'LightPressAction',
+    'LightConverage', 'LightSineWave', 'LightKaleidoscope', 'LightLineWave', 'LightUserPicture', 'LightLaser', 'LightCircleWave', 'LightDazzing',
+    'LightRainDown', 'LightMeteor', 'LightPressActionOff'].map((n, i) => [String(i), n]),
+)
+
+/** Mode index of a named RY lighting type on this model. */
+export function ryModeIndex(light: RyLight, type: string) {
+  const list = light.list ?? RY_LIGHT_LIST
+  const hit = Object.entries(list).find(([, n]) => n === type)
+  return hit ? Number(hit[0]) : undefined
+}
+
+function ryEffects(light: RyLight): EffectDef[] {
+  const list = light.list ?? RY_LIGHT_LIST
+  // modes this model lists, else every mode we know a name for (music / screen sync need the host, so they're left out)
+  const types = light.types ?? Object.values(list).filter((t) => RY_MODES[t]).map((type) => ({ type, options: 0, rgb: true, dazzle: true, speed: true }))
+  return types.flatMap((t) => {
+    const id = ryModeIndex(light, t.type)
+    const known = RY_MODES[t.type]
+    if (id === undefined || !known) return []
+    const custom = t.type === 'LightUserPicture'
+    return [{ id, name: known[0], color: !custom && t.rgb, speed: !custom && t.speed, direction: t.options >= 2, preview: known[1] }]
+  })
+}
+
 /** Makes `device` the active board: layout, switch limits and lighting effects everywhere in the app. */
 export function activateDevice(device: DeviceDef) {
   setLayout(layoutFor(device))
   if (device.protocol === 'rk' && device.rk) {
     setEffects(rkEffects(device.rk), device.rk.customMode)
+  } else if (device.protocol === 'ry' && device.ry) {
+    setRtLimits(device.limits)
+    setEffects(ryEffects(device.ry.light), ryModeIndex(device.ry.light, 'LightUserPicture') ?? 13)
   } else {
     setRtLimits(device.limits)
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)
@@ -251,6 +432,17 @@ export const RK_VENDOR_ID = 0x258a
 export const RK_FILTER = { vendorId: RK_VENDOR_ID, usagePage: 0x0001, usage: 0x0080 }
 export const RK_PRODUCT_IDS = RK_DEVICES.map((d) => d.productId)
 
+/** RY5088 boards take configuration on a vendor collection (usage page 0xFFFF, usage 2). */
+export const RY_USAGE_PAGE = 0xffff
+export const RY_USAGE = 0x02
+export const RY_VENDOR_IDS = [...new Set(RY_DEVICES.map((d) => d.vendorId))]
+export const RY_FILTERS = RY_VENDOR_IDS.map((vendorId) => ({ vendorId, usagePage: RY_USAGE_PAGE, usage: RY_USAGE }))
+
+/** The exact RY model from the id the board reports. */
+export function ryDeviceById(deviceId: number) {
+  return RY_DEVICES.find((d) => d.ry?.deviceId === deviceId) ?? null
+}
+
 export interface Detection {
   /** best guess (always set when anything matches the product id) */
   device: DeviceDef | null
@@ -263,7 +455,13 @@ export interface Detection {
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 /** Works out which board is connected from its USB ids and product name. */
-export function detect(vendorId: number, productId: number, productName: string): Detection {
+export function detect(vendorId: number, productId: number, productName: string, ryDeviceId?: number): Detection {
+  if (ryDeviceId !== undefined) {
+    // RY boards report their model id; the USB ids are shared by many models
+    const exact = ryDeviceById(ryDeviceId)
+    const candidates = RY_DEVICES.filter((d) => d.vendorId === vendorId && d.productId === productId)
+    return { device: exact ?? candidates[0] ?? null, candidates: exact ? [exact] : candidates, certain: !!exact }
+  }
   if (vendorId === RK_VENDOR_ID) {
     const rk = RK_DEVICES.find((d) => d.productId === productId) ?? null
     return { device: rk, candidates: rk ? [rk] : [], certain: !!rk }

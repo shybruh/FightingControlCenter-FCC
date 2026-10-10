@@ -20,6 +20,7 @@ function mode<T>(values: T[]): T {
 export function PerformancePanel() {
   const regions = useStore((s) => s.regions)!
   const update = useStore((s) => s.update)
+  const rtFlags = useStore((s) => s.device?.caps.rtFlags !== false)
   const [selected, setSelected] = useState<Set<number>>(() => new Set(KEYS.map((k) => k.id)))
   const [separate, setSeparate] = useState(false)
 
@@ -131,24 +132,28 @@ export function PerformancePanel() {
                       if (!v) patch({ release: cur.press })
                     }}
                   />
-                  <SwitchRow
-                    label="Continuous rapid trigger"
-                    hint="Active across the whole travel, not only below the actuation point."
-                    checked={!!(cur.flags & RT_FLAG.continuous)}
-                    onChange={(v) => setFlag(RT_FLAG.continuous, v)}
-                  />
-                  <SwitchRow
-                    label="Bottom-out optimisation"
-                    hint="Touching the bottom counts as fully pressed, avoiding accidental releases."
-                    checked={!!(cur.flags & RT_FLAG.bottom)}
-                    onChange={(v) => setFlag(RT_FLAG.bottom, v)}
-                  />
-                  <SwitchRow
-                    label="Rampage mode"
-                    hint="Even more extreme precision. Needs stable, well-seated switches."
-                    checked={!!(cur.flags & RT_FLAG.rampage)}
-                    onChange={(v) => setFlag(RT_FLAG.rampage, v)}
-                  />
+                  {rtFlags && (
+                    <>
+                      <SwitchRow
+                        label="Continuous rapid trigger"
+                        hint="Active across the whole travel, not only below the actuation point."
+                        checked={!!(cur.flags & RT_FLAG.continuous)}
+                        onChange={(v) => setFlag(RT_FLAG.continuous, v)}
+                      />
+                      <SwitchRow
+                        label="Bottom-out optimisation"
+                        hint="Touching the bottom counts as fully pressed, avoiding accidental releases."
+                        checked={!!(cur.flags & RT_FLAG.bottom)}
+                        onChange={(v) => setFlag(RT_FLAG.bottom, v)}
+                      />
+                      <SwitchRow
+                        label="Rampage mode"
+                        hint="Even more extreme precision. Needs stable, well-seated switches."
+                        checked={!!(cur.flags & RT_FLAG.rampage)}
+                        onChange={(v) => setFlag(RT_FLAG.rampage, v)}
+                      />
+                    </>
+                  )}
                 </div>
               </CardContent>
             )}

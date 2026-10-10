@@ -48,8 +48,8 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
       body: (
         <>
           <p>
-            A fast configurator for Hall-effect keyboards built on Sonix chips: MCHOSE, AULA, Ajazz, Epomaker and many more. So far it has been
-            tested end to end on the Fekker × VTER Fighting68 HE.
+            A fast configurator for Hall-effect keyboards: MonsGeek, MCHOSE, AULA, Ajazz, Epomaker and many more. So far it has been tested
+            end to end on the Fekker × VTER Fighting68 HE.
           </p>
           {device && (
             <div className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
