@@ -78,6 +78,12 @@
   animation: fcc-pop var(--dur-slow) var(--ease-out) both;
 }
 
+/* Box that grows / shrinks to its content (height set from JS, see AutoHeight). */
+.auto-height {
+  overflow: hidden;
+  transition: height var(--dur-slow) var(--ease-out);
+}
+
 /* Tiles that respond to the pointer. */
 .lift {
   transition:

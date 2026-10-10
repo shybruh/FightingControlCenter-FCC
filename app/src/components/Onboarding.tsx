@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { FlagIcon, KeyboardIcon, LayersIcon, ShieldCheckIcon, type LucideIcon } from 'lucide-react'
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
@@ -135,17 +135,19 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
   return (
     <AlertDialog open={open && !choosing} onOpenChange={(o) => !o && finish()}>
       <AlertDialogContent className="max-w-lg gap-5">
-        <div key={step.id} className="swap-in flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <step.icon className="size-4" />
+        <AutoHeight watch={step.id}>
+          <div key={step.id} className="swap-in flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <step.icon className="size-4" />
+              </div>
+              <AlertDialogTitle>{step.title}</AlertDialogTitle>
             </div>
-            <AlertDialogTitle>{step.title}</AlertDialogTitle>
+            <AlertDialogDescription render={<div />} className="flex flex-col gap-3 text-sm text-muted-foreground">
+              {step.body}
+            </AlertDialogDescription>
           </div>
-          <AlertDialogDescription render={<div />} className="flex flex-col gap-3 text-sm text-muted-foreground">
-            {step.body}
-          </AlertDialogDescription>
-        </div>
+        </AutoHeight>
 
         <div className="flex items-center gap-2">
           <div className="flex flex-1 gap-1.5" aria-label={`Step ${index + 1} of ${steps.length}`}>
@@ -172,5 +174,27 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
         </div>
       </AlertDialogContent>
     </AlertDialog>
+  )
+}
+
+/** Animates its height to follow the content, so steps of different sizes grow and shrink instead of jumping. */
+/** `watch` changes when the content is swapped, so the new height is applied straight away. */
+function AutoHeight({ children, watch }: { children: ReactNode; watch?: unknown }) {
+  const inner = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number>()
+  useLayoutEffect(() => {
+    if (inner.current) setHeight(inner.current.offsetHeight)
+  }, [watch])
+  useLayoutEffect(() => {
+    const el = inner.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setHeight(el.offsetHeight))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <div className="auto-height" style={{ height }}>
+      <div ref={inner}>{children}</div>
+    </div>
   )
 }
