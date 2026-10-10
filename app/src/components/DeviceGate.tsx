@@ -35,7 +35,9 @@ export function ReadOnlyBanner() {
         <span className="font-medium text-foreground">{device ? `${device.name} hasn't been tested with FCC yet.` : 'Unknown keyboard.'}</span>{' '}
         {writeOnly
           ? "It can't report its settings, so FCC shows your saved profile. Changes are off until you allow them; the protocol matches existing Royal Kludge tools, so it should work. Tell us if it does!"
-          : device?.protocol === 'ry'
+          : device?.protocol === 'mc'
+            ? "Its settings are read and backed up, but changes are off until you allow them. FCC follows the same protocol as MCHOSE's own driver, so it should work. Tell us if it does!"
+            : device?.protocol === 'ry'
             ? "Its settings are read and backed up, but changes are off until you allow them. FCC follows the same protocol as MonsGeek's own driver, so it should work. Tell us if it does!"
             : 'Its settings are read and backed up, but changes are off until you allow them. It uses the same protocol as the boards FCC is tested on, so it should work. Tell us if it does!'}
       </span>

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **MCHOSE magnetic boards** (ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87 …, 28 models): lighting, per-key RGB,
+  keymap, actuation, rapid trigger, mod-tap, toggle, macros and settings, with each board's real layout. Untested so far.
+- Royal Kludge: a known M75 is picked over other devices that share the Sinowealth USB vendor id.
+
 ## 0.2.0
 
 ### New keyboards

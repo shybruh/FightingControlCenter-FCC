@@ -3,6 +3,7 @@ import { Keyboard, type KeyboardDriver, type RegionData } from './hid/device'
 import { MockTransport } from './hid/mock'
 import { MockRkTransport, RkKeyboard } from './hid/rk'
 import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
+import { McKeyboard, MockMcTransport } from './hid/mc'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
 import { isTauri } from './hid/tauri'
@@ -255,20 +256,26 @@ export const useStore = create<State>((set, get) => {
       const usb = `${id.vendorId.toString(16).padStart(4, '0')}:${id.productId.toString(16).padStart(4, '0')}`
       throw new Error(`this Royal Kludge model (USB id ${usb}${id.productName ? `, "${id.productName}"` : ''}) isn't supported yet. If your Royal Kludge keyboard is plugged in by cable, this is probably another device (mouse, receiver) that shares its USB vendor id`)
     }
+    if ('kind' in source && source.kind === 'mc' && !device?.mc) {
+      await source.transport.close()
+      throw new Error("this MCHOSE model isn't in FCC's list yet. Please send a board report")
+    }
     if (probe && !device?.ry) {
       if ('kind' in source) await source.transport.close()
       throw new Error(`this keyboard (model ${probe.deviceId}) isn't in FCC's list yet. Please send a board report`)
     }
     // the protocol decides the driver; the model decides layout and limits
     const kb: KeyboardDriver = !('kind' in source)
-      ? source instanceof RyKeyboard && source.model !== device
+      ? (source instanceof RyKeyboard || source instanceof McKeyboard) && source.model !== device
         ? source.forDevice(device!)
         : source
       : source.kind === 'sonix'
         ? new Keyboard(source.transport)
         : source.kind === 'rk'
           ? new RkKeyboard(source.transport, device!)
-          : new RyKeyboard(source.transport, device!, probe!)
+          : source.kind === 'mc'
+            ? new McKeyboard(source.transport, device!)
+            : new RyKeyboard(source.transport, device!, probe!)
     set({ kb })
     applyDevice(device)
     const sameFamily = (d: DeviceDef) => d.transport === 'wired' && d.protocol === (device?.protocol ?? 'sonix')
@@ -346,7 +353,9 @@ export const useStore = create<State>((set, get) => {
           ? { kind: 'rk', transport: new MockRkTransport(demoDevice) }
           : demoDevice?.protocol === 'ry'
             ? { kind: 'ry', transport: new MockRyTransport(demoDevice) }
-            : demo
+            : demoDevice?.protocol === 'mc'
+              ? { kind: 'mc', transport: new MockMcTransport(demoDevice) }
+              : demo
             ? { kind: 'sonix', transport: new MockTransport() }
             : isTauri()
               ? await openDesktop()
@@ -544,7 +553,7 @@ export const useStore = create<State>((set, get) => {
       }
       set({ deviceChoices: null })
       // RY translation depends on the model's key matrix: read the board again as the chosen model
-      if (kb instanceof RyKeyboard) {
+      if (kb instanceof RyKeyboard || kb instanceof McKeyboard) {
         void get().refresh()
         return
       }

@@ -521,7 +521,11 @@ function AssignCard({ macros, sel, dirty, save }: { macros: DraftMacro[]; sel: n
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">{keyName(key)}</span>
             {current != null && <Badge variant="secondary">plays {macros[current]?.name ?? `M${current + 1}`}</Badge>}
-            <Segmented value={mode} options={MODES} onChange={(v) => setMode(v as 0 | 1 | 2)} />
+            <Segmented
+              value={mode}
+              options={MODES.filter((m) => useStore.getState().device?.caps.macroModes.includes(m.value) ?? true)}
+              onChange={(v) => setMode(v as 0 | 1 | 2)}
+            />
             {mode === 1 && (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Input

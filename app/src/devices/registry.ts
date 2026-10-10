@@ -10,6 +10,7 @@ import { SONIX_CUSTOM, SONIX_EFFECTS, setEffects, setRtLimits, type EffectDef, t
 import catalog from './catalog.json'
 import rkCatalog from './rk-catalog.json'
 import ryCatalog from './ry-catalog.json'
+import mcCatalog from './mc-catalog.json'
 import verifiedList from './verified.json'
 
 /** boards confirmed working through board reports */
@@ -19,7 +20,7 @@ const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.h
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
 /** Which keyboard protocol a board speaks. */
-export type Protocol = 'sonix' | 'rk' | 'ry'
+export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc'
 
 export type AdvancedKind = 'rs' | 'socd' | 'dks' | 'modtap' | 'toggle'
 
@@ -43,6 +44,10 @@ export interface Capabilities {
   advanced: AdvancedKind[]
   /** SOCD resolution modes (see SOCD_MODES) */
   socdModes: number[]
+  /** live key travel view */
+  liveTravel: boolean
+  /** macro play modes FCC can set: 0 once, 1 repeat, 2 until pressed again */
+  macroModes: number[]
 }
 
 const SONIX_CAPS: Capabilities = {
@@ -57,6 +62,8 @@ const SONIX_CAPS: Capabilities = {
   rtFlags: true,
   advanced: ['rs', 'socd', 'dks', 'modtap', 'toggle'],
   socdModes: [3, 1, 2, 4],
+  liveTravel: true,
+  macroModes: [0, 1, 2],
 }
 const RK_CAPS: Capabilities = {
   readBack: false,
@@ -70,6 +77,8 @@ const RK_CAPS: Capabilities = {
   rtFlags: false,
   advanced: [],
   socdModes: [],
+  liveTravel: false,
+  macroModes: [],
 }
 const RY_CAPS: Capabilities = {
   readBack: true,
@@ -85,6 +94,25 @@ const RY_CAPS: Capabilities = {
   // snap tap is "last input wins"; there's no rappy-snappy
   advanced: ['socd', 'dks', 'modtap', 'toggle'],
   socdModes: [3],
+  liveTravel: true,
+  macroModes: [0, 1, 2],
+}
+const MC_CAPS: Capabilities = {
+  readBack: true,
+  performance: true,
+  advancedKeys: true,
+  macros: true,
+  // MCHOSE settings live on their own card
+  keyboardSettings: false,
+  sleepInLighting: false,
+  mouseBindings: true,
+  perKeyRgb: true,
+  rtFlags: false,
+  // DKS and SOCD wait until their byte meanings are confirmed on a real board
+  advanced: ['modtap', 'toggle'],
+  socdModes: [],
+  liveTravel: false,
+  macroModes: [0],
 }
 
 export interface RkMode {
@@ -120,6 +148,27 @@ export interface DeviceDef {
   caps: Capabilities
   rk?: RkInfo
   ry?: RyInfo
+  mc?: McInfo
+}
+
+/** MCHOSE first-generation ("glw") magnetic boards. */
+export interface McInfo {
+  /** every USB id the board can show up as */
+  identities: [number, number][]
+  /** device type from the vendor list (decides the macro area size) */
+  type: number
+  /** actuation units per mm */
+  step: number
+  /** smallest gap to the bottom, in actuation units */
+  minTravel: number
+  /** rapid trigger resolution, mm */
+  precision: number
+  maxTravel: number
+  maxKeyCount: number
+  /** lighting effect values the board lists */
+  effects: number[]
+  /** factory key table, layer 0: [index, type, code1, code2] */
+  defaults: [number, number, number, number][]
 }
 
 /** Lighting constants of an RY5088 model (they differ between model classes). */
@@ -273,7 +322,61 @@ export const RY_DEVICES: DeviceDef[] = RY_DATA.devices
     }
   })
 
-export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES]
+// ---------- MCHOSE (ACE 60 / 68 / 75, JET75, MIX87 …) ----------
+
+interface McCatalogDevice {
+  id: string
+  name: string
+  identities: [number, number][]
+  type: number
+  step: number
+  minTravel: number
+  precision: number
+  maxTravel: number
+  maxKeyCount: number
+  wireless: boolean
+  effects: number[]
+  /** [index, hid, x, y, w, h, label] */
+  keys: [number, number, number, number, number, number, string][]
+  defaults: [number, number, number, number][]
+}
+const MC_DATA = (mcCatalog as unknown as { devices: McCatalogDevice[] }).devices
+const MC_LAYOUTS = new Map<string, McCatalogDevice['keys']>()
+/** "电竞版" / "超竞版" edition names, in English */
+const mcName = (n: string) => n.replace('(电竞版)', ' (Esports)').replace('(超竞版)', ' (Ultra)').replace(/\s+/g, ' ').trim()
+
+export const MC_DEVICES: DeviceDef[] = MC_DATA.filter((d) => !d.wireless).map((d) => {
+  MC_LAYOUTS.set(d.id, d.keys)
+  const travel = Math.round(d.maxTravel * 100)
+  // rapid trigger can't go below 2 raw units at the board's resolution
+  const sensMin = Math.max(1, Math.round(2 * d.precision * 100))
+  return {
+    id: d.id,
+    name: `MCHOSE ${mcName(d.name)}`,
+    vendorId: d.identities[0][0],
+    productId: d.identities[0][1],
+    layout: d.id,
+    fnLayout: null,
+    transport: 'wired' as const,
+    status: statusOf(d.id, 'untested'),
+    limits: { travel, actuationMin: 10, actuationMax: travel - 10, actuationDefault: 150, sensMin, sensMax: travel, sensDefault: 30 },
+    protocol: 'mc' as const,
+    caps: MC_CAPS,
+    mc: {
+      identities: d.identities,
+      type: d.type,
+      step: d.step,
+      minTravel: d.minTravel,
+      precision: d.precision,
+      maxTravel: d.maxTravel,
+      maxKeyCount: d.maxKeyCount,
+      effects: d.effects,
+      defaults: d.defaults,
+    },
+  }
+})
+
+export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES]
 
 export const FIGHTING68 = DEVICES.find((d) => d.id === 'fighting68')!
 
@@ -296,6 +399,18 @@ const SHIFTED: Record<number, string> = {
 /** Key geometry for a device. The official Sonix data's HID codes have a few mistakes, so the browser key code wins. */
 export function layoutFor(device: DeviceDef): KeyDef[] {
   if (device.layout === 'fighting68-fcc') return FIGHTING68_KEYS
+  if (device.protocol === 'mc') {
+    return (MC_LAYOUTS.get(device.id) ?? []).map(([id, hid, x, y, w, h, label]) => ({
+      id,
+      label: hid ? (LEGEND[hid] ?? hidName(hid)) : label,
+      sub: SHIFTED[hid],
+      hid,
+      x,
+      y,
+      w,
+      h,
+    }))
+  }
   if (device.protocol === 'rk' || device.protocol === 'ry') {
     return ((device.protocol === 'rk' ? RK_LAYOUTS : RY_LAYOUTS).get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
       id: slot,
@@ -408,6 +523,44 @@ function ryEffects(light: RyLight): EffectDef[] {
   })
 }
 
+/** MCHOSE effects by value: name, has colour, has speed, has direction, closest Fighting68 preview. */
+const MC_EFFECTS: Record<number, [string, boolean, boolean, boolean, number]> = {
+  0: ['Custom per-key', false, false, false, SONIX_CUSTOM],
+  1: ['Rainbow cycle', false, true, false, 0x08],
+  2: ['Gradient', true, false, false, 0x0b],
+  3: ['Static', true, false, false, 0x01],
+  4: ['Breathing', true, true, false, 0x07],
+  5: ['Disco', false, true, false, 0x06],
+  6: ['Horizontal wave', true, true, true, 0x0b],
+  7: ['Vertical wave', true, true, true, 0x12],
+  8: ['Center spread', true, true, true, 0x09],
+  9: ['Starlight', true, true, false, 0x04],
+  10: ['Spiral', true, true, true, 0x10],
+  11: ['Rise and fall', true, true, false, 0x11],
+  12: ['Bounce', true, true, false, 0x13],
+  13: ['Reactive ripple', true, true, false, 0x0f],
+  14: ['Ripple', true, true, false, 0x0f],
+  15: ['Afterimage', true, true, false, 0x03],
+  16: ['Reactive fireworks', true, true, false, 0x0d],
+  17: ['Light pillars', true, true, false, 0x0e],
+  18: ['Diagonal flow', true, true, false, 0x12],
+  19: ['Laser rain', true, true, false, 0x05],
+  20: ['Twinkle', true, true, false, 0x04],
+  21: ['Fireworks', true, true, false, 0x0d],
+  22: ['Triangle bounce', true, true, false, 0x13],
+}
+/** FCC effect id for an MCHOSE effect value (FCC keeps 0 for "off"). */
+export const mcEffectId = (value: number) => value + 1
+
+function mcEffects(mc: McInfo): EffectDef[] {
+  return mc.effects
+    .filter((v) => MC_EFFECTS[v])
+    .map((v) => {
+      const [name, color, speed, direction, preview] = MC_EFFECTS[v]
+      return { id: mcEffectId(v), name, color, speed, direction, preview }
+    })
+}
+
 /** Makes `device` the active board: layout, switch limits and lighting effects everywhere in the app. */
 export function activateDevice(device: DeviceDef) {
   setLayout(layoutFor(device))
@@ -416,6 +569,9 @@ export function activateDevice(device: DeviceDef) {
   } else if (device.protocol === 'ry' && device.ry) {
     setRtLimits(device.limits)
     setEffects(ryEffects(device.ry.light), ryModeIndex(device.ry.light, 'LightUserPicture') ?? 13)
+  } else if (device.protocol === 'mc' && device.mc) {
+    setRtLimits(device.limits)
+    setEffects(mcEffects(device.mc), mcEffectId(0))
   } else {
     setRtLimits(device.limits)
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)
@@ -437,6 +593,13 @@ export const RY_USAGE_PAGE = 0xffff
 export const RY_USAGE = 0x02
 export const RY_VENDOR_IDS = [...new Set(RY_DEVICES.map((d) => d.vendorId))]
 export const RY_FILTERS = RY_VENDOR_IDS.map((vendorId) => ({ vendorId, usagePage: RY_USAGE_PAGE, usage: RY_USAGE }))
+
+/** MCHOSE boards talk on a generic-desktop collection with usage 0. */
+export const MC_USAGE_PAGE = 0x0001
+export const MC_USAGE = 0x0000
+export const MC_IDS = [...new Map(MC_DEVICES.flatMap((d) => d.mc!.identities).map(([v, p]) => [`${v}:${p}`, [v, p] as const])).values()]
+export const MC_FILTERS = MC_IDS.map(([vendorId, productId]) => ({ vendorId, productId, usagePage: MC_USAGE_PAGE, usage: MC_USAGE }))
+export const isMcId = (vendorId: number, productId: number) => MC_IDS.some(([v, p]) => v === vendorId && p === productId)
 
 /** The exact RY model from the id the board reports. */
 export function ryDeviceById(deviceId: number) {
@@ -461,6 +624,10 @@ export function detect(vendorId: number, productId: number, productName: string,
     const exact = ryDeviceById(ryDeviceId)
     const candidates = RY_DEVICES.filter((d) => d.vendorId === vendorId && d.productId === productId)
     return { device: exact ?? candidates[0] ?? null, candidates: exact ? [exact] : candidates, certain: !!exact }
+  }
+  if (isMcId(vendorId, productId)) {
+    const candidates = MC_DEVICES.filter((d) => d.mc!.identities.some(([v, p]) => v === vendorId && p === productId))
+    return { device: candidates[0] ?? null, candidates, certain: candidates.length === 1 }
   }
   if (vendorId === RK_VENDOR_ID) {
     const rk = RK_DEVICES.find((d) => d.productId === productId) ?? null

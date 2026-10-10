@@ -3,7 +3,8 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
-import { RK_PRODUCT_IDS, RY_VENDOR_IDS } from '../devices/registry'
+import { MC_IDS, RK_PRODUCT_IDS, RY_VENDOR_IDS } from '../devices/registry'
+import type { McExpect, McTransport } from './mc'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export function isTauri(): boolean {
@@ -62,6 +63,43 @@ export class TauriTransport implements Transport {
   async close() {
     this.unlisten?.()
     await invoke('hid_close')
+  }
+}
+
+/** Desktop transport for MCHOSE boards: output report out, matching input report back (src-tauri/src/mc.rs). */
+export class TauriMcTransport implements McTransport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: DeviceInfo) {
+    this.name = info.name || 'MCHOSE keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('mc_available', { ids: MC_IDS })
+  }
+
+  static async open(): Promise<TauriMcTransport> {
+    const info = await invoke<DeviceInfo>('mc_open', { ids: MC_IDS })
+    const t = new TauriMcTransport(info)
+    t.unlisten = await listen('mc-disconnected', () => t.disconnects.emit())
+    return t
+  }
+
+  async request(packet: Uint8Array, expect: McExpect) {
+    return Uint8Array.from(await invoke<number[]>('mc_request', { data: Array.from(packet), ...expect }))
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('mc_close')
   }
 }
 

@@ -3,7 +3,7 @@
 # Fighting Control Center
 
 **A fast, modern configurator for Hall-effect keyboards.**
-Works with ~135 Sonix-based boards (MCHOSE, AULA, Ajazz, Epomaker …) and ~280 RongYuan-based ones (MonsGeek FUN60, FUN68, M1 V5 HE, Akko …).
+Works with ~135 Sonix-based boards (MCHOSE, AULA, Ajazz, Epomaker …) ~280 RongYuan-based ones (MonsGeek FUN60, FUN68, M1 V5 HE, Akko …) and MCHOSE's ACE / JET / MIX range.
 Tested end to end on the Fekker × VTER **Fighting68 HE** so far: [report yours](#report-your-keyboard) to get it verified.
 
 Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
@@ -90,6 +90,7 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 | ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Tested end to end on real hardware |
 | ⚠️ Untested | 135 wired boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, Royal Kludge RK-series, MCHOSE, Looting, QSENN, Epomaker HE80, LEOBOG… | Detected automatically; open **read-only** until you choose *Allow changes* |
 | ⚠️ Untested | 285 RongYuan RY5088 boards: **MonsGeek FUN60** / FUN68 / M1 V5 HE, Akko MOD007B HE, … | Every feature, over MonsGeek's own protocol. The board reports its exact model. Read-only until *Allow changes* |
+| ⚠️ Untested | 28 MCHOSE boards: **ACE 60** / 60 Pro / 68 / 68 Air / 75, JET 75, ZERO 75X, MIX 87, … | Lighting, per-key RGB, keymap, actuation, rapid trigger, mod-tap, toggle, macros, settings. DKS / SOCD / live travel later. Read-only until *Allow changes* |
 | 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
@@ -153,7 +154,7 @@ app/src/hid/        protocol, transports (WebHID / Tauri / demo), device queue, 
 app/src/devices/    keyboard catalogue + detection
 app/src/components/ pages and UI
 app/src-tauri/      desktop shell: native HID bridge, tray, hotkeys, popup
-docs/               protocol notes (Sonix, RongYuan, Royal Kludge), supported devices, screenshots
+docs/               protocol notes (Sonix, RongYuan, MCHOSE, Royal Kludge), supported devices, screenshots
 tools/catalog/      scripts that regenerate the device catalogue
 tools/report/       board report decoder
 ```
@@ -166,5 +167,5 @@ MonsGeek's web driver. The Royal Kludge packet layout was learned from the open-
 
 ## Disclaimer
 
-Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, Royal Kludge or any keyboard
+Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, MCHOSE, Royal Kludge or any keyboard
 brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.

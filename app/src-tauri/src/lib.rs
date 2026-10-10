@@ -1,5 +1,6 @@
 mod desktop;
 mod hid;
+mod mc;
 mod osd;
 mod portable;
 mod rk;
@@ -27,6 +28,7 @@ pub fn run() {
     .manage(osd::OsdGeneration::default())
     .manage(rk::RkState::default())
     .manage(ry::RyState::default())
+    .manage(mc::McState::default())
     .invoke_handler(tauri::generate_handler![
       hid::hid_available,
       hid::hid_open,
@@ -46,6 +48,10 @@ pub fn run() {
       ry::ry_send,
       ry::ry_receive,
       ry::ry_close,
+      mc::mc_available,
+      mc::mc_open,
+      mc::mc_request,
+      mc::mc_close,
     ])
     .on_window_event(|window, event| {
       if window.label() != "main" {

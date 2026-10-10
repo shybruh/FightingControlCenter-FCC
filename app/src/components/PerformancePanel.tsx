@@ -21,6 +21,7 @@ export function PerformancePanel() {
   const regions = useStore((s) => s.regions)!
   const update = useStore((s) => s.update)
   const rtFlags = useStore((s) => s.device?.caps.rtFlags !== false)
+  const liveTravel = useStore((s) => s.device?.caps.liveTravel !== false)
   const [selected, setSelected] = useState<Set<number>>(() => new Set(KEYS.map((k) => k.id)))
   const [separate, setSeparate] = useState(false)
 
@@ -165,7 +166,7 @@ export function PerformancePanel() {
         </Card>
       )}
 
-      <SensorPanel />
+      {liveTravel && <SensorPanel />}
     </div>
   )
 }

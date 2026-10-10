@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator'
 import { POLLING_RATES, decodeInfo, decodeSettings, encodeSettings, type Settings } from '../hid/codec'
 import { RK_SLEEP_BYTE, RK_SLEEP_DEFAULT } from '../hid/rk'
 import { RY_POLLING, RyKeyboard, decodeRySettings, encodeRySettings, type RySettings } from '../hid/ry'
+import { decodeMcSettings, encodeMcSettings, type McSettings } from '../hid/mc'
 import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -26,7 +27,10 @@ import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
   const protocol = useStore((s) => s.device?.protocol)
-  return protocol === 'rk' ? <RkSettingsPanel /> : protocol === 'ry' ? <RySettingsPanel /> : <SonixSettingsPanel />
+  if (protocol === 'rk') return <RkSettingsPanel />
+  if (protocol === 'ry') return <RySettingsPanel />
+  if (protocol === 'mc') return <McSettingsPanel />
+  return <SonixSettingsPanel />
 }
 
 const RK_SLEEP = [
@@ -275,6 +279,47 @@ function RySettingsPanel() {
   )
 }
 
+/** MCHOSE boards (ACE 60 …). */
+function McSettingsPanel() {
+  const regions = useStore((s) => s.regions)!
+  const update = useStore((s) => s.update)
+  const s = decodeMcSettings(regions.settings)
+  const info = decodeInfo(regions.info)
+  const set = (p: Partial<McSettings>) => update('settings', encodeMcSettings(regions.settings, { ...s, ...p }))
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyboard</CardTitle>
+          <CardDescription>Saved with the keyboard's active profile.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Field label="Sleep after" value={`${s.sleepMinutes} min`}>
+            <Slider min={1} max={60} value={Math.max(1, s.sleepMinutes)} onChange={(v) => set({ sleepMinutes: v })} />
+          </Field>
+          <div className="flex flex-col">
+            <SwitchRow label="Lock the Windows key" checked={s.lockWin} onChange={(v) => set({ lockWin: v })} />
+            <SwitchRow label="Bottom rapid trigger" checked={s.bottomRapidTrigger} onChange={(v) => set({ bottomRapidTrigger: v })} />
+            <SwitchRow label="Berserk mode" checked={s.tachyon} onChange={(v) => set({ tachyon: v })} />
+            <SwitchRow label="Debounce" checked={s.debounce} onChange={(v) => set({ debounce: v })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex flex-col gap-4">
+        <DeviceCard>
+          <Stat label="Firmware">v{info.firmware}</Stat>
+          <Stat label="USB ID">
+            {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
+          </Stat>
+        </DeviceCard>
+        <DangerCard />
+      </div>
+    </div>
+  )
+}
+
 function IntroButton() {
   const openIntro = useStore((s) => s.openIntro)
   return (
@@ -328,7 +373,7 @@ function ModelPicker() {
         </SelectContent>
       </Select>
       <p className="text-xs text-muted-foreground">
-        {device?.protocol === 'ry' ? 'Reported by the keyboard itself.' : 'Detected from the USB id and name.'} Change it if the layout looks
+        {device?.protocol === 'ry' ? 'Reported by the keyboard itself.' : 'Detected from the USB id.'} Change it if the layout looks
         wrong; each model keeps its own profiles.
       </p>
     </div>
