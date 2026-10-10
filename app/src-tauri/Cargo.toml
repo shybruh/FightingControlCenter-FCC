@@ -1,6 +1,6 @@
 [package]
 name = "fcc"
-version = "0.1.0"
+version = "0.2.0"
 description = "Fighting Control Center — configurator for the Fighting68 HE"
 authors = ["FCC"]
 license = ""
