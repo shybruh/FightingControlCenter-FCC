@@ -252,7 +252,8 @@ export const useStore = create<State>((set, get) => {
     const device = demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : (remembered ?? det.device)
     if ('kind' in source && source.kind === 'rk' && !device?.rk) {
       await source.transport.close()
-      throw new Error("this Royal Kludge model isn't supported yet")
+      const usb = `${id.vendorId.toString(16).padStart(4, '0')}:${id.productId.toString(16).padStart(4, '0')}`
+      throw new Error(`this Royal Kludge model (USB id ${usb}${id.productName ? `, "${id.productName}"` : ''}) isn't supported yet`)
     }
     if (probe && !device?.ry) {
       if ('kind' in source) await source.transport.close()
