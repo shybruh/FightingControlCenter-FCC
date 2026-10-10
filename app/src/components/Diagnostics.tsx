@@ -3,6 +3,8 @@ import { create } from 'zustand'
 import { CopyIcon, DownloadIcon, EarIcon, PlusIcon, RadarIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react'
 import { AlertDialog, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -130,7 +132,7 @@ function DevicesTab() {
           {copied ? 'Copied' : 'Copy scan'}
         </Button>
         <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-          <input type="checkbox" checked={onlyRelevant} onChange={(e) => setOnlyRelevant(e.target.checked)} />
+          <Switch size="sm" checked={onlyRelevant} onCheckedChange={setOnlyRelevant} />
           Only keyboards FCC knows something about
         </label>
       </div>
@@ -255,6 +257,12 @@ const LEVELS: Record<string, Level[]> = {
   problems: ['warn', 'error'],
 }
 
+const FILTERS = [
+  { value: 'all', label: 'Everything (packets too)' },
+  { value: 'info', label: 'Steps and problems' },
+  { value: 'problems', label: 'Problems only' },
+]
+
 function LogTab() {
   const header = useHeader()
   const [, force] = useState(0)
@@ -280,18 +288,25 @@ function LogTab() {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select className="h-8 rounded-md border bg-transparent px-2 text-sm" value={filter} onChange={(e) => setFilter(e.target.value as keyof typeof LEVELS)}>
-          <option value="all">Everything (packets too)</option>
-          <option value="info">Steps and problems</option>
-          <option value="problems">Problems only</option>
-        </select>
+        <Select items={FILTERS} value={filter} onValueChange={(v) => v && setFilter(v as keyof typeof LEVELS)}>
+          <SelectTrigger size="sm" className="w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {FILTERS.map((f) => (
+              <SelectItem key={f.value} value={f.value}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
+          <Switch
+            size="sm"
             checked={noisy}
-            onChange={(e) => {
-              logSettings.noisy = e.target.checked
-              setNoisy(e.target.checked)
+            onCheckedChange={(v) => {
+              logSettings.noisy = v
+              setNoisy(v)
             }}
           />
           Include live-travel packets
@@ -317,7 +332,7 @@ function LogTab() {
           .join(' · ')}
       </p>
       <div className="min-h-0 flex-1 overflow-auto rounded-md border p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-        {shown.length === 0 && <span className="text-muted-foreground">Nothing logged yet.</span>}
+        {shown.length === 0 && <span className="text-muted-foreground">{logEntries().length ? 'Nothing matches this filter.' : 'Nothing logged yet.'}</span>}
         {shown.map((e, i) => (
           <div key={i} className={cn(e.level === 'error' && 'text-red-400', e.level === 'warn' && 'text-amber-300', e.level === 'debug' && 'text-muted-foreground')}>
             {formatEntry(e)}
