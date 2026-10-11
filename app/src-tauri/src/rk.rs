@@ -23,6 +23,8 @@ struct RkConnection {
     devices: Vec<HidDevice>,
     /// "usage page/usage, interface" per handle, for error messages
     labels: Vec<String>,
+    /// feature reports each handle's descriptor declares (id, bytes without the id); None if it couldn't be read
+    features: Vec<Option<Vec<(u8, usize)>>>,
     /// the handle that took the last report
     working: usize,
     stop: Arc<AtomicBool>,
@@ -68,6 +70,7 @@ pub fn rk_open(app: AppHandle, state: State<RkState>, products: Vec<u16>) -> Res
     let label = |d: &hidapi::DeviceInfo| format!("{:04x}/{:04x} if{} {}", d.usage_page(), d.usage(), d.interface_number(), d.path().to_string_lossy());
     let mut devices = vec![device];
     let mut labels = vec![label(info)];
+    let mut failed = Vec::new();
     for d in api.device_list() {
         if d.path() != info.path()
             && d.vendor_id() == info.vendor_id()
@@ -79,15 +82,32 @@ pub fn rk_open(app: AppHandle, state: State<RkState>, products: Vec<u16>) -> Res
                     devices.push(h);
                     labels.push(label(d));
                 }
-                Err(e) => labels.push(format!("{} (could not open: {e})", label(d))),
+                Err(e) => failed.push(format!("{} (could not open: {e})", label(d))),
             }
         }
     }
+    let features: Vec<Option<Vec<(u8, usize)>>> = devices
+        .iter()
+        .map(|h| {
+            let mut buf = [0u8; 4096];
+            h.get_report_descriptor(&mut buf).ok().map(|n| feature_reports(&buf[..n]))
+        })
+        .collect();
+    let described: Vec<String> = labels
+        .iter()
+        .zip(&features)
+        .map(|(l, f)| match f {
+            Some(f) if f.is_empty() => format!("{l} | no feature reports"),
+            Some(f) => format!("{l} | feature {}", f.iter().map(|(id, n)| format!("0x{id:02x}({n}B)")).collect::<Vec<_>>().join(", ")),
+            None => format!("{l} | descriptor unreadable"),
+        })
+        .chain(failed)
+        .collect();
     let out = RkInfo {
         name: info.product_string().unwrap_or("").to_string(),
         vendor_id: info.vendor_id(),
         product_id: info.product_id(),
-        collections: labels.clone(),
+        collections: described,
     };
 
     // The board never sends anything back, so watch the device list to notice unplugging.
@@ -110,9 +130,7 @@ pub fn rk_open(app: AppHandle, state: State<RkState>, products: Vec<u16>) -> Res
         });
     }
 
-    // labels of handles that failed to open aren't in `devices`; keep only the opened ones' labels in step
-    let labels: Vec<String> = labels.into_iter().filter(|l| !l.contains("could not open")).collect();
-    *slot = Some(RkConnection { devices, labels, working: 0, stop });
+    *slot = Some(RkConnection { devices, labels, features, working: 0, stop });
     Ok(out)
 }
 
@@ -128,12 +146,24 @@ pub fn rk_send_feature(state: State<RkState>, data: Vec<u8>) -> Result<(), Strin
     let order: Vec<usize> = std::iter::once(conn.working).chain((0..conn.devices.len()).filter(|&i| i != conn.working)).collect();
     let mut errors = Vec::new();
     for i in order {
-        match conn.devices[i].send_feature_report(&data) {
+        let label = conn.labels.get(i).map(String::as_str).unwrap_or("?");
+        // Windows only takes a feature report the collection declares, at exactly its size
+        let buf = match &conn.features[i] {
+            Some(declared) => match sized_for(&data, declared) {
+                Ok(b) => b,
+                Err(why) => {
+                    errors.push(format!("[{label}] skipped: {why}"));
+                    continue;
+                }
+            },
+            None => data.clone(),
+        };
+        match conn.devices[i].send_feature_report(&buf) {
             Ok(()) => {
                 conn.working = i;
                 return Ok(());
             }
-            Err(e) => errors.push(format!("[{}] {e}", conn.labels.get(i).map(String::as_str).unwrap_or("?"))),
+            Err(e) => errors.push(format!("[{label}] sent {} bytes: {e}", buf.len())),
         }
     }
     Err(format!("Write failed on every collection ({} tried): {}", errors.len(), errors.join(" | ")))
@@ -146,4 +176,97 @@ pub fn rk_close(state: State<RkState>) -> Result<(), String> {
         conn.stop.store(true, Ordering::Relaxed);
     }
     Ok(())
+}
+
+/// The feature reports a report descriptor declares: (report id, size in bytes without the id).
+fn feature_reports(desc: &[u8]) -> Vec<(u8, usize)> {
+    let mut out: Vec<(u8, usize)> = Vec::new();
+    let (mut size, mut count, mut id) = (0usize, 0usize, 0u8);
+    let mut bits: Vec<(u8, usize)> = Vec::new();
+    let mut i = 0;
+    while i < desc.len() {
+        let prefix = desc[i];
+        if prefix == 0xfe {
+            // long item
+            i += 3 + *desc.get(i + 1).unwrap_or(&0) as usize;
+            continue;
+        }
+        let len = [0, 1, 2, 4][(prefix & 3) as usize];
+        let mut value = 0u32;
+        for k in 0..len {
+            value |= (*desc.get(i + 1 + k).unwrap_or(&0) as u32) << (8 * k);
+        }
+        i += 1 + len;
+        match (prefix >> 2) & 3 {
+            1 => match prefix >> 4 {
+                7 => size = value as usize,
+                9 => count = value as usize,
+                8 => id = value as u8,
+                _ => {}
+            },
+            0 if prefix >> 4 == 0xb => match bits.iter_mut().find(|(r, _)| *r == id) {
+                Some((_, b)) => *b += size * count,
+                None => bits.push((id, size * count)),
+            },
+            _ => {}
+        }
+    }
+    for (r, b) in bits {
+        out.push((r, b.div_ceil(8)));
+    }
+    out
+}
+
+/// `data` (report id + payload) laid out for a collection that declares `declared`: the payload cut or padded to the
+/// report's size, and the whole buffer as long as the collection's longest feature report (what Windows expects).
+fn sized_for(data: &[u8], declared: &[(u8, usize)]) -> Result<Vec<u8>, String> {
+    let id = data[0];
+    let list = || declared.iter().map(|(r, n)| format!("0x{r:02x}({n}B)")).collect::<Vec<_>>().join(", ");
+    let Some(&(_, n)) = declared.iter().find(|(r, _)| *r == id) else {
+        return Err(if declared.is_empty() {
+            "declares no feature reports".into()
+        } else {
+            format!("declares feature {} but not 0x{id:02x}", list())
+        });
+    };
+    let payload = &data[1..];
+    if payload.len() > n && payload[n..].iter().any(|&b| b != 0) {
+        return Err(format!("report 0x{id:02x} holds {n} bytes, the command needs more"));
+    }
+    let longest = declared.iter().map(|(_, n)| *n).max().unwrap_or(n);
+    let mut buf = vec![0u8; 1 + longest];
+    buf[0] = id;
+    let take = payload.len().min(n);
+    buf[1..1 + take].copy_from_slice(&payload[..take]);
+    Ok(buf)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reads_feature_reports() {
+        // vendor page, report 0x0a: 8 bits x 64 feature; report 0x0b: 8 bits x 32 feature; one input report
+        let desc = [
+            0x06, 0x02, 0xff, 0x09, 0x01, 0xa1, 0x01, 0x85, 0x0a, 0x75, 0x08, 0x95, 0x40, 0x09, 0x01, 0xb1, 0x02, 0x85, 0x0b,
+            0x95, 0x20, 0x09, 0x01, 0xb1, 0x02, 0x85, 0x0c, 0x95, 0x08, 0x09, 0x01, 0x81, 0x02, 0xc0,
+        ];
+        assert_eq!(feature_reports(&desc), vec![(0x0a, 64), (0x0b, 32)]);
+    }
+
+    #[test]
+    fn sizes_reports() {
+        let mut cmd = vec![0x0a, 1, 2, 3];
+        cmd.resize(65, 0);
+        // shorter report: cut trailing zeros, buffer as long as the longest report
+        let b = sized_for(&cmd, &[(0x0a, 16), (0x0b, 32)]).unwrap();
+        assert_eq!(b.len(), 33);
+        assert_eq!(&b[..4], &[0x0a, 1, 2, 3]);
+        // doesn't declare it
+        assert!(sized_for(&cmd, &[(0x06, 64)]).is_err());
+        // would lose data
+        cmd[40] = 9;
+        assert!(sized_for(&cmd, &[(0x0a, 16)]).is_err());
+    }
 }
