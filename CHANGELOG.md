@@ -6,7 +6,8 @@
   keymap, actuation, rapid trigger, mod-tap, toggle, macros and settings, with each board's real layout. Untested so far.
 - Royal Kludge: a known M75 is picked over other devices that share the Sinowealth USB vendor id.
 - Royal Kludge (Windows): settings go to the collection of the config interface that declares them, sized the way it
-  declares them; the log lists what every collection accepts.
+  declares them; the log lists what every collection accepts. Boards whose firmware has no such report (a newer RK
+  protocol) now say so on connect instead of failing on every change.
 - **Diagnostics** (connect page → *Not detected? Diagnostics*, or Settings → *Diagnostics*):
   - *Devices*: every HID device and collection the PC sees, the reports each one declares, and whether (and why) FCC
     would use it. *Listen* shows a collection's live input reports. *Copy scan* for sharing.

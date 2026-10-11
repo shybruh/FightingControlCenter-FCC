@@ -18,6 +18,8 @@ interface DeviceInfo {
   product_id: number
   /** RK: the collections opened on the configuration interface */
   collections?: string[]
+  /** RK: whether a collection declares feature report 0x0a (null when a descriptor couldn't be read) */
+  declares_config_report?: boolean | null
 }
 
 /** Desktop transport: native hidapi in the Rust backend (src-tauri/src/hid.rs). */
@@ -148,6 +150,8 @@ export class TauriRyTransport implements RyTransport {
 }
 
 /** Desktop transport for Royal Kludge legacy boards: feature reports through the Rust bridge (src-tauri/src/rk.rs). */
+let lastRkCollections = ''
+
 export class TauriRkTransport implements FeatureTransport {
   readonly name: string
   readonly identity: DeviceIdentity
@@ -165,7 +169,19 @@ export class TauriRkTransport implements FeatureTransport {
 
   static async open(): Promise<TauriRkTransport> {
     const info = await invoke<DeviceInfo>('rk_open', { products: RK_PRODUCT_IDS })
-    log.info('rk', `opened ${info.collections?.length ?? 0} collection(s) on the configuration interface`, info.collections)
+    // auto-connect retries every couple of seconds; only log what changed
+    const seen = JSON.stringify(info.collections)
+    const fresh = seen !== lastRkCollections
+    lastRkCollections = seen
+    if (fresh) log.info('rk', `opened ${info.collections?.length ?? 0} collection(s) on the configuration interface`, info.collections)
+    if (info.declares_config_report === false) {
+      await invoke('rk_close')
+      const usb = `${info.vendor_id.toString(16).padStart(4, '0')}:${info.product_id.toString(16).padStart(4, '0')}`
+      if (fresh) log.warn('rk', `${usb} declares no feature report 0x0a: newer firmware, not the protocol FCC knows`)
+      throw new Error(
+        `this Royal Kludge keyboard (USB id ${usb}) has newer firmware that uses a different protocol from the one FCC supports, so FCC can't change its settings yet. Diagnostics → Log shows what it accepts.`,
+      )
+    }
     const t = new TauriRkTransport(info)
     t.unlisten = await listen('rk-disconnected', () => t.disconnects.emit())
     return t

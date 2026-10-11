@@ -15,6 +15,8 @@ use tauri::{AppHandle, Emitter, State};
 const RK_VENDOR_ID: u16 = 0x258a;
 const USAGE_PAGE: u16 = 0x0001;
 const USAGE: u16 = 0x0080;
+/// the feature report the legacy protocol uses
+const CONFIG_REPORT: u8 = 0x0a;
 /// report id + 64 data bytes
 const REPORT_LEN: usize = 65;
 
@@ -40,6 +42,8 @@ pub struct RkInfo {
     product_id: u16,
     /// the collections FCC opened on the configuration interface
     collections: Vec<String>,
+    /// whether a collection declares the configuration report (0x0a); None if a descriptor couldn't be read
+    declares_config_report: Option<bool>,
 }
 
 /// 0x258a is Sinowealth's generic vendor id, shared by many keyboards and mice: a known RK model wins over anything else.
@@ -103,11 +107,19 @@ pub fn rk_open(app: AppHandle, state: State<RkState>, products: Vec<u16>) -> Res
         })
         .chain(failed)
         .collect();
+    let declares_config_report = if features.iter().flatten().any(|f| f.iter().any(|&(id, _)| id == CONFIG_REPORT)) {
+        Some(true)
+    } else if features.iter().all(Option::is_some) {
+        Some(false)
+    } else {
+        None
+    };
     let out = RkInfo {
         name: info.product_string().unwrap_or("").to_string(),
         vendor_id: info.vendor_id(),
         product_id: info.product_id(),
         collections: described,
+        declares_config_report,
     };
 
     // The board never sends anything back, so watch the device list to notice unplugging.
