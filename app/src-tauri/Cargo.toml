@@ -1,10 +1,10 @@
 [package]
 name = "fcc"
 version = "0.3.0"
-description = "Fighting Control Center — configurator for the Fighting68 HE"
+description = "Fighting Control Center: configurator for Hall-effect keyboards"
 authors = ["FCC"]
-license = ""
-repository = ""
+license = "GPL-3.0-or-later"
+repository = "https://github.com/shybruh/FightingControlCenter-FCC"
 edition = "2024"
 rust-version = "1.90"
 

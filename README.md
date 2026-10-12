@@ -172,3 +172,9 @@ MonsGeek's web driver. The Royal Kludge packet layout was learned from the open-
 
 Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, MCHOSE, Royal Kludge or any keyboard
 brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.
+
+## License
+
+Fighting Control Center is free software, licensed under the [GNU General Public License v3.0 or later](LICENSE). You
+can use, study, change and share it; if you distribute a modified version, you must make its source available under
+the same license.
