@@ -113,9 +113,12 @@ regions and `--verify` marks the board verified in `app/src/devices/verified.jso
 **Windows:** download `Fighting Control Center_x64-setup.exe` from [Releases](../../releases) and run it.
 The installer isn't code-signed yet, so SmartScreen may warn you: *More info → Run anyway*.
 
-**Portable:** download `FCC-portable-<version>.zip`, unzip anywhere (a USB stick works) and run the exe. While
-`portable.txt` sits next to it, profiles and settings stay in an `FCC-data` folder beside the exe. Build it with
+**Portable:** download `FCC-portable-<version>.zip`, unzip anywhere and run the exe. Build it with
 `npm run desktop:portable`.
+
+Both keep profiles and settings in `%APPDATA%\Fighting Control Center\settings.json`, so reinstalling, updating or
+deleting a portable copy keeps them (*Desktop → Open folder* shows it). To keep everything beside the exe instead
+(e.g. on a USB stick), put an empty `portable.txt` next to it: data then goes to an `FCC-data` folder there.
 
 **Browser:** run the web version (below) in Chrome or Edge; no install needed.
 

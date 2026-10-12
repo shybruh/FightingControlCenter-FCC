@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart'
-import { GamepadIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
+import { FolderOpenIcon, GamepadIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { useDesktopStatus } from '../desktop/integration'
 import { acceleratorFromEvent, prettyHotkey, profileHotkey, useDesktop, type GameRule } from '../desktop/settings'
+import { openSettingsFolder, settingsFilePath, settingsPortable } from '../desktop/settingsFile'
 import { useStore } from '../store'
 import { Segmented, SwitchRow } from './ui'
 
@@ -89,6 +90,22 @@ function GeneralCard() {
           checked={d.closeToTray}
           onChange={(v) => d.set({ closeToTray: v })}
         />
+        <div className="flex items-center justify-between gap-3 border-t pt-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-sm">Saved settings</span>
+            <span className="truncate text-xs text-muted-foreground" title={settingsFilePath ?? undefined}>
+              {settingsFilePath
+                ? 'Profiles and settings are kept in your Windows user folder, so reinstalling keeps them.'
+                : settingsPortable
+                  ? 'Portable mode: kept in the FCC-data folder next to the app.'
+                  : "The settings file couldn't be used, so they're only in the app's own storage. Diagnostics → Log has details."}
+            </span>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => void openSettingsFolder()}>
+            <FolderOpenIcon data-icon="inline-start" />
+            Open folder
+          </Button>
+        </div>
       </CardContent>
     </Card>
   )

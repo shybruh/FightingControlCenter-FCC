@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Settings survive reinstalls:** profiles and settings are saved to `%APPDATA%\Fighting Control Center\settings.json`,
+  shared by the installer and portable builds, so reinstalling, updating or deleting a portable copy keeps them.
+  *Desktop → Open folder* shows it. The portable zip no longer includes `portable.txt`; add one to keep data beside
+  the exe as before.
 - **MCHOSE magnetic boards** (ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87 …, 28 models): lighting, per-key RGB,
   keymap, actuation, rapid trigger, mod-tap, toggle, macros and settings, with each board's real layout. Untested so far.
 - Royal Kludge: a known M75 is picked over other devices that share the Sinowealth USB vendor id.

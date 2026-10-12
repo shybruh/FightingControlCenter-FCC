@@ -1,5 +1,6 @@
 //! Portable mode: with a `portable.txt` next to the exe, everything the app stores (profiles, settings, backups)
-//! lives in an `FCC-data` folder beside it instead of the Windows user profile. Without the file nothing changes.
+//! lives in an `FCC-data` folder beside it instead of the Windows user profile (and the settings file in config.rs
+//! isn't used). Without the file nothing changes.
 
 use std::path::PathBuf;
 
@@ -9,9 +10,14 @@ const MARKER: &str = "portable.txt";
 const DATA_DIR: &str = "FCC-data";
 
 /// The data folder to use, when running portable.
-fn data_dir() -> Option<PathBuf> {
+pub fn data_dir() -> Option<PathBuf> {
     let dir = std::env::current_exe().ok()?.parent()?.to_path_buf();
     dir.join(MARKER).is_file().then(|| dir.join(DATA_DIR))
+}
+
+/// Whether this copy keeps its data beside the exe.
+pub fn is_portable() -> bool {
+    data_dir().is_some()
 }
 
 /// Creates the windows declared in tauri.conf.json (marked `"create": false` there) so the portable data folder

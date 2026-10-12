@@ -1,3 +1,4 @@
+mod config;
 mod desktop;
 mod hid;
 mod mc;
@@ -40,6 +41,9 @@ pub fn run() {
       desktop::set_close_to_tray,
       desktop::list_window_apps,
       desktop::running_exes,
+      config::config_load,
+      config::config_save,
+      config::config_open_folder,
       desktop::open_project_page,
       osd::show_osd,
       rk::rk_available,
