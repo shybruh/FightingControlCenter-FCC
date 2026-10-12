@@ -127,8 +127,8 @@ deleting a portable copy keeps them (*Desktop → Open folder* shows it). To kee
 Requirements: Node.js 20+, and for the desktop app, Rust and the Microsoft C++ build tools.
 
 ```bash
-git clone https://github.com/shybruh/FightingControlCenter---FCC.git
-cd FightingControlCenter---FCC
+git clone https://github.com/shybruh/FightingControlCenter-FCC.git
+cd FightingControlCenter-FCC
 npm --prefix app install
 
 npm --prefix app run dev              # web version on http://localhost:5174

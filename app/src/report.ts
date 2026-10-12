@@ -11,7 +11,7 @@ import type { RegionData } from './hid/device'
 import { isTauri } from './hid/tauri'
 import type { DeviceIdentity } from './hid/transport'
 
-export const REPO_URL = 'https://github.com/shybruh/FightingControlCenter---FCC/'
+export const REPO_URL = 'https://github.com/shybruh/FightingControlCenter-FCC/'
 /** GitHub rejects much longer issue URLs; past this the report is pasted instead of prefilled */
 const MAX_URL = 7500
 

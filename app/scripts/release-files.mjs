@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { appVersion, changelogSection } from './release-notes.mjs'
 
-const REPO = 'shybruh/FightingControlCenter---FCC'
+const REPO = 'shybruh/FightingControlCenter-FCC'
 const app = path.resolve(import.meta.dirname, '..')
 const version = appVersion()
 const bundle = path.join(app, 'src-tauri/target/release/bundle')

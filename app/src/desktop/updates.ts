@@ -12,7 +12,7 @@ import { errorText, log } from '../diag/log'
 import { isTauri } from '../hid/tauri'
 import { useStore } from '../store'
 
-const RELEASES_URL = 'https://github.com/shybruh/FightingControlCenter---FCC/releases/latest'
+const RELEASES_URL = 'https://github.com/shybruh/FightingControlCenter-FCC/releases/latest'
 const FIRST_CHECK_MS = 8_000
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000
 

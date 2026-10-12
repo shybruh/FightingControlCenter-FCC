@@ -253,7 +253,7 @@ mod win {
 }
 
 /// Only pages of FCC's own GitHub repo (issues, releases) may be opened from the app.
-const PROJECT_URL: &str = "https://github.com/shybruh/FightingControlCenter---FCC/";
+const PROJECT_URL: &str = "https://github.com/shybruh/FightingControlCenter-FCC/";
 
 #[tauri::command]
 pub fn open_project_page(app: AppHandle, url: String) -> Result<(), String> {
