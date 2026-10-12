@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Demo mode no longer overwrites your real Fighting68 profiles: demo profiles live in memory only.
+
 ## 0.3.0
 
 This is the first version that updates itself. Install it once by hand; after that FCC offers new versions on its own.

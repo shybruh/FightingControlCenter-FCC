@@ -96,8 +96,10 @@ const CHOICES_KEY = 'fcc.deviceChoices.v1'
 const ALLOWED_KEY = 'fcc.allowedDevices.v1'
 
 /** Profiles are per keyboard model: key indices differ between boards. The Fighting68 keeps the original key. */
-let profilesKey = PROFILES_KEY
-const profilesKeyFor = (device: DeviceDef | null) => (!device || device.id === FIGHTING68.id ? PROFILES_KEY : `${PROFILES_KEY}:${device.id}`)
+/** where the connected board's profiles are stored; null in demo mode, whose profiles live in memory only */
+let profilesKey: string | null = PROFILES_KEY
+const profilesKeyFor = (device: DeviceDef | null, demo: boolean) =>
+  demo ? null : !device || device.id === FIGHTING68.id ? PROFILES_KEY : `${PROFILES_KEY}:${device.id}`
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -127,6 +129,7 @@ const introSeen = () => {
 const WRITE_DEBOUNCE_MS = 120
 
 function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null } {
+  if (!profilesKey) return { profiles: [], activeProfileId: null }
   try {
     const raw = localStorage.getItem(profilesKey)
     if (raw) return JSON.parse(raw)
@@ -137,6 +140,8 @@ function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null }
 }
 
 function saveProfiles(profiles: Profile[], activeProfileId: string | null) {
+  // demo: a demo must never overwrite the real board's profiles (it pretends to be a Fighting68)
+  if (!profilesKey) return
   try {
     localStorage.setItem(profilesKey, JSON.stringify({ profiles, activeProfileId }))
   } catch {
@@ -222,7 +227,7 @@ export const useStore = create<State>((set, get) => {
   /** Makes `device` active: layout, switch limits, read-only state and its own profile store. */
   const applyDevice = (device: DeviceDef | null) => {
     activateDevice(device ?? FIGHTING68)
-    profilesKey = profilesKeyFor(device)
+    profilesKey = profilesKeyFor(device, get().demo)
     const allowed = readJson<string[]>(ALLOWED_KEY, [])
     const readOnly = !device || (device.status !== 'verified' && !allowed.includes(device.id))
     set({ device, readOnly, ...loadProfiles() })
