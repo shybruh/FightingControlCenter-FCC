@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart'
-import { FolderOpenIcon, GamepadIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
+import { DownloadIcon, FolderOpenIcon, GamepadIcon, PlusIcon, RefreshCwIcon, Trash2Icon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { useDesktopStatus } from '../desktop/integration'
 import { acceleratorFromEvent, prettyHotkey, profileHotkey, useDesktop, type GameRule } from '../desktop/settings'
 import { openSettingsFolder, settingsFilePath, settingsPortable } from '../desktop/settingsFile'
+import { checkForUpdates, useUpdates } from '../desktop/updates'
+import { UpdateDialog } from './UpdateButton'
 import { useStore } from '../store'
 import { Segmented, SwitchRow } from './ui'
 
@@ -90,6 +92,7 @@ function GeneralCard() {
           checked={d.closeToTray}
           onChange={(v) => d.set({ closeToTray: v })}
         />
+        <UpdatesRow />
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <div className="flex min-w-0 flex-col">
             <span className="text-sm font-medium">Saved settings</span>
@@ -396,5 +399,40 @@ function AddGame({ onAdd }: { onAdd(exe: string, label: string): void }) {
         </form>
       </PopoverContent>
     </Popover>
+  )
+}
+
+function UpdatesRow() {
+  const { phase, current, version, error } = useUpdates()
+  const [open, setOpen] = useState(false)
+  const status =
+    phase === 'checking'
+      ? 'Checking…'
+      : phase === 'available' || phase === 'downloading'
+        ? `Version ${version} is available.`
+        : phase === 'none'
+          ? "You're up to date."
+          : phase === 'error'
+            ? `Couldn't check: ${error ?? 'unknown error'}`
+            : 'Checks GitHub for new versions a few seconds after start.'
+  return (
+    <div className="flex items-center justify-between gap-3 border-t py-3">
+      <div className="flex min-w-0 flex-col">
+        <span className="text-sm font-medium">Updates{current && <span className="font-normal text-muted-foreground"> · version {current}</span>}</span>
+        <span className={cn('text-xs', phase === 'error' ? 'text-destructive' : 'text-muted-foreground')}>{status}</span>
+      </div>
+      {phase === 'available' || phase === 'downloading' ? (
+        <Button size="sm" onClick={() => setOpen(true)}>
+          <DownloadIcon data-icon="inline-start" />
+          Update
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" disabled={phase === 'checking'} onClick={() => void checkForUpdates(true)}>
+          <RefreshCwIcon data-icon="inline-start" />
+          Check now
+        </Button>
+      )}
+      <UpdateDialog open={open} onOpenChange={setOpen} />
+    </div>
   )
 }

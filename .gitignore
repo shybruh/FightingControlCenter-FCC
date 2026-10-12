@@ -3,6 +3,7 @@ node_modules/
 dist/
 app/src-tauri/target/
 app/src-tauri/gen/
+app/release/
 
 # local tooling
 *.log

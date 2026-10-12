@@ -33,6 +33,7 @@ import type { Capabilities } from '../devices/registry'
 import { useStore } from '../store'
 import { AdvancedPanel } from './AdvancedPanel'
 import { DesktopPanel } from './DesktopPanel'
+import { UpdateButton } from './UpdateButton'
 import { KeymapPanel } from './KeymapPanel'
 import { LightingPanel } from './LightingPanel'
 import { MacroPanel } from './MacroPanel'
@@ -122,6 +123,7 @@ function TopBar({ title }: { title: string }) {
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4 md:px-6">
       <h1 className="text-sm font-medium">{title}</h1>
       <div className="flex items-center gap-3">
+        <UpdateButton />
         <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
           <StatusDot
             state={pending ? 'busy' : 'ok'}

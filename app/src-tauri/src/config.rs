@@ -81,3 +81,10 @@ pub fn config_open_folder(app: AppHandle) -> Result<(), String> {
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
 }
+
+/// Whether this copy was installed (the installer leaves an uninstaller beside the exe) rather than unzipped.
+/// Updates run the new installer, so only installed copies can update themselves.
+#[tauri::command]
+pub fn is_installed() -> bool {
+    std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("uninstall.exe").is_file())).unwrap_or(false)
+}

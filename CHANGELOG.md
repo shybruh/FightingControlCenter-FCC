@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Auto-updates:** the installed app checks GitHub for new versions at startup and every few hours; *Update* in the
+  top bar shows what's new and installs it with one click (the download is signature-checked first). Portable copies
+  get a link to the new release. *Desktop → App* shows the version and has *Check now*.
 - **Settings survive reinstalls:** profiles and settings are saved to `%APPDATA%\Fighting Control Center\settings.json`,
   shared by the installer and portable builds, so reinstalling, updating or deleting a portable copy keeps them.
   *Desktop → Open folder* shows it. The portable zip no longer includes `portable.txt`; add one to keep data beside

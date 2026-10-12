@@ -2,7 +2,11 @@
 #
 # Release: bump the version (app/package.json, app/src-tauri/tauri.conf.json, app/src-tauri/Cargo.toml), rename
 # "## Unreleased" in CHANGELOG.md to "## <version>", commit, then push a tag:  git tag v0.3.0 && git push origin v0.3.0
-# A draft release with both files and the changelog section appears under Releases; check it, then Publish.
+# A draft release with the files and the changelog section appears under Releases; check it, then Publish. Installed
+# copies of FCC find it through latest.json once it's published.
+#
+# Updates are signed: the repository secret TAURI_SIGNING_PRIVATE_KEY must hold the private key whose public half is in
+# tauri.conf.json (plugins.updater.pubkey). Without it a tag build fails; a test build just skips signing.
 #
 # Test build: Actions → Release → Run workflow. The files are attached to the run (Artifacts), no release is made.
 
@@ -23,6 +27,9 @@ jobs:
       run:
         working-directory: app
         shell: bash
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,7 +47,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Check the tag matches the app version
+      - name: Check the tag, changelog and signing key
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           app=$(node -p "require('./src-tauri/tauri.conf.json').version")
@@ -48,13 +55,25 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME doesn't match the app version $app (tauri.conf.json)"
             exit 1
           fi
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret isn't set, so the update couldn't be signed"
+            exit 1
+          fi
+          node scripts/release-notes.mjs > ../release-notes.md
 
-      - name: Release notes
+      - name: Build (signed for updates when the key is available)
+        run: |
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            npx tauri build --config '{"bundle":{"createUpdaterArtifacts":true}}'
+          else
+            echo "::warning::No signing key: building without update files"
+            npx tauri build
+          fi
+          node scripts/make-portable.mjs
+
+      - name: Gather the release files
         if: startsWith(github.ref, 'refs/tags/')
-        run: node scripts/release-notes.mjs > ../release-notes.md
-
-      - name: Build installer and portable zip
-        run: npm run desktop:portable
+        run: node scripts/release-files.mjs
 
       - name: Draft the release
         if: startsWith(github.ref, 'refs/tags/')
@@ -65,8 +84,9 @@ jobs:
           body_path: release-notes.md
           fail_on_unmatched_files: true
           files: |
-            app/src-tauri/target/release/bundle/nsis/*.exe
-            app/src-tauri/target/release/bundle/portable/*.zip
+            app/release/*.exe
+            app/release/*.zip
+            app/release/latest.json
 
       - name: Keep the files (test build)
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}

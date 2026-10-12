@@ -12,6 +12,7 @@ import { webHidSupported } from './hid/transport'
 import { useStore } from './store'
 import { Diagnostics, useDiagnostics } from './components/Diagnostics'
 import { useDesktopIntegration } from './desktop/integration'
+import { useUpdateChecks } from './desktop/updates'
 import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
 
@@ -19,6 +20,7 @@ export default function App() {
   const status = useStore((s) => s.status)
   const tryReconnect = useStore((s) => s.tryReconnect)
   useDesktopIntegration()
+  useUpdateChecks()
 
   useEffect(() => {
     tryReconnect()

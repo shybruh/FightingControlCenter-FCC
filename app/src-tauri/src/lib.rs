@@ -20,6 +20,8 @@ pub fn run() {
     // must be first: a second launch just brings the running window forward
     .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| desktop::show_main(app)))
     .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .plugin(tauri_plugin_global_shortcut::Builder::new().build())
     .plugin(tauri_plugin_autostart::init(
       tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -44,6 +46,7 @@ pub fn run() {
       config::config_load,
       config::config_save,
       config::config_open_folder,
+      config::is_installed,
       desktop::open_project_page,
       osd::show_osd,
       rk::rk_available,
