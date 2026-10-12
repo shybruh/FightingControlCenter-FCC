@@ -6,7 +6,7 @@ import { register, unregisterAll } from '@tauri-apps/plugin-global-shortcut'
 import { create } from 'zustand'
 import { isTauri } from '../hid/tauri'
 import { useStore } from '../store'
-import { prettyHotkey, profileHotkey, useDesktop } from './settings'
+import { prettyHotkey, profileHotkey, useDesktop, type GameRule } from './settings'
 
 interface FocusedApp {
   exe: string
@@ -48,7 +48,6 @@ export function useDesktopIntegration() {
   const status = useStore((s) => s.status)
   const d = useDesktop()
   const recording = useDesktopStatus((s) => s.recording)
-  const autoSwitched = useDesktopStatus((s) => s.autoSwitched)
 
   // ---- tray menu mirrors the profile list ----
   useEffect(() => {
@@ -120,43 +119,78 @@ export function useDesktopIntegration() {
 
   // a switch can't happen while the keyboard is (re)connecting: catch up once it's ready
   useEffect(() => {
-    if (status === 'ready' && currentFocus) onFocus(currentFocus)
+    if (status !== 'ready') return
+    if (currentFocus) onFocus(currentFocus)
+    void checkRunning()
   }, [status])
 
-  // the game may close while something else (or nothing) has focus: watch its process
+  // games start and close while something else (or nothing) has focus: watch their processes
   useEffect(() => {
-    if (!isTauri() || !autoSwitched) return
-    const timer = setInterval(async () => {
-      const auto = useDesktopStatus.getState().autoSwitched
-      if (!auto) return
-      const running = await invoke<string[]>('running_exes', { names: [auto.exe] }).catch(() => [auto.exe])
-      if (!running.length) leaveGame(`Closed ${auto.label}`)
-    }, GAME_EXIT_POLL_MS)
+    if (!isTauri() || !d.rulesEnabled) return
+    const timer = setInterval(() => void checkRunning(), GAME_EXIT_POLL_MS)
     return () => clearInterval(timer)
-  }, [autoSwitched])
+  }, [d.rulesEnabled])
+}
+
+const sameExe = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+
+/** The rule for `exe`, if it has one whose profile still exists. */
+function ruleFor(exe: string) {
+  const { rules } = useDesktop.getState()
+  const { profiles } = useStore.getState()
+  return rules.find((r) => sameExe(r.exe, exe) && profiles.some((p) => p.id === r.profileId))
 }
 
 function onFocus(app: FocusedApp) {
-  const { rulesEnabled, rules } = useDesktop.getState()
+  const { rulesEnabled, switchWhile, fccLeavesGame } = useDesktop.getState()
+  if (!rulesEnabled || useStore.getState().status !== 'ready') return
+  const rule = app.self ? undefined : ruleFor(app.exe)
+  if (rule) return enterGame(rule)
+
+  // "while running": only the game closing ends it (see checkRunning)
+  if (switchWhile === 'running') return
+  if (app.self && !fccLeavesGame) return
+  const auto = useDesktopStatus.getState().autoSwitched
+  if (auto) leaveGame(`Left ${auto.label}`)
+}
+
+function enterGame(rule: GameRule) {
   const store = useStore.getState()
-  if (!rulesEnabled || store.status !== 'ready') return
   const status = useDesktopStatus.getState()
-  // FCC itself counts as leaving the game
-  const rule = app.self
-    ? undefined
-    : rules.find((r) => r.exe.toLowerCase() === app.exe.toLowerCase() && store.profiles.some((p) => p.id === r.profileId))
+  if (status.autoSwitched?.rule === rule.id && store.activeProfileId === rule.profileId) return
+  // remember where we came from only on the first switch of an auto-switch chain
+  const from = status.autoSwitched ? status.autoSwitched.from : store.activeProfileId
+  const label = rule.label || rule.exe
+  useDesktopStatus.setState({ autoSwitched: { from, rule: rule.id, exe: rule.exe, label } })
+  switchAndNotify(rule.profileId, `Game · ${label}`)
+}
 
-  if (rule) {
-    if (status.autoSwitched?.rule === rule.id && store.activeProfileId === rule.profileId) return
-    // remember where we came from only on the first switch of an auto-switch chain
-    const from = status.autoSwitched ? status.autoSwitched.from : store.activeProfileId
-    const label = rule.label || rule.exe
-    useDesktopStatus.setState({ autoSwitched: { from, rule: rule.id, exe: rule.exe, label } })
-    switchAndNotify(rule.profileId, `Game · ${label}`)
-    return
+let checking = false
+
+/** Notices games closing and, in "while running" mode, games starting. */
+async function checkRunning() {
+  const { rulesEnabled, rules, switchWhile } = useDesktop.getState()
+  const auto = useDesktopStatus.getState().autoSwitched
+  if (!isTauri() || !rulesEnabled || checking || useStore.getState().status !== 'ready') return
+  const names = switchWhile === 'running' ? rules.map((r) => r.exe) : auto ? [auto.exe] : []
+  if (!names.length) return
+  checking = true
+  try {
+    const running = await invoke<string[]>('running_exes', { names }).catch(() => null)
+    if (!running) return
+    const isRunning = (exe: string) => running.some((r) => sameExe(r, exe))
+    const current = useDesktopStatus.getState().autoSwitched
+    if (current && isRunning(current.exe)) return
+    if (switchWhile === 'running') {
+      // the focused game first, then the first running one in the list
+      const focused = currentFocus && !currentFocus.self ? ruleFor(currentFocus.exe) : undefined
+      const next = (focused && isRunning(focused.exe) ? focused : undefined) ?? rules.map((r) => ruleFor(r.exe)).find((r) => r && isRunning(r.exe))
+      if (next) return enterGame(next)
+    }
+    if (current) leaveGame(`Closed ${current.label}`)
+  } finally {
+    checking = false
   }
-
-  if (status.autoSwitched) leaveGame(`Left ${status.autoSwitched.label}`)
 }
 
 /** Out of the game (focus moved away, or it closed): apply the "when you leave the game" choice. */

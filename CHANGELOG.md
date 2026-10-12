@@ -20,6 +20,8 @@
 - Game profiles: switch back when the game closes, even if nothing else gets focus, and when you alt-tab into FCC.
   A switch missed while the keyboard was reconnecting is applied once it's ready. Games whose process can't be
   opened (some anti-cheat) are recognised too.
+- Game profiles: choose *While focused* or *While running* (on from launch until the game closes, even when you
+  alt-tab), and whether opening FCC counts as leaving the game.
 
 ## 0.2.0
 

@@ -20,6 +20,10 @@ interface DesktopSettings {
   cycleHotkey: string | null
   rulesEnabled: boolean
   rules: GameRule[]
+  /** focused: the game profile is on while the game has focus; running: from launch until it closes */
+  switchWhile: 'focused' | 'running'
+  /** focused mode: whether switching to FCC itself counts as leaving the game */
+  fccLeavesGame: boolean
   revert: RevertMode
   osdEnabled: boolean
   osdPosition: 'top' | 'bottom'
@@ -38,6 +42,8 @@ const DEFAULTS: DesktopSettings = {
   cycleHotkey: 'Ctrl+Alt+Digit0',
   rulesEnabled: true,
   rules: [],
+  switchWhile: 'focused',
+  fccLeavesGame: true,
   revert: 'previous',
   osdEnabled: true,
   osdPosition: 'top',

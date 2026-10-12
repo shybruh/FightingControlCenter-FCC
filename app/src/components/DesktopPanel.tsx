@@ -92,10 +92,10 @@ function GeneralCard() {
         />
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <div className="flex min-w-0 flex-col">
-            <span className="text-sm">Saved settings</span>
-            <span className="truncate text-xs text-muted-foreground" title={settingsFilePath ?? undefined}>
+            <span className="text-sm font-medium">Saved settings</span>
+            <span className="text-xs text-muted-foreground" title={settingsFilePath ?? undefined}>
               {settingsFilePath
-                ? 'Profiles and settings are kept in your Windows user folder, so reinstalling keeps them.'
+                ? 'Kept in your Windows user folder, so reinstalling or updating keeps them.'
                 : settingsPortable
                   ? 'Portable mode: kept in the FCC-data folder next to the app.'
                   : "The settings file couldn't be used, so they're only in the app's own storage. Diagnostics → Log has details."}
@@ -232,7 +232,9 @@ function GamesCard() {
       <CardHeader>
         <CardTitle>Game profiles</CardTitle>
         <CardDescription>
-          Switches to the game's profile while the game is focused, and back when you alt-tab out or close it.
+          {d.switchWhile === 'running'
+            ? "Switches to the game's profile when the game starts, and back when it closes."
+            : "Switches to the game's profile while the game is focused, and back when you alt-tab out or close it."}
         </CardDescription>
         <CardAction>
           <Switch checked={d.rulesEnabled} onCheckedChange={(v) => d.set({ rulesEnabled: v })} aria-label="Enable game profiles" />
@@ -275,8 +277,35 @@ function GamesCard() {
 
         <AddGame onAdd={addRule} />
 
+        <div className="flex flex-col border-t pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Use the game profile</span>
+              <span className="text-xs text-muted-foreground">
+                {d.switchWhile === 'running' ? 'From launch until the game closes, even when you alt-tab.' : 'Only while the game window is focused.'}
+              </span>
+            </div>
+            <Segmented
+              value={d.switchWhile}
+              options={[
+                { value: 'focused', label: 'While focused' },
+                { value: 'running', label: 'While running' },
+              ]}
+              onChange={(v) => d.set({ switchWhile: v })}
+            />
+          </div>
+          {d.switchWhile === 'focused' && (
+            <SwitchRow
+              label="Opening FCC counts as leaving the game"
+              hint="Turn off to keep the game profile while you tweak it in FCC."
+              checked={d.fccLeavesGame}
+              onChange={(v) => d.set({ fccLeavesGame: v })}
+            />
+          )}
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <span className="text-sm">When you leave the game</span>
+          <span className="text-sm">{d.switchWhile === 'running' ? 'When the game closes' : 'When you leave the game'}</span>
           <Select
             items={revertItems}
             value={revertValue}
