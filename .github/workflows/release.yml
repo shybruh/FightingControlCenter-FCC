@@ -63,6 +63,8 @@ jobs:
 
       - name: Build (signed for updates when the key is available)
         run: |
+          # the key is one line of base64; a pasted secret often picks up a trailing newline or spaces
+          export TAURI_SIGNING_PRIVATE_KEY="$(printf '%s' "$TAURI_SIGNING_PRIVATE_KEY" | tr -d '\r\n\t ')"
           if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
             npx tauri build --config '{"bundle":{"createUpdaterArtifacts":true}}'
           else
