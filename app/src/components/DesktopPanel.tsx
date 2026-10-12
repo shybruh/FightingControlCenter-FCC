@@ -214,7 +214,9 @@ function GamesCard() {
     <Card>
       <CardHeader>
         <CardTitle>Game profiles</CardTitle>
-        <CardDescription>Switch profile automatically when a game is focused.</CardDescription>
+        <CardDescription>
+          Switches to the game's profile while the game is focused, and back when you alt-tab out or close it.
+        </CardDescription>
         <CardAction>
           <Switch checked={d.rulesEnabled} onCheckedChange={(v) => d.set({ rulesEnabled: v })} aria-label="Enable game profiles" />
         </CardAction>

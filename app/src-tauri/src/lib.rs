@@ -39,6 +39,7 @@ pub fn run() {
       desktop::set_tray_profiles,
       desktop::set_close_to_tray,
       desktop::list_window_apps,
+      desktop::running_exes,
       desktop::open_project_page,
       osd::show_osd,
       rk::rk_available,

@@ -11,19 +11,36 @@ import { prettyHotkey, profileHotkey, useDesktop } from './settings'
 interface FocusedApp {
   exe: string
   title: string
+  /** FCC's own window */
+  self?: boolean
+}
+
+/** The game profile that's on because a game was focused, and what to go back to. */
+interface AutoSwitch {
+  /** profile active before the first game switch */
+  from: string | null
+  rule: string
+  exe: string
+  label: string
 }
 
 /** Live desktop state for the UI (not persisted). */
 export const useDesktopStatus = create<{
+  /** last focused app other than FCC (shown in the game profiles card) */
   focused: FocusedApp | null
   hotkeyErrors: Record<string, string>
-  autoSwitched: { from: string | null; rule: string } | null
+  autoSwitched: AutoSwitch | null
   /** true while the user is recording a new hotkey; global hotkeys are released meanwhile */
   recording: boolean
 }>(() => ({ focused: null, hotkeyErrors: {}, autoSwitched: null, recording: false }))
 
 /** How long a game must stay focused before its profile is applied (avoids alt-tab thrash). */
 const FOCUS_SETTLE_MS = 800
+/** How often to check that the game behind an auto-switch is still running. */
+const GAME_EXIT_POLL_MS = 2000
+
+/** what has focus right now, FCC included */
+let currentFocus: FocusedApp | null = null
 
 export function useDesktopIntegration() {
   const profiles = useStore((s) => s.profiles)
@@ -31,6 +48,7 @@ export function useDesktopIntegration() {
   const status = useStore((s) => s.status)
   const d = useDesktop()
   const recording = useDesktopStatus((s) => s.recording)
+  const autoSwitched = useDesktopStatus((s) => s.autoSwitched)
 
   // ---- tray menu mirrors the profile list ----
   useEffect(() => {
@@ -89,7 +107,8 @@ export function useDesktopIntegration() {
   useEffect(() => {
     if (!isTauri()) return
     const off = listen<FocusedApp>('foreground-app', (e) => {
-      useDesktopStatus.setState({ focused: e.payload })
+      currentFocus = e.payload
+      if (!e.payload.self) useDesktopStatus.setState({ focused: e.payload })
       clearTimeout(settle.current)
       settle.current = setTimeout(() => onFocus(e.payload), FOCUS_SETTLE_MS)
     })
@@ -98,29 +117,58 @@ export function useDesktopIntegration() {
       void off.then((u) => u())
     }
   }, [])
+
+  // a switch can't happen while the keyboard is (re)connecting: catch up once it's ready
+  useEffect(() => {
+    if (status === 'ready' && currentFocus) onFocus(currentFocus)
+  }, [status])
+
+  // the game may close while something else (or nothing) has focus: watch its process
+  useEffect(() => {
+    if (!isTauri() || !autoSwitched) return
+    const timer = setInterval(async () => {
+      const auto = useDesktopStatus.getState().autoSwitched
+      if (!auto) return
+      const running = await invoke<string[]>('running_exes', { names: [auto.exe] }).catch(() => [auto.exe])
+      if (!running.length) leaveGame(`Closed ${auto.label}`)
+    }, GAME_EXIT_POLL_MS)
+    return () => clearInterval(timer)
+  }, [autoSwitched])
 }
 
 function onFocus(app: FocusedApp) {
-  const { rulesEnabled, rules, revert } = useDesktop.getState()
+  const { rulesEnabled, rules } = useDesktop.getState()
   const store = useStore.getState()
   if (!rulesEnabled || store.status !== 'ready') return
   const status = useDesktopStatus.getState()
-  const rule = rules.find((r) => r.exe.toLowerCase() === app.exe.toLowerCase() && store.profiles.some((p) => p.id === r.profileId))
+  // FCC itself counts as leaving the game
+  const rule = app.self
+    ? undefined
+    : rules.find((r) => r.exe.toLowerCase() === app.exe.toLowerCase() && store.profiles.some((p) => p.id === r.profileId))
 
   if (rule) {
-    if (store.activeProfileId === rule.profileId) return
+    if (status.autoSwitched?.rule === rule.id && store.activeProfileId === rule.profileId) return
     // remember where we came from only on the first switch of an auto-switch chain
     const from = status.autoSwitched ? status.autoSwitched.from : store.activeProfileId
-    useDesktopStatus.setState({ autoSwitched: { from, rule: rule.id } })
-    switchAndNotify(rule.profileId, `Game · ${rule.label || rule.exe}`)
+    const label = rule.label || rule.exe
+    useDesktopStatus.setState({ autoSwitched: { from, rule: rule.id, exe: rule.exe, label } })
+    switchAndNotify(rule.profileId, `Game · ${label}`)
     return
   }
 
-  // left the game: revert
-  if (!status.autoSwitched) return
-  const target = revert === 'previous' ? status.autoSwitched.from : revert === 'stay' ? null : revert.profileId
+  if (status.autoSwitched) leaveGame(`Left ${status.autoSwitched.label}`)
+}
+
+/** Out of the game (focus moved away, or it closed): apply the "when you leave the game" choice. */
+function leaveGame(reason: string) {
+  const { revert } = useDesktop.getState()
+  const store = useStore.getState()
+  const auto = useDesktopStatus.getState().autoSwitched
+  // keep the auto-switch until the keyboard is ready, so the revert isn't lost
+  if (!auto || store.status !== 'ready') return
+  const target = revert === 'previous' ? auto.from : revert === 'stay' ? null : revert.profileId
   useDesktopStatus.setState({ autoSwitched: null })
-  if (target && store.profiles.some((p) => p.id === target)) switchAndNotify(target, `Left ${app.exe}`)
+  if (target && store.profiles.some((p) => p.id === target)) switchAndNotify(target, reason)
 }
 
 /** Switches profile and, when FCC isn't the focused window, shows the on-screen popup. */

@@ -25,6 +25,9 @@ pub struct TrayProfile {
 pub struct ForegroundApp {
     exe: String,
     title: String,
+    /// FCC's own window
+    #[serde(rename = "self")]
+    own: bool,
 }
 
 pub fn show_main<R: Runtime>(app: &AppHandle<R>) {
@@ -100,7 +103,8 @@ pub fn set_close_to_tray(state: State<CloseToTray>, enabled: bool) {
     state.0.store(enabled, Ordering::Relaxed);
 }
 
-/// Emits `foreground-app` whenever the focused application changes.
+/// Emits `foreground-app` whenever the focused application changes (including to FCC itself). Moments with no
+/// focused window (switching, a game closing) emit nothing.
 pub fn start_foreground_watcher<R: Runtime>(app: AppHandle<R>) {
     std::thread::spawn(move || {
         let mut last: Option<ForegroundApp> = None;
@@ -117,6 +121,13 @@ pub fn start_foreground_watcher<R: Runtime>(app: AppHandle<R>) {
     });
 }
 
+/// Which of `names` (executable names, any case) have a running process.
+#[tauri::command]
+pub fn running_exes(names: Vec<String>) -> Vec<String> {
+    let running = win::process_names();
+    names.into_iter().filter(|n| running.iter().any(|(_, r)| r.eq_ignore_ascii_case(n))).collect()
+}
+
 /// Visible top-level windows with their executables, for the "add game" picker.
 #[tauri::command]
 pub fn list_window_apps() -> Vec<ForegroundApp> {
@@ -129,7 +140,10 @@ pub fn list_window_apps() -> Vec<ForegroundApp> {
 #[cfg(windows)]
 mod win {
     use super::ForegroundApp;
-    use windows_sys::Win32::Foundation::{CloseHandle, HWND, LPARAM};
+    use windows_sys::Win32::Foundation::{CloseHandle, HWND, INVALID_HANDLE_VALUE, LPARAM};
+    use windows_sys::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, PROCESSENTRY32W, Process32FirstW, Process32NextW, TH32CS_SNAPPROCESS,
+    };
     use windows_sys::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetForegroundWindow, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, IsWindowVisible,
@@ -143,19 +157,41 @@ mod win {
                 return None;
             }
             let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
-            if handle.is_null() {
-                return None;
+            if !handle.is_null() {
+                let mut buf = [0u16; 1024];
+                let mut len = buf.len() as u32;
+                let ok = QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut len);
+                CloseHandle(handle);
+                if ok != 0 {
+                    let path = String::from_utf16_lossy(&buf[..len as usize]);
+                    return path.rsplit(['\\', '/']).next().map(str::to_string);
+                }
             }
-            let mut buf = [0u16; 1024];
-            let mut len = buf.len() as u32;
-            let ok = QueryFullProcessImageNameW(handle, 0, buf.as_mut_ptr(), &mut len);
-            CloseHandle(handle);
-            if ok == 0 {
-                return None;
-            }
-            let path = String::from_utf16_lossy(&buf[..len as usize]);
-            path.rsplit(['\\', '/']).next().map(str::to_string)
+            // protected processes (some anti-cheat games) can't be opened; the process list still names them
+            process_names().into_iter().find(|(p, _)| *p == pid).map(|(_, name)| name)
         }
+    }
+
+    /// Every running process: (pid, executable name).
+    pub fn process_names() -> Vec<(u32, String)> {
+        let mut out = Vec::new();
+        unsafe {
+            let snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if snap == INVALID_HANDLE_VALUE {
+                return out;
+            }
+            let mut entry: PROCESSENTRY32W = std::mem::zeroed();
+            entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+            let mut ok = Process32FirstW(snap, &mut entry);
+            while ok != 0 {
+                let name = &entry.szExeFile;
+                let len = name.iter().position(|&c| c == 0).unwrap_or(name.len());
+                out.push((entry.th32ProcessID, String::from_utf16_lossy(&name[..len])));
+                ok = Process32NextW(snap, &mut entry);
+            }
+            CloseHandle(snap);
+        }
+        out
     }
 
     fn title_of(hwnd: HWND) -> String {
@@ -170,7 +206,7 @@ mod win {
         }
     }
 
-    /// The focused app, or None when nothing (or FCC itself) is focused.
+    /// The focused app, or None when no window is focused or its executable can't be found.
     pub fn foreground_app() -> Option<ForegroundApp> {
         let hwnd = unsafe { GetForegroundWindow() };
         if hwnd.is_null() {
@@ -178,10 +214,8 @@ mod win {
         }
         let mut pid = 0u32;
         unsafe { GetWindowThreadProcessId(hwnd, &mut pid) };
-        if pid == std::process::id() {
-            return None;
-        }
-        Some(ForegroundApp { exe: exe_of(hwnd)?, title: title_of(hwnd) })
+        let own = pid == std::process::id();
+        Some(ForegroundApp { exe: exe_of(hwnd)?, title: title_of(hwnd), own })
     }
 
     unsafe extern "system" fn collect(hwnd: HWND, lparam: LPARAM) -> i32 {
@@ -190,7 +224,7 @@ mod win {
             let title = title_of(hwnd);
             if !title.is_empty() {
                 if let Some(exe) = exe_of(hwnd) {
-                    out.push(ForegroundApp { exe, title });
+                    out.push(ForegroundApp { exe, title, own: false });
                 }
             }
         }
@@ -213,6 +247,9 @@ mod win {
     pub fn window_apps() -> Vec<ForegroundApp> {
         Vec::new()
     }
+    pub fn process_names() -> Vec<(u32, String)> {
+        Vec::new()
+    }
 }
 
 /// Only pages of FCC's own GitHub repo (issues, releases) may be opened from the app.
@@ -225,4 +262,21 @@ pub fn open_project_page(app: AppHandle, url: String) -> Result<(), String> {
         return Err("only FCC's GitHub pages can be opened".into());
     }
     app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    #[test]
+    fn finds_running_processes() {
+        let me = std::env::current_exe().unwrap();
+        let name = me.file_name().unwrap().to_string_lossy().to_uppercase();
+        // any case matches, and a made-up name doesn't
+        assert_eq!(super::running_exes(vec![name.clone(), "no-such-game.exe".into()]), vec![name]);
+    }
+
+    #[test]
+    fn marks_own_window() {
+        let app = super::ForegroundApp { exe: "fcc.exe".into(), title: String::new(), own: true };
+        assert!(serde_json::to_string(&app).unwrap().contains("\"self\":true"));
+    }
 }

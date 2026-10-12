@@ -13,6 +13,9 @@
     would use it. *Listen* shows a collection's live input reports. *Copy scan* for sharing.
   - *Log*: a detailed, timestamped log of detection, connecting, reading, writing (every packet) and errors. Copy or save it.
 - RongYuan: only listed keyboards are picked up, never a RongYuan mouse or receiver.
+- Game profiles: switch back when the game closes, even if nothing else gets focus, and when you alt-tab into FCC.
+  A switch missed while the keyboard was reconnecting is applied once it's ready. Games whose process can't be
+  opened (some anti-cheat) are recognised too.
 
 ## 0.2.0
 
