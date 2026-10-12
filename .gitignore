@@ -15,3 +15,6 @@ tools/catalog/app*.js
 tools/catalog/app*.css
 tools/catalog/devices-raw.json
 tools/catalog/measured.json
+
+# screenshots and clips for the website (kept locally)
+website-media/
