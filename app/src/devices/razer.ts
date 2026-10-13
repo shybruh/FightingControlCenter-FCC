@@ -11,6 +11,8 @@ export interface RazerInfo {
   cols: number
   /** FCC key id -> [matrix row, matrix column] */
   matrix: Record<number, [number, number]>
+  /** lights that aren't keys (underglow): FCC id -> every matrix cell the segment lights */
+  spans: Record<number, [number, number][]>
   /** USB interface the board takes commands on */
   iface: number
   /** transaction ids Razer's software uses for each kind of command */
@@ -37,15 +39,17 @@ export interface RazerModel {
 
 export const RAZER_VENDOR_ID = 0x1532
 
-type CatalogKey = [label: string, hid: number, row: number, col: number, x: number, y: number, w: number, h: number]
+type CatalogKey = [label: string, hid: number, row: number, col: number, x: number, y: number, w: number, h: number, cells?: [number, number][]]
 
 export const RAZER_MODELS: RazerModel[] = catalog.map((m) => {
   const keys: KeyDef[] = []
   const matrix: Record<number, [number, number]> = {}
-  for (const [label, hid, row, col, x, y, w, h] of m.keys as CatalogKey[]) {
+  const spans: Record<number, [number, number][]> = {}
+  for (const [label, hid, row, col, x, y, w, h, cells] of m.keys as CatalogKey[]) {
     const id = keys.length
-    keys.push({ id, label, hid, x, y, w, ...(h > 1 ? { h } : {}) })
+    keys.push({ id, label, hid, x, y, w, ...(h !== 1 ? { h } : {}), ...(cells ? { light: true } : {}) })
     matrix[id] = [row, col]
+    if (cells) spans[id] = cells
   }
   return {
     id: m.id,
@@ -56,6 +60,7 @@ export const RAZER_MODELS: RazerModel[] = catalog.map((m) => {
       rows: m.rows,
       cols: m.cols,
       matrix,
+      spans,
       iface: m.iface,
       tid: m.tid,
       gameStore: m.gameStore,

@@ -204,6 +204,34 @@ for (const id of ['razer-blackwidow-v3-tkl', 'razer-huntsman-v2']) {
   check(`${id}: Sunset design lands on every key`, wrong, [])
 }
 
+// underglow: lights that aren't keys continue the matrix after the keys, as OpenRGB numbers them
+{
+  const lit = (id) => {
+    const d = DEVICES.find((x) => x.id === id)
+    activateDevice(d)
+    const lights = layout.KEYS.filter((k) => k.light)
+    const cells = lights.flatMap((k) => d.razer.spans[k.id])
+    const all = layout.KEYS.flatMap((k) => d.razer.spans[k.id] ?? [d.razer.matrix[k.id]]).map(String)
+    return { d, lights, cells, shared: all.length - new Set(all).size, maxId: Math.max(...layout.KEYS.map((k) => k.id)) }
+  }
+  const v4 = lit('razer-blackwidow-v4')
+  check('BlackWidow V4: 6 underglow segments, 18 LEDs in row 6 columns 0-17', [v4.lights.length, v4.cells.length, v4.cells.every(([r]) => r === 6), v4.cells.map(([, c]) => c).join()], [6, 18, true, [...Array(18).keys()].join()])
+  const pro = lit('razer-blackwidow-v4-pro')
+  check('BlackWidow V4 Pro: wrist rest after 5 unconnected LEDs (row 7, columns 0-19)', pro.cells.slice(18).map(String), [...Array(20).keys()].map((c) => `7,${c}`))
+  const elite = lit('razer-huntsman-elite')
+  check('Huntsman Elite: 66 underglow LEDs fill rows 6-8', [elite.cells.length, Math.min(...elite.cells.map(([r]) => r)), Math.max(...elite.cells.map(([r]) => r))], [66, 6, 8])
+  check('no LED lit by two keys or segments, ids fit the colour region', [v4, pro, elite].map((x) => [x.shared, x.maxId < 126]), [[0, true], [0, true], [0, true]])
+  const fr = await run('razer-blackwidow-v4', async (k, regs, d) => {
+    const colors = regs.colors.slice()
+    const seg = layout.KEYS.find((x) => x.label === 'Underglow right 2')
+    colors.set([seg.id, 0, 255, 0], seg.id * 4)
+    await k.writeRegion('colors', colors)
+    await k.writeRegion('led', codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: R.RAZER_FX.custom }))
+  })
+  const row6 = fr.all.filter((p) => cmd(p) === 'f/3').find((p) => p[10] === 6)
+  check('painting "Underglow right 2" lights its 3 LEDs (row 6, columns 12-14) green', [12, 13, 14].map((c) => Array.from(row6.slice(13 + c * 3, 16 + c * 3))), [[0, 255, 0], [0, 255, 0], [0, 255, 0]])
+}
+
 // fixed-speed effects preview at the model's own pace
 activateDevice(DEVICES.find((d) => d.id === 'razer-huntsman-v2'))
 const huntsmanPace = codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed

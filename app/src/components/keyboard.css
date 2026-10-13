@@ -55,6 +55,11 @@
   border-color: color-mix(in oklch, var(--primary) 55%, transparent);
   background: color-mix(in oklch, var(--tint) var(--tint-mix, 40%), color-mix(in oklch, var(--secondary), var(--foreground) 10%));
 }
+/* a light that isn't a key (underglow strip segment): a thin bar, no legend */
+.key.light .key-cap {
+  padding: 0;
+  border-radius: 999px;
+}
 .key-fill {
   position: absolute;
   left: 0;

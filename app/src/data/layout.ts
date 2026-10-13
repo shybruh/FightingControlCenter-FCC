@@ -16,6 +16,8 @@ export interface KeyDef {
   h?: number
   x: number
   y: number
+  /** a light that isn't a key (e.g. a strip of underglow): only lighting uses it */
+  light?: boolean
 }
 
 type Row = Array<[id: number, label: string, hid: number, w?: number, sub?: string]>

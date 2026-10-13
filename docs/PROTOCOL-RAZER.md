@@ -29,6 +29,12 @@ The command set is the same on every supported board (the "extended matrix" fami
 - whether per-key frames get an answer (the BlackWidow V4 / V4 Pro / V4 75% don't: FCC sends them without reading one);
 - whether the board has the polling-rate command and which rates, and whether it has keyswitch optimisation;
 - the LED matrix size (5 x 15 up to 9 x 22) and where each key sits in it.
+- lights that aren't keys (underglow, wrist rest). They continue the matrix where the keys end, numbered left to right
+  from row 6, as OpenRGB lists them: BlackWidow V4 / V4 Pro: underglow left (9) and right (9) in row 6, then on the
+  V4 Pro 5 unconnected LEDs and the wrist rest (20) in row 7; Huntsman Elite / V2 Analog: 66 underglow LEDs in rows
+  6-8. FCC shows them as strips around the keys, in segments of a few LEDs each;
+- how fast the firmware runs breathing, spectrum and wave, for the preview (the commands carry no speed; the newer
+  boards are slower).
 
 ## Report layout
 

@@ -78,7 +78,7 @@ export function Keyboard({ selected, onSelectionChange, face, single, onKeyClick
             <button
               key={k.id}
               type="button"
-              className={`key${isSel ? ' sel' : ''}${f.marked ? ' marked' : ''}`}
+              className={`key${k.light ? ' light' : ''}${isSel ? ' sel' : ''}${f.marked ? ' marked' : ''}`}
               style={
                 {
                   '--x': k.x,
@@ -100,7 +100,7 @@ export function Keyboard({ selected, onSelectionChange, face, single, onKeyClick
                     style={{ height: `${Math.min(1, Math.max(0, f.fill)) * 100}%`, background: f.fillColor }}
                   />
                 )}
-                <span className="key-main">{f.main ?? (k.label || 'Space')}</span>
+                {!k.light && <span className="key-main">{f.main ?? (k.label || 'Space')}</span>}
                 {f.sub != null && <span className="key-sub">{f.sub}</span>}
               </span>
             </button>

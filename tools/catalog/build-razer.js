@@ -90,26 +90,33 @@ const MEDIA = (row, from) => ['Prev', 'Play', 'Next', 'Mute'].map((n, i) => ['in
 // iface: USB interface for commands. tid: transaction ids [effects, per-key frame, brightness]. game: storage + tid for
 // game mode. frameNoAnswer: the board doesn't answer per-key frames. polling: Hz list when the board has the
 // polling-rate command. keyswitch: typing/gaming optimisation. matrix: OpenRazer's [rows, cols].
+// lights: LEDs that aren't keys (underglow), in the order OpenRGB lists them after the keyboard. Like OpenRGB, they
+// continue the LED matrix where the keys end (row 6 onwards, left to right): { side, name, count, segments } draws them
+// as a strip beside the keys, split into segments FCC paints as one; { skip } is LEDs that aren't connected.
 // fx: how fast the board's firmware runs breathing / spectrum / wave (FCC's preview speed, 1 slow … 5 fast). Razer
 // sends every board the same commands, so the pace is the firmware's own. Measured: Huntsman V2 (1); the BlackWidow V3
 // TKL runs faster than that. Others follow their generation (boards on transaction id 0x3f are the older firmware).
 
+const SIDES = [{ side: 'left', name: 'Underglow left', count: 9, segments: 3 }, { side: 'right', name: 'Underglow right', count: 9, segments: 3 }]
+// OpenRGB has these 66 as one block; where each sits around the board isn't documented, so they're one strip below it
+const UNDERGLOW_66 = [{ side: 'bottom', name: 'Underglow', count: 66, segments: 6 }]
+
 const MODELS = [
   { id: 'huntsman-v2', name: 'Huntsman V2', pid: 0x026c, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['no', 0x1f], polling: [125, 250, 500, 1000, 2000, 4000, 8000], keyswitch: true, matrix: [6, 22], size: 'full', edits: MEDIA(0, 17) },
   { id: 'huntsman-v2-tkl', name: 'Huntsman V2 TKL', pid: 0x026b, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['no', 0x1f], polling: [125, 250, 500, 1000, 2000, 4000, 8000], keyswitch: true, matrix: [6, 18], size: 'tkl', edits: [] },
-  { id: 'huntsman-v2-analog', name: 'Huntsman V2 Analog', pid: 0x0266, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [8, 22], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 18), ...shiftRows([1, 2, 3, 4, 5])] },
+  { id: 'huntsman-v2-analog', name: 'Huntsman V2 Analog', pid: 0x0266, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [9, 22], lights: UNDERGLOW_66, size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 18), ...shiftRows([1, 2, 3, 4, 5])] },
   { id: 'huntsman-v3-pro', name: 'Huntsman V3 Pro', pid: 0x02a6, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [6, 22], size: 'full', edits: [...shiftRows([0, 1, 2, 3, 4, 5]), ['rm', 5, 17]] },
   { id: 'huntsman-v3-pro-tkl', name: 'Huntsman V3 Pro TKL', pid: 0x02a7, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [6, 22], size: 'tkl', edits: [['ins', 0, 0, ''], ['swap', 0, 16, 'Play'], ['ins', 0, 17, ''], ...shiftRows([1, 2, 3, 4, 5])] },
   { id: 'huntsman-mini', name: 'Huntsman Mini', pid: 0x0257, iface: 2, tid: [0x3f, 0x3f, 0x3f], game: ['var', 0xff], matrix: [5, 15], size: '60', edits: shiftRows([0, 1, 2, 3, 4]) },
-  { id: 'huntsman-elite', name: 'Huntsman Elite', pid: 0x0226, iface: 1, tid: [0x3f, 0x3f, 0x3f], game: ['var', 0xff], matrix: [9, 22], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 18), ...shiftRows([1, 2, 3, 4, 5])] },
+  { id: 'huntsman-elite', name: 'Huntsman Elite', pid: 0x0226, iface: 1, tid: [0x3f, 0x3f, 0x3f], game: ['var', 0xff], matrix: [9, 22], lights: UNDERGLOW_66, size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 18), ...shiftRows([1, 2, 3, 4, 5])] },
   { id: 'huntsman-te', name: 'Huntsman Tournament Edition', pid: 0x0243, iface: 2, tid: [0x3f, 0x3f, 0x3f], game: ['var', 0xff], matrix: [6, 18], size: 'tkl', edits: shiftRows([0, 1, 2, 3, 4, 5]) },
   { id: 'huntsman', name: 'Huntsman', pid: 0x0227, iface: 1, tid: [0x3f, 0x3f, 0x3f], game: ['var', 0xff], matrix: [6, 22], size: 'full', edits: shiftRows([0, 1, 2, 3, 4, 5]) },
   { id: 'blackwidow-v3', name: 'BlackWidow V3', pid: 0x024e, iface: 3, tid: [0x3f, 0x1f, 0x3f], game: ['var', 0xff], matrix: [6, 22], size: 'full', edits: [...shiftRows([0, 1, 2, 3, 4, 5]), ['swap', 5, 6, 'Space'], ['swap', 5, 7, ''], ['swap', 5, 10, 'RAlt']] },
   { id: 'blackwidow-v3-tkl', name: 'BlackWidow V3 TKL', pid: 0x0a24, iface: 2, tid: [0x3f, 0x1f, 0x3f], game: ['var', 0xff], matrix: [6, 18], size: 'tkl', edits: shiftRows([0, 1, 2, 3, 4, 5]) },
   { id: 'blackwidow-v3-mini', name: 'BlackWidow V3 Mini (wired)', pid: 0x0258, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [5, 16], size: '60', edits: [['swap', 0, 0, 'Esc'], ['ins', 0, 13, ''], ['swap', 0, 15, 'Del'], ['swap', 1, 15, 'PgUp'], ['swap', 2, 15, 'PgDn'], ['swap', 3, 14, 'Ins'], ['swap', 3, 15, 'Up'], ['swap', 4, 12, 'RCtrl'], ['swap', 4, 13, 'Left'], ['swap', 4, 14, 'Down'], ['swap', 4, 15, 'Right']] },
   { id: 'blackwidow-v3-pro', name: 'BlackWidow V3 Pro (wired)', pid: 0x025a, iface: 2, tid: [0x3f, 0x1f, 0x3f], game: ['var', 0xff], matrix: [6, 22], size: 'full', edits: MEDIA(0, 18) },
-  { id: 'blackwidow-v4', name: 'BlackWidow V4', pid: 0x0287, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], frameNoAnswer: true, polling: [125, 250, 500, 1000, 2000, 4000, 8000], matrix: [8, 23], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 19), ...shiftRows([1, 2, 3, 4, 5])] },
-  { id: 'blackwidow-v4-pro', name: 'BlackWidow V4 Pro', pid: 0x028d, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], frameNoAnswer: true, polling: [125, 250, 500, 1000, 2000, 4000, 8000], matrix: [8, 23], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 19), ...shiftRows([1, 2, 3, 4, 5])] },
+  { id: 'blackwidow-v4', name: 'BlackWidow V4', pid: 0x0287, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], frameNoAnswer: true, lights: SIDES, polling: [125, 250, 500, 1000, 2000, 4000, 8000], matrix: [8, 23], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 19), ...shiftRows([1, 2, 3, 4, 5])] },
+  { id: 'blackwidow-v4-pro', name: 'BlackWidow V4 Pro', pid: 0x028d, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], frameNoAnswer: true, lights: [...SIDES, { skip: 5 }, { side: 'bottom', name: 'Wrist rest', count: 20, segments: 5 }], polling: [125, 250, 500, 1000, 2000, 4000, 8000], matrix: [8, 23], size: 'full', edits: [...shiftRows([0]), ...MEDIA(0, 19), ...shiftRows([1, 2, 3, 4, 5])] },
   { id: 'blackwidow-v4-x', name: 'BlackWidow V4 X', pid: 0x0293, iface: 2, tid: [0x3f, 0x1f, 0x1f], game: ['var', 0xff], matrix: [6, 22], size: 'full', edits: [] },
   { id: 'blackwidow-v4-75', name: 'BlackWidow V4 75%', pid: 0x02a5, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], frameNoAnswer: true, polling: [125, 250, 500, 1000, 2000, 4000, 8000], matrix: [6, 16], size: '75', edits: [/* OpenRGB lists (0,2) here, which deletes F1; closing the gap after Esc is what it means */ ['rm', 0, 1], ['ins', 1, 14, ''], ['ins', 1, 16, 'Del'], ['ins', 2, 16, 'PgUp'], ['ins', 3, 16, 'PgDn'], ['ins', 4, 15, 'Up'], ['ins', 4, 16, 'Ins'], ['rm', 5, 13], ['ins', 5, 14, 'Left'], ['ins', 5, 15, 'Down'], ['ins', 5, 16, 'Right']] },
   { id: 'blackwidow-v4-tkl', name: 'BlackWidow V4 TKL (wired)', pid: 0x02d7, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['var', 0xff], polling: [125, 250, 500, 1000], matrix: [6, 18], size: 'tkl', edits: [['ins', 0, 10, ''], ['ins', 1, 14, ''], ['ins', 2, 14, ''], ['ins', 4, 14, ''], ['ins', 5, 5, '']] },
@@ -173,9 +180,47 @@ function geometry(model, keys) {
   return out
 }
 
+/** Light strips beside the keys (thickness and gap in key units); the keys move right when there's a strip on the left. */
+const STRIP = 0.32
+const GAP = 0.28
+function lightStrips(m, keys, cols) {
+  if (!m.lights) return { keys, lights: [] }
+  const left = m.lights.some((l) => l.side === 'left') ? STRIP + GAP : 0
+  const moved = keys.map((k) => ({ ...k, x: k.x + left }))
+  const right = Math.max(...moved.map((k) => k.x + k.w))
+  const bottom = Math.max(...moved.map((k) => k.y + k.h))
+  const out = []
+  // the LEDs after the keyboard's own rows, numbered on along the matrix
+  let led = 6 * cols
+  for (const l of m.lights) {
+    if (l.skip) {
+      led += l.skip
+      continue
+    }
+    const per = l.count / l.segments
+    const vertical = l.side !== 'bottom'
+    const length = vertical ? bottom : right - left
+    const start = vertical ? 0 : left
+    const size = (length - GAP * (l.segments - 1)) / l.segments
+    for (let s = 0; s < l.segments; s++) {
+      const cells = []
+      for (let i = Math.round(s * per); i < Math.round((s + 1) * per); i++) cells.push([Math.floor((led + i) / cols), (led + i) % cols])
+      const at = start + s * (size + GAP)
+      const x = l.side === 'left' ? 0 : l.side === 'right' ? right + GAP : at
+      const y = vertical ? at : bottom + GAP
+      out.push({ name: `${l.name} ${s + 1}`, x, y, w: vertical ? STRIP : size, h: vertical ? size : STRIP, cells })
+    }
+    led += l.count
+  }
+  return { keys: moved, lights: out }
+}
+
+const round = (n) => +n.toFixed(2)
+
 const catalog = MODELS.map((m) => {
   const keys = layout(m.size, m.edits).filter((k) => k.row < 6)
   const cols = Math.max(m.matrix[1], ...keys.map((k) => k.col + 1))
+  const placed = lightStrips(m, geometry(m, keys), cols)
   return {
     id: `razer-${m.id}`,
     name: `Razer ${m.name}`,
@@ -189,10 +234,17 @@ const catalog = MODELS.map((m) => {
     previewSpeed: m.fx ?? (m.tid[0] === 0x3f ? 3 : 1),
     rows: m.matrix[0],
     cols,
-    keys: geometry(m, keys).map((k) => [LABEL[k.name] ?? k.name, HID[k.name] ?? 0, k.row, k.col, +k.x.toFixed(2), k.y, k.w, k.h]),
+    keys: [
+      ...placed.keys.map((k) => [LABEL[k.name] ?? k.name, HID[k.name] ?? 0, k.row, k.col, round(k.x), k.y, k.w, k.h]),
+      // lights that aren't keys: no HID usage, and every matrix cell the segment covers
+      ...placed.lights.map((l) => [l.name, 0, l.cells[0][0], l.cells[0][1], round(l.x), round(l.y), round(l.w), round(l.h), l.cells]),
+    ],
   }
 })
 
 const out = path.join(__dirname, '../../app/src/devices/razer-catalog.json')
 fs.writeFileSync(out, JSON.stringify(catalog) + '\n')
-for (const c of catalog) console.log(`${c.name.padEnd(34)} ${c.productId.toString(16).padStart(4, '0')} if${c.iface} ${c.rows}x${c.cols} ${c.keys.length} keys`)
+for (const c of catalog) {
+  const lights = c.keys.filter((k) => k[8]).length
+  console.log(`${c.name.padEnd(34)} ${c.productId.toString(16).padStart(4, '0')} if${c.iface} ${c.rows}x${c.cols} ${c.keys.length - lights} keys${lights ? ` + ${lights} light segments` : ''}`)
+}

@@ -347,11 +347,10 @@ export class RazerKeyboard implements KeyboardDriver {
     if (!rz) return []
     const grid = Array.from({ length: rz.rows }, () => new Uint8Array(rz.cols * 3))
     for (const k of KEYS) {
-      const at = rz.matrix[k.id]
-      if (at === undefined) continue
-      const [row, col] = at
+      // a key lights one cell; an underglow segment lights each of its cells
+      const cells = rz.spans?.[k.id] ?? (rz.matrix[k.id] ? [rz.matrix[k.id]] : [])
       const o = k.id * 4
-      grid[row].set([this.state.colors[o + 1], this.state.colors[o + 2], this.state.colors[o + 3]], col * 3)
+      for (const [row, col] of cells) grid[row]?.set([this.state.colors[o + 1], this.state.colors[o + 2], this.state.colors[o + 3]], col * 3)
     }
     return [...grid.map((row, i) => frameRow(i, 0, rz.cols - 1, row)), effect.custom()]
   }
