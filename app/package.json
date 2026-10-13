@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "node scripts/test.mjs",
+    "test:rust": "cd src-tauri && cargo test --lib",
     "preview": "vite preview",
     "tauri": "tauri",
     "desktop": "tauri dev",

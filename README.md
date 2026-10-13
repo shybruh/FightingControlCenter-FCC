@@ -139,6 +139,7 @@ npm --prefix app install
 npm --prefix app run dev              # web version on http://localhost:5174
 npm --prefix app run desktop          # desktop app with hot reload
 npm --prefix app run desktop:build    # release build + installer (app/src-tauri/target/release/bundle/nsis)
+npm --prefix app test                 # catalog and protocol checks, no keyboard needed
 ```
 
 No keyboard handy? Click **Try demo mode** for a simulated board (or **Demo: Royal Kludge M75**).
