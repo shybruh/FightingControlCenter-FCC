@@ -203,6 +203,8 @@ export interface EffectDef {
   direction: boolean
   /** Fighting68 effect id used to approximate this effect in the on-screen preview (other boards' modes) */
   preview?: number
+  /** speed (1–5) the preview plays it at, for effects whose speed the board fixes */
+  previewSpeed?: number
 }
 
 /** Effect id of the Fighting68's custom per-key mode; the preview always uses this id for per-key colours. */

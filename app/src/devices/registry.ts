@@ -610,9 +610,11 @@ function mcEffects(mc: McInfo): EffectDef[] {
 /** Razer effects as FCC shows them (ids are FCC's own, see RAZER_FX in hid/razer.ts). */
 const RAZER_EFFECTS: EffectDef[] = [
   { id: 1, name: 'Static', color: true, speed: false, direction: false, preview: 0x01 },
-  { id: 2, name: 'Breathing', color: true, speed: false, direction: false, preview: 0x07 },
-  { id: 3, name: 'Spectrum cycle', color: false, speed: false, direction: false, preview: 0x08 },
-  { id: 4, name: 'Wave', color: false, speed: false, direction: true, preview: 0x0b },
+  // Razer runs breathing, spectrum and wave at a fixed speed, slower than the preview's default
+  { id: 2, name: 'Breathing', color: true, speed: false, direction: false, preview: 0x07, previewSpeed: 1 },
+  { id: 3, name: 'Spectrum cycle', color: false, speed: false, direction: false, preview: 0x08, previewSpeed: 1 },
+  // always a rainbow, like the Fighting68's endless flow
+  { id: 4, name: 'Wave', color: false, speed: false, direction: true, preview: 0x10, previewSpeed: 1 },
   { id: 5, name: 'Reactive', color: true, speed: true, direction: false, preview: 0x02 },
   { id: 6, name: 'Starlight', color: true, speed: true, direction: false, preview: 0x04 },
   { id: 7, name: 'Custom per-key', color: false, speed: false, direction: false, preview: SONIX_CUSTOM },

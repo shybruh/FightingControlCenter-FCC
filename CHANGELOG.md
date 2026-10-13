@@ -6,6 +6,7 @@
 - **Razer Huntsman V2** (experimental, desktop app): lighting effects, per-key RGB, brightness, polling rate up to
   8000 Hz, game mode and keyswitch optimisation. Untested so far: it opens read-only until you choose *Allow changes*.
   Close Razer Synapse while using FCC.
+  The on-screen preview runs breathing, spectrum and wave at the keyboard's own (slower) pace, with wave in rainbow.
 
 ### Fixed
 - The lighting preview no longer re-renders endlessly on boards whose effects are previewed through a Fighting68
