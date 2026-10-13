@@ -8,13 +8,13 @@ import path from 'node:path'
 const app = path.resolve(import.meta.dirname, '..')
 const out = process.argv[2] ?? path.join(app, '..', 'website', 'Fighting Control Center website', 'data', 'keyboards.json')
 
-/** Boards with support being worked on that the app can't drive yet. */
-const IN_PROGRESS = [
-  { name: 'AK820', brand: 'AJAZZ', family: 'AJAZZ', status: 'in-progress', usb: [] },
-  { name: 'AK820 Pro', brand: 'AJAZZ', family: 'AJAZZ', status: 'in-progress', usb: ['0c45:8009'] },
-]
-/** Boards the app lists but can't drive yet (e.g. newer firmware with a protocol FCC doesn't speak). */
-const IN_PROGRESS_IDS = new Set(['258a:0163'])
+// boards being worked on, with how far along they are (src/devices/in-progress.json)
+const work = JSON.parse(fs.readFileSync(path.join(app, 'src/devices/in-progress.json'), 'utf8'))
+const percent = (n) => Math.min(100, Math.max(0, Math.round(Number(n) || 0)))
+/** Boards the app can't drive yet. */
+const IN_PROGRESS = work.boards.map((b) => ({ ...b, status: 'in-progress', progress: percent(b.progress) }))
+/** Boards the app lists but can't drive yet (e.g. newer firmware with a protocol FCC doesn't speak), by USB id. */
+const IN_PROGRESS_IDS = new Map(work.existing.map((e) => [e.usb.toLowerCase(), { progress: percent(e.progress), stage: e.stage }]))
 
 // the registry is TypeScript that imports JSON catalogues: let Vite load it
 const vite = await createServer({ root: app, logLevel: 'error', server: { middlewareMode: true }, appType: 'custom' })
@@ -60,7 +60,7 @@ for (const d of DEVICES) {
   if (!row.usb.includes(usb)) row.usb.push(usb)
   // a verified id wins over untested ones under the same name
   if (status === 'verified') row.status = 'verified'
-  if (IN_PROGRESS_IDS.has(usb)) row.status = 'in-progress'
+  if (IN_PROGRESS_IDS.has(usb)) Object.assign(row, { status: 'in-progress' }, IN_PROGRESS_IDS.get(usb))
   rows.set(key, row)
 }
 

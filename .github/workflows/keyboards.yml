@@ -1,0 +1,57 @@
+# Builds the website's keyboard list from the app's device registry (plus app/src/devices/in-progress.json for boards
+# being worked on) and publishes it on the `site-data` branch, which the website reads directly:
+#   https://raw.githubusercontent.com/shybruh/FightingControlCenter-FCC/site-data/keyboards.json
+# Runs when the devices (or the script) change on main, or by hand from Actions → Keyboard list → Run workflow.
+# main itself is never touched, so nothing needs pulling after it runs.
+
+name: Keyboard list
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app/src/devices/**
+      - app/scripts/site-keyboards.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keyboard-list
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - name: Generate the list
+        run: |
+          mkdir -p ../site-data
+          node scripts/site-keyboards.mjs ../site-data/keyboards.json
+          node -e "const l = require('../site-data/keyboards.json'); if (!Array.isArray(l) || l.length < 100) { console.error('suspiciously short list: ' + l.length); process.exit(1) }"
+
+      - name: Publish to the site-data branch
+        working-directory: site-data
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git init -q -b site-data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add keyboards.json
+          git commit -q -m "Keyboard list from ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" site-data

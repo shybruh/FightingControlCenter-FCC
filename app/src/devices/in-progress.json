@@ -1,0 +1,28 @@
+{
+  "_about": "Boards being worked on, shown on the website's keyboard list with a progress bar. Edit and push: GitHub rebuilds the list (.github/workflows/keyboards.yml). progress is 0-100; stage is one short line. Either list the board here (new boards) or mark an existing app entry by its USB id.",
+  "boards": [
+    {
+      "name": "AK820",
+      "brand": "AJAZZ",
+      "family": "AJAZZ",
+      "usb": [],
+      "progress": 15,
+      "stage": "Waiting for a USB capture of AJAZZ's software"
+    },
+    {
+      "name": "AK820 Pro",
+      "brand": "AJAZZ",
+      "family": "AJAZZ",
+      "usb": ["0c45:8009"],
+      "progress": 15,
+      "stage": "Waiting for a USB capture of AJAZZ's software"
+    }
+  ],
+  "existing": [
+    {
+      "usb": "258a:0163",
+      "progress": 30,
+      "stage": "Newer firmware found; waiting for a USB capture of RK's software"
+    }
+  ]
+}
