@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
 ### New keyboards
 - **Razer keyboards** (experimental, desktop app), 19 models: Huntsman V2 / V2 TKL / V2 Analog / V3 Pro / V3 Pro TKL /
@@ -8,12 +8,15 @@
   V4 TKL / Elite. Lighting effects, per-key RGB, brightness and game mode; polling rate (up to 8000 Hz) and keyswitch
   optimisation on the boards that have them. The Huntsman V2's lighting is confirmed on a real board; the rest are
   untested and open read-only until you choose *Allow changes*. Close Razer Synapse while using FCC.
-  The on-screen preview runs breathing, spectrum and wave at the keyboard's own (slower) pace, with wave in rainbow.
+- Razer previews: breathing, spectrum and wave play at the keyboard's own (slower) pace, and wave is shown in rainbow.
 
 ### Fixed
 - The lighting preview no longer re-renders endlessly on boards whose effects are previewed through a Fighting68
   effect (RongYuan, MCHOSE, Royal Kludge), which could make the app sluggish.
 - Demo mode no longer overwrites your real Fighting68 profiles: demo profiles live in memory only.
+
+### Other
+- FCC is now licensed under the GNU GPL v3.0 or later.
 
 ## 0.3.0
 
