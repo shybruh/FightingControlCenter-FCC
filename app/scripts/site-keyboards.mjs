@@ -13,8 +13,12 @@ const work = JSON.parse(fs.readFileSync(path.join(app, 'src/devices/in-progress.
 const percent = (n) => Math.min(100, Math.max(0, Math.round(Number(n) || 0)))
 /** Boards the app can't drive yet. */
 const IN_PROGRESS = work.boards.map((b) => ({ ...b, status: 'in-progress', progress: percent(b.progress) }))
-/** Boards the app lists but can't drive yet (e.g. newer firmware with a protocol FCC doesn't speak), by USB id. */
-const IN_PROGRESS_IDS = new Map(work.existing.map((e) => [e.usb.toLowerCase(), { progress: percent(e.progress), stage: e.stage }]))
+/** Boards the app lists that are still being worked on, by USB id: in progress (can't drive them yet, e.g. newer
+ *  firmware with a protocol FCC doesn't speak) unless the entry keeps another status (partly supported already). */
+const IN_PROGRESS_IDS = new Map(work.existing.map((e) => [
+  e.usb.toLowerCase(),
+  { ...(e.keepStatus ? {} : { status: 'in-progress' }), progress: percent(e.progress), stage: e.stage },
+]))
 
 // the registry is TypeScript that imports JSON catalogues: let Vite load it
 const vite = await createServer({ root: app, logLevel: 'error', server: { middlewareMode: true }, appType: 'custom' })
@@ -60,7 +64,7 @@ for (const d of DEVICES) {
   if (!row.usb.includes(usb)) row.usb.push(usb)
   // a verified id wins over untested ones under the same name
   if (status === 'verified') row.status = 'verified'
-  if (IN_PROGRESS_IDS.has(usb)) Object.assign(row, { status: 'in-progress' }, IN_PROGRESS_IDS.get(usb))
+  if (IN_PROGRESS_IDS.has(usb)) Object.assign(row, IN_PROGRESS_IDS.get(usb))
   rows.set(key, row)
 }
 
