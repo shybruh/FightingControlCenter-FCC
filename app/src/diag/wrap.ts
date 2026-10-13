@@ -4,6 +4,7 @@ import type { Opened } from '../hid/connect'
 import type { McExpect, McTransport } from '../hid/mc'
 import type { FeatureTransport } from '../hid/rk'
 import type { RyTransport } from '../hid/ry'
+import type { RazerTransport } from '../hid/razer'
 import type { Transport } from '../hid/transport'
 import { errorText, hex, log } from './log'
 
@@ -140,6 +141,38 @@ function mc(t: McTransport): McTransport {
   }
 }
 
+function razer(t: RazerTransport): RazerTransport {
+  const h2 = (n: number) => `0x${n.toString(16).padStart(2, '0')}`
+  const cmd = (r: ArrayLike<number>) => `command ${h2(r[6])} ${h2(r[7])}`
+  return {
+    get name() {
+      return t.name
+    },
+    get identity() {
+      return t.identity
+    },
+    async request(report) {
+      // header and arguments; the rest of the 90 bytes is padding
+      log.packet('razer', 'out', report.slice(0, 8 + Math.max(report[5], 1)), cmd(report))
+      try {
+        const reply = await t.request(report)
+        log.packet('razer', 'in', reply.slice(0, 8 + Math.max(reply[5], 1)), `status ${h2(reply[0])}`)
+        return reply
+      } catch (e) {
+        log.error('razer', `${cmd(report)} failed`, errorText(e))
+        throw e
+      }
+    },
+    onDisconnect(l) {
+      return t.onDisconnect(() => {
+        log.warn('razer', `disconnected: ${who(t)}`)
+        l()
+      })
+    },
+    close: () => t.close(),
+  }
+}
+
 /** The same connection with every packet logged. */
 export function withLogging(o: Opened): Opened {
   log.info('connect', `opened ${o.kind} transport: ${who(o.transport)}`, o.transport.identity)
@@ -152,5 +185,7 @@ export function withLogging(o: Opened): Opened {
       return { kind: 'ry', transport: ry(o.transport) }
     case 'mc':
       return { kind: 'mc', transport: mc(o.transport) }
+    case 'razer':
+      return { kind: 'razer', transport: razer(o.transport) }
   }
 }

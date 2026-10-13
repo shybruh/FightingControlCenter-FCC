@@ -18,6 +18,7 @@ import { POLLING_RATES, decodeInfo, decodeSettings, encodeSettings, type Setting
 import { RK_SLEEP_BYTE, RK_SLEEP_DEFAULT } from '../hid/rk'
 import { RY_POLLING, RyKeyboard, decodeRySettings, encodeRySettings, type RySettings } from '../hid/ry'
 import { decodeMcSettings, encodeMcSettings, type McSettings } from '../hid/mc'
+import { RAZER_POLLING, decodeRazerSettings, encodeRazerSettings, type RazerSettings } from '../hid/razer'
 import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -31,6 +32,7 @@ export function SettingsPanel() {
   if (protocol === 'rk') return <RkSettingsPanel />
   if (protocol === 'ry') return <RySettingsPanel />
   if (protocol === 'mc') return <McSettingsPanel />
+  if (protocol === 'razer') return <RazerSettingsPanel />
   return <SonixSettingsPanel />
 }
 
@@ -91,6 +93,88 @@ function RkSettingsPanel() {
             </Button>
             <ReportButton variant="ghost" />
             <IntroButton />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/** Razer boards: settings are read from the keyboard, lighting comes from the profile. */
+function RazerSettingsPanel() {
+  const regions = useStore((s) => s.regions)!
+  const update = useStore((s) => s.update)
+  const pushProfile = useStore((s) => s.pushProfile)
+  const device = useStore((s) => s.device)!
+  const s = decodeRazerSettings(regions.settings)
+  const set = (p: Partial<RazerSettings>) => update('settings', encodeRazerSettings(regions.settings, { ...s, ...p }))
+  const rates = RAZER_POLLING.filter((r) => device.razer?.pollingRates.includes(r.hz))
+  const rateItems = Object.fromEntries(rates.map((r) => [String(r.value), `${r.hz.toLocaleString()} Hz`]))
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyboard</CardTitle>
+          <CardDescription>Read from the keyboard when it connects. These apply to every profile.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Field label="Polling rate">
+            <Select items={rateItems} value={String(s.polling)} onValueChange={(v) => v && set({ polling: Number(v) })}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {rates.map((r) => (
+                  <SelectItem key={r.value} value={String(r.value)}>
+                    {r.hz.toLocaleString()} Hz
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Keyswitch optimisation">
+            <Segmented
+              value={s.gaming ? 1 : 0}
+              options={[
+                { value: 0, label: 'Typing' },
+                { value: 1, label: 'Gaming' },
+              ]}
+              onChange={(v) => set({ gaming: v === 1 })}
+            />
+          </Field>
+          <div className="flex flex-col">
+            <SwitchRow label="Game mode" hint="Turns off the Windows key so it can't throw you out of a game." checked={s.gameMode} onChange={(v) => set({ gameMode: v })} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Device</CardTitle>
+          <CardDescription>
+            The keyboard can't report its lighting, so FCC shows the active profile. If lighting was changed elsewhere (Razer Synapse, Fn shortcuts),
+            write the profile again. Close Synapse while using FCC: both send commands to the keyboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ModelPicker />
+          <Separator />
+          <Stat label="USB ID">
+            {device.vendorId.toString(16).padStart(4, '0')}:{device.productId.toString(16).padStart(4, '0')}
+          </Stat>
+          <Separator />
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={pushProfile}>
+              <UploadIcon data-icon="inline-start" />
+              Write profile to keyboard
+            </Button>
+            <ReportButton variant="ghost" />
+            <IntroButton />
+            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
+              <BugIcon data-icon="inline-start" />
+              Diagnostics
+            </Button>
           </div>
         </CardContent>
       </Card>

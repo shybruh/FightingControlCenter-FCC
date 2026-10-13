@@ -1,9 +1,11 @@
 mod config;
 mod desktop;
 mod hid;
+mod hidutil;
 mod mc;
 mod osd;
 mod portable;
+mod razer;
 mod rk;
 mod scan;
 mod ry;
@@ -31,6 +33,7 @@ pub fn run() {
     .manage(desktop::CloseToTray(AtomicBool::new(true)))
     .manage(osd::OsdGeneration::default())
     .manage(rk::RkState::default())
+    .manage(razer::RazerState::default())
     .manage(ry::RyState::default())
     .manage(mc::McState::default())
     .manage(scan::ScanState::default())
@@ -49,6 +52,10 @@ pub fn run() {
       config::is_installed,
       desktop::open_project_page,
       osd::show_osd,
+      razer::razer_available,
+      razer::razer_open,
+      razer::razer_request,
+      razer::razer_close,
       rk::rk_available,
       rk::rk_open,
       rk::rk_send_feature,

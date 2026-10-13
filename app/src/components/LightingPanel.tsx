@@ -216,8 +216,12 @@ function LivePreview({
 }) {
   const custom = led.effect === CUSTOM_EFFECT
   // while painting, show the true colours without animation so selection is easy to read
-  const def = EFFECTS.find((e) => e.id === led.effect)
-  const shown = custom ? { ...led, effect: SONIX_CUSTOM } : def?.preview ? { ...led, effect: def.preview } : led
+  const preview = EFFECTS.find((e) => e.id === led.effect)?.preview
+  // memoised: a new object every render would restart the preview's animation loop on every frame, forever
+  const shown = useMemo(
+    () => (custom ? { ...led, effect: SONIX_CUSTOM } : preview ? { ...led, effect: preview } : led),
+    [custom, preview, led],
+  )
   const frame = useLedPreview(shown, colors, custom)
   return (
     <Keyboard

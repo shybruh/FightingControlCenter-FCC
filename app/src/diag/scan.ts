@@ -3,7 +3,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { DEVICES, MC_USAGE, MC_USAGE_PAGE, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS, WIRED_IDS, isMcId, isRyId } from '../devices/registry'
+import { DEVICES, MC_USAGE, MC_USAGE_PAGE, RAZER_VENDOR_ID, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS, WIRED_IDS, isMcId, isRazerId, isRyId } from '../devices/registry'
 import { isTauri } from '../hid/tauri'
 import { CONFIG_USAGE, CONFIG_USAGE_PAGE } from '../hid/protocol'
 import { parseDescriptor, usageName, type ReportSummary } from './descriptor'
@@ -48,6 +48,11 @@ export function claimFor(vendorId: number, productId: number, usagePage: number,
     if (usagePage === RY_USAGE_PAGE && usage === RY_USAGE)
       return isRyId(vendorId, productId) ? 'RongYuan RY5088 driver: config collection ✓ (model checked on connect)' : `RongYuan vendor id, but ${usb} isn't a keyboard FCC knows (mouse or receiver?)`
     return 'RongYuan vendor id, other collection'
+  }
+  if (vendorId === RAZER_VENDOR_ID) {
+    return isRazerId(vendorId, productId)
+      ? 'Razer driver: uses whichever collection declares the 90-byte command report (see the log on connect)'
+      : `Razer vendor id, but ${usb} isn't a keyboard FCC knows yet`
   }
   if (isMcId(vendorId, productId)) {
     return usagePage === MC_USAGE_PAGE && usage === MC_USAGE ? 'MCHOSE driver: config collection ✓' : 'MCHOSE board, other collection'

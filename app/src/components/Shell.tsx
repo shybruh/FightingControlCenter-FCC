@@ -58,7 +58,7 @@ interface Page {
 const PAGES: Page[] = [
   { id: 'performance', label: 'Performance', icon: GaugeIcon, needs: 'performance', blurb: 'Actuation, rapid trigger and live key travel', render: () => <PerformancePanel /> },
   { id: 'lighting', label: 'Lighting', icon: SunIcon, blurb: 'Effects, colours and per-key lighting', render: () => <LightingPanel /> },
-  { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, blurb: 'Remap keys, media keys and shortcuts', render: () => <KeymapPanel /> },
+  { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, needs: 'keymap', blurb: 'Remap keys, media keys and shortcuts', render: () => <KeymapPanel /> },
   { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', blurb: 'DKS, mod-tap, toggle and SOCD', render: () => <AdvancedPanel /> },
   { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', blurb: 'Record and edit macros', render: () => <MacroPanel /> },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, blurb: 'Model, keyboard options, backup and reports', render: () => <SettingsPanel /> },

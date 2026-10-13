@@ -2,7 +2,8 @@
 
 FCC talks to keyboards that use the Sonix-based HE firmware behind the VTER / driveall.cn web driver. The list below is extracted from that driver (see `app/src/devices/catalog.json`).
 
-It also supports some Royal Kludge boards over RK's own protocol; see [Royal Kludge](#royal-kludge) at the end.
+It also supports some Royal Kludge boards over RK's own protocol and the Razer Huntsman V2 over Razer's; see
+[Royal Kludge](#royal-kludge) and [Razer](#razer) at the end.
 
 ## Verified (1)
 
@@ -526,3 +527,13 @@ driver (`app/src/devices/mc-catalog.json`), with each board's own drawn layout.
 | MCHOSE Mix 87 | `41e4:2122` |
 | MCHOSE Mix 87 | `3837:300d` |
 | MCHOSE ZERO 75X | `41e4:211c` |
+
+## Razer
+
+Experimental, desktop app only. Lighting, per-key RGB, brightness, polling rate, game mode and keyswitch optimisation over
+Razer's command set ([PROTOCOL-RAZER.md](PROTOCOL-RAZER.md)). The lighting effect can't be read back, so FCC shows the
+saved profile; settings are read when the keyboard connects. Opens read-only until *Allow changes*.
+
+| Model | USB id | Switches |
+|---|---|---|
+| Razer Huntsman V2 | `1532:026c` | Optical (no actuation settings) |

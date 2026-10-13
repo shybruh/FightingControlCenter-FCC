@@ -2,6 +2,10 @@
 
 # Fighting Control Center
 
+**In Early development**
+
+<img src="docs/screenshots/lighting.png" alt="Lighting page with a live wave effect preview" width="900">
+
 **A fast, modern configurator for Hall-effect keyboards.**
 Works with ~135 Sonix-based boards (MCHOSE, AULA, Ajazz, Epomaker …) ~280 RongYuan-based ones (MonsGeek FUN60, FUN68, M1 V5 HE, Akko …) and MCHOSE's ACE / JET / MIX range.
 Tested end to end on the Fekker × VTER **Fighting68 HE** so far: [report yours](#report-your-keyboard) to get it verified.
@@ -10,7 +14,6 @@ Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Ma
 
 Windows desktop app (Tauri, ~2 MB) and a web version (Chrome / Edge)
 
-<img src="docs/screenshots/lighting.png" alt="Lighting page with a live wave effect preview" width="900">
 
 </div>
 
@@ -92,12 +95,14 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 | ⚠️ Untested | 285 RongYuan RY5088 boards: **MonsGeek FUN60** / FUN68 / M1 V5 HE, Akko MOD007B HE, … | Every feature, over MonsGeek's own protocol. The board reports its exact model. Read-only until *Allow changes* |
 | ⚠️ Untested | 28 MCHOSE boards: **ACE 60** / 60 Pro / 68 / 68 Air / 75, JET 75, ZERO 75X, MIX 87, … | Lighting, per-key RGB, keymap, actuation, rapid trigger, mod-tap, toggle, macros, settings. DKS / SOCD / live travel later. Read-only until *Allow changes* |
 | 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
+| 🧪 Experimental | **Razer Huntsman V2** (`1532:026c`) | Lighting effects, per-key RGB, brightness, polling rate (up to 8000 Hz), game mode and keyswitch optimisation. Optical switches, so no actuation or rapid trigger; no remapping. Desktop app only; close Razer Synapse while using FCC |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
 The Sonix boards use the same firmware family as the Fighting68, and the RongYuan boards follow MonsGeek's own driver
 ([docs/PROTOCOL-RY.md](docs/PROTOCOL-RY.md)), so they *should* work. The full list with
 USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. The M75 is a side project for a non-HE board
-that speaks Royal Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)).
+that speaks Royal Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)), and the Huntsman V2 uses Razer's
+command set ([docs/PROTOCOL-RAZER.md](docs/PROTOCOL-RAZER.md)).
 
 ## Report your keyboard
 
@@ -166,11 +171,12 @@ tools/report/       board report decoder
 
 The RongYuan protocol notes of **monsgeek-akko-linux** were the starting point for the RY5088 driver, checked against
 MonsGeek's web driver. The Royal Kludge packet layout was learned from the open-source projects **Rangoli** and
-**Kludge Knight**. FCC's implementations are its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
+**Kludge Knight**. The Razer command set follows what **OpenRazer** documents, and Razer key positions follow
+**OpenRGB**'s layouts. FCC's implementations are its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
 
 ## Disclaimer
 
-Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, MCHOSE, Royal Kludge or any keyboard
+Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, MCHOSE, Royal Kludge, Razer or any keyboard
 brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.
 
 ## License

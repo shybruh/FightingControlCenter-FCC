@@ -3,7 +3,8 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
-import { MC_IDS, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
+import type { RazerTransport } from './razer'
+import { MC_IDS, RAZER_IDS, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
 import type { McExpect, McTransport } from './mc'
 import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
@@ -198,5 +199,59 @@ export class TauriRkTransport implements FeatureTransport {
   async close() {
     this.unlisten?.()
     await invoke('rk_close')
+  }
+}
+
+/** Desktop transport for Razer boards: command and answer through the Rust bridge (src-tauri/src/razer.rs). */
+const RAZER_PRODUCTS = RAZER_IDS.map(([, p]) => p)
+let lastRazerCollections = ''
+
+interface RazerInfo {
+  name: string
+  vendor_id: number
+  product_id: number
+  collections: string[]
+  control: string
+}
+
+export class TauriRazerTransport implements RazerTransport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: RazerInfo) {
+    this.name = info.name || 'Razer keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('razer_available', { products: RAZER_PRODUCTS })
+  }
+
+  static async open(): Promise<TauriRazerTransport> {
+    const info = await invoke<RazerInfo>('razer_open', { products: RAZER_PRODUCTS })
+    // auto-connect retries every couple of seconds; only log what changed
+    const seen = JSON.stringify(info.collections)
+    if (seen !== lastRazerCollections) {
+      lastRazerCollections = seen
+      log.info('razer', `control collection: ${info.control}`, info.collections)
+    }
+    const t = new TauriRazerTransport(info)
+    t.unlisten = await listen('razer-disconnected', () => t.disconnects.emit())
+    return t
+  }
+
+  async request(report: Uint8Array) {
+    return Uint8Array.from(await invoke<number[]>('razer_request', { data: Array.from(report) }))
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('razer_close')
   }
 }

@@ -2,7 +2,14 @@
 
 ## Unreleased
 
+### New keyboards
+- **Razer Huntsman V2** (experimental, desktop app): lighting effects, per-key RGB, brightness, polling rate up to
+  8000 Hz, game mode and keyswitch optimisation. Untested so far: it opens read-only until you choose *Allow changes*.
+  Close Razer Synapse while using FCC.
+
 ### Fixed
+- The lighting preview no longer re-renders endlessly on boards whose effects are previewed through a Fighting68
+  effect (RongYuan, MCHOSE, Royal Kludge), which could make the app sluggish.
 - Demo mode no longer overwrites your real Fighting68 profiles: demo profiles live in memory only.
 
 ## 0.3.0

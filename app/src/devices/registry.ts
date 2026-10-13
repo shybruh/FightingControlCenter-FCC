@@ -3,6 +3,7 @@
 //   verified on real hardware so far (verified.json lists confirmed boards); other wired boards share its protocol and are "untested"; wireless dongles are not supported yet.
 // - Royal Kludge "legacy" boards (Sinowealth, VID 0x258a; rk-catalog.json): a different, write-only protocol with
 //   keymap and lighting only. Untested.
+// - Razer boards (VID 0x1532; devices/razer.ts): lighting, per-key colours and a few settings. Untested.
 
 import { hidFromCode, hidName } from '../data/keycodes'
 import { FIGHTING68_KEYS, setLayout, type KeyDef } from '../data/layout'
@@ -12,6 +13,7 @@ import rkCatalog from './rk-catalog.json'
 import ryCatalog from './ry-catalog.json'
 import mcCatalog from './mc-catalog.json'
 import verifiedList from './verified.json'
+import { RAZER_MODELS, RAZER_VENDOR_ID, type RazerInfo } from './razer'
 
 /** boards confirmed working through board reports */
 const VERIFIED = new Set(verifiedList.verified)
@@ -20,7 +22,7 @@ const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.h
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
 /** Which keyboard protocol a board speaks. */
-export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc'
+export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc' | 'razer'
 
 export type AdvancedKind = 'rs' | 'socd' | 'dks' | 'modtap' | 'toggle'
 
@@ -30,6 +32,8 @@ export interface Capabilities {
   readBack: boolean
   /** actuation, rapid trigger, live travel, calibration */
   performance: boolean
+  /** remapping keys */
+  keymap: boolean
   advancedKeys: boolean
   macros: boolean
   /** polling rate, stability, wake, factory reset… */
@@ -53,6 +57,7 @@ export interface Capabilities {
 const SONIX_CAPS: Capabilities = {
   readBack: true,
   performance: true,
+  keymap: true,
   advancedKeys: true,
   macros: true,
   keyboardSettings: true,
@@ -68,6 +73,7 @@ const SONIX_CAPS: Capabilities = {
 const RK_CAPS: Capabilities = {
   readBack: false,
   performance: false,
+  keymap: true,
   advancedKeys: false,
   macros: false,
   keyboardSettings: false,
@@ -80,9 +86,28 @@ const RK_CAPS: Capabilities = {
   liveTravel: false,
   macroModes: [],
 }
+const RAZER_CAPS: Capabilities = {
+  // settings are read back, lighting isn't: the profile stays the source of truth
+  readBack: false,
+  performance: false,
+  keymap: false,
+  advancedKeys: false,
+  macros: false,
+  // Razer settings live on their own card
+  keyboardSettings: false,
+  sleepInLighting: false,
+  mouseBindings: false,
+  perKeyRgb: true,
+  rtFlags: false,
+  advanced: [],
+  socdModes: [],
+  liveTravel: false,
+  macroModes: [],
+}
 const RY_CAPS: Capabilities = {
   readBack: true,
   performance: true,
+  keymap: true,
   advancedKeys: true,
   macros: true,
   // the RY settings live on their own card
@@ -100,6 +125,7 @@ const RY_CAPS: Capabilities = {
 const MC_CAPS: Capabilities = {
   readBack: true,
   performance: true,
+  keymap: true,
   advancedKeys: true,
   macros: true,
   // MCHOSE settings live on their own card
@@ -149,6 +175,7 @@ export interface DeviceDef {
   rk?: RkInfo
   ry?: RyInfo
   mc?: McInfo
+  razer?: RazerInfo
 }
 
 /** MCHOSE first-generation ("glw") magnetic boards. */
@@ -376,7 +403,25 @@ export const MC_DEVICES: DeviceDef[] = MC_DATA.filter((d) => !d.wireless).map((d
   }
 })
 
-export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES]
+const RAZER_LAYOUTS = new Map(RAZER_MODELS.map((m) => [m.id, m.keys]))
+
+export const RAZER_DEVICES: DeviceDef[] = RAZER_MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  vendorId: RAZER_VENDOR_ID,
+  productId: m.productId,
+  layout: m.id,
+  fnLayout: null,
+  transport: 'wired' as const,
+  status: statusOf(m.id, 'untested'),
+  // optical switches: no travel settings
+  limits: { travel: 0, actuationMin: 0, actuationMax: 0, actuationDefault: 0, sensMin: 0, sensMax: 0, sensDefault: 0 },
+  protocol: 'razer' as const,
+  caps: RAZER_CAPS,
+  razer: m.razer,
+}))
+
+export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES, ...RAZER_DEVICES]
 
 export const FIGHTING68 = DEVICES.find((d) => d.id === 'fighting68')!
 
@@ -411,6 +456,7 @@ export function layoutFor(device: DeviceDef): KeyDef[] {
       h,
     }))
   }
+  if (device.protocol === 'razer') return RAZER_LAYOUTS.get(device.id) ?? []
   if (device.protocol === 'rk' || device.protocol === 'ry') {
     return ((device.protocol === 'rk' ? RK_LAYOUTS : RY_LAYOUTS).get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
       id: slot,
@@ -561,6 +607,18 @@ function mcEffects(mc: McInfo): EffectDef[] {
     })
 }
 
+/** Razer effects as FCC shows them (ids are FCC's own, see RAZER_FX in hid/razer.ts). */
+const RAZER_EFFECTS: EffectDef[] = [
+  { id: 1, name: 'Static', color: true, speed: false, direction: false, preview: 0x01 },
+  { id: 2, name: 'Breathing', color: true, speed: false, direction: false, preview: 0x07 },
+  { id: 3, name: 'Spectrum cycle', color: false, speed: false, direction: false, preview: 0x08 },
+  { id: 4, name: 'Wave', color: false, speed: false, direction: true, preview: 0x0b },
+  { id: 5, name: 'Reactive', color: true, speed: true, direction: false, preview: 0x02 },
+  { id: 6, name: 'Starlight', color: true, speed: true, direction: false, preview: 0x04 },
+  { id: 7, name: 'Custom per-key', color: false, speed: false, direction: false, preview: SONIX_CUSTOM },
+]
+const RAZER_CUSTOM = 7
+
 /** Makes `device` the active board: layout, switch limits and lighting effects everywhere in the app. */
 export function activateDevice(device: DeviceDef) {
   setLayout(layoutFor(device))
@@ -572,6 +630,8 @@ export function activateDevice(device: DeviceDef) {
   } else if (device.protocol === 'mc' && device.mc) {
     setRtLimits(device.limits)
     setEffects(mcEffects(device.mc), mcEffectId(0))
+  } else if (device.protocol === 'razer') {
+    setEffects(RAZER_EFFECTS, RAZER_CUSTOM)
   } else {
     setRtLimits(device.limits)
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)
@@ -604,6 +664,11 @@ export const MC_IDS = [...new Map(MC_DEVICES.flatMap((d) => d.mc!.identities).ma
 export const MC_FILTERS = MC_IDS.map(([vendorId, productId]) => ({ vendorId, productId, usagePage: MC_USAGE_PAGE, usage: MC_USAGE }))
 export const isMcId = (vendorId: number, productId: number) => MC_IDS.some(([v, p]) => v === vendorId && p === productId)
 
+/** Razer boards take commands on their control interface (USB interface 3 on the Huntsman V2). */
+export { RAZER_VENDOR_ID }
+export const RAZER_IDS = RAZER_DEVICES.map((d) => [d.vendorId, d.productId] as const)
+export const isRazerId = (vendorId: number, productId: number) => vendorId === RAZER_VENDOR_ID && RAZER_DEVICES.some((d) => d.productId === productId)
+
 /** The exact RY model from the id the board reports. */
 export function ryDeviceById(deviceId: number) {
   return RY_DEVICES.find((d) => d.ry?.deviceId === deviceId) ?? null
@@ -631,6 +696,10 @@ export function detect(vendorId: number, productId: number, productName: string,
   if (isMcId(vendorId, productId)) {
     const candidates = MC_DEVICES.filter((d) => d.mc!.identities.some(([v, p]) => v === vendorId && p === productId))
     return { device: candidates[0] ?? null, candidates, certain: candidates.length === 1 }
+  }
+  if (vendorId === RAZER_VENDOR_ID) {
+    const razer = RAZER_DEVICES.find((d) => d.productId === productId) ?? null
+    return { device: razer, candidates: razer ? [razer] : [], certain: !!razer }
   }
   if (vendorId === RK_VENDOR_ID) {
     const rk = RK_DEVICES.find((d) => d.productId === productId) ?? null
