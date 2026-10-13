@@ -95,7 +95,7 @@ Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mo
 | ⚠️ Untested | 285 RongYuan RY5088 boards: **MonsGeek FUN60** / FUN68 / M1 V5 HE, Akko MOD007B HE, … | Every feature, over MonsGeek's own protocol. The board reports its exact model. Read-only until *Allow changes* |
 | ⚠️ Untested | 28 MCHOSE boards: **ACE 60** / 60 Pro / 68 / 68 Air / 75, JET 75, ZERO 75X, MIX 87, … | Lighting, per-key RGB, keymap, actuation, rapid trigger, mod-tap, toggle, macros, settings. DKS / SOCD / live travel later. Read-only until *Allow changes* |
 | 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
-| 🧪 Experimental | **Razer Huntsman V2** (`1532:026c`) | Lighting effects, per-key RGB, brightness, polling rate (up to 8000 Hz), game mode and keyswitch optimisation. Optical switches, so no actuation or rapid trigger; no remapping. Desktop app only; close Razer Synapse while using FCC |
+| 🧪 Experimental | **Razer** keyboards (19 models): Huntsman V2 / V2 TKL / V3 Pro / Mini / Elite, BlackWidow V3 / V4 / V4 Pro / V4 75% / V4 X, … | Lighting effects, per-key RGB, brightness and game mode; polling rate and keyswitch optimisation where the board has them. No remapping yet. Desktop app only; close Razer Synapse while using FCC |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
 
 The Sonix boards use the same firmware family as the Fighting68, and the RongYuan boards follow MonsGeek's own driver

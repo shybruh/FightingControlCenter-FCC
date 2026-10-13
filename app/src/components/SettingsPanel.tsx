@@ -119,30 +119,34 @@ function RazerSettingsPanel() {
           <CardDescription>Read from the keyboard when it connects. These apply to every profile.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <Field label="Polling rate">
-            <Select items={rateItems} value={String(s.polling)} onValueChange={(v) => v && set({ polling: Number(v) })}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {rates.map((r) => (
-                  <SelectItem key={r.value} value={String(r.value)}>
-                    {r.hz.toLocaleString()} Hz
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Keyswitch optimisation">
-            <Segmented
-              value={s.gaming ? 1 : 0}
-              options={[
-                { value: 0, label: 'Typing' },
-                { value: 1, label: 'Gaming' },
-              ]}
-              onChange={(v) => set({ gaming: v === 1 })}
-            />
-          </Field>
+          {rates.length > 0 && (
+            <Field label="Polling rate">
+              <Select items={rateItems} value={String(s.polling)} onValueChange={(v) => v && set({ polling: Number(v) })}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rates.map((r) => (
+                    <SelectItem key={r.value} value={String(r.value)}>
+                      {r.hz.toLocaleString()} Hz
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+          {device.razer?.keyswitch && (
+            <Field label="Keyswitch optimisation">
+              <Segmented
+                value={s.gaming ? 1 : 0}
+                options={[
+                  { value: 0, label: 'Typing' },
+                  { value: 1, label: 'Gaming' },
+                ]}
+                onChange={(v) => set({ gaming: v === 1 })}
+              />
+            </Field>
+          )}
           <div className="flex flex-col">
             <SwitchRow label="Game mode" hint="Turns off the Windows key so it can't throw you out of a game." checked={s.gameMode} onChange={(v) => set({ gameMode: v })} />
           </div>

@@ -3,9 +3,11 @@
 ## Unreleased
 
 ### New keyboards
-- **Razer Huntsman V2** (experimental, desktop app): lighting effects, per-key RGB, brightness, polling rate up to
-  8000 Hz, game mode and keyswitch optimisation. Untested so far: it opens read-only until you choose *Allow changes*.
-  Close Razer Synapse while using FCC.
+- **Razer keyboards** (experimental, desktop app), 19 models: Huntsman V2 / V2 TKL / V2 Analog / V3 Pro / V3 Pro TKL /
+  Mini / Elite / Tournament Edition / original, BlackWidow V3 / V3 TKL / V3 Mini / V3 Pro / V4 / V4 Pro / V4 X / V4 75% /
+  V4 TKL / Elite. Lighting effects, per-key RGB, brightness and game mode; polling rate (up to 8000 Hz) and keyswitch
+  optimisation on the boards that have them. The Huntsman V2's lighting is confirmed on a real board; the rest are
+  untested and open read-only until you choose *Allow changes*. Close Razer Synapse while using FCC.
   The on-screen preview runs breathing, spectrum and wave at the keyboard's own (slower) pace, with wave in rainbow.
 
 ### Fixed

@@ -55,6 +55,7 @@ pub fn run() {
       razer::razer_available,
       razer::razer_open,
       razer::razer_request,
+      razer::razer_send,
       razer::razer_close,
       rk::rk_available,
       rk::rk_open,

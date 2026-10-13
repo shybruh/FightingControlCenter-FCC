@@ -32,6 +32,8 @@ export interface RazerTransport {
   readonly identity: DeviceIdentity
   /** sends a 90-byte report and returns the 90-byte answer */
   request(report: Uint8Array): Promise<Uint8Array>
+  /** sends a report without reading an answer (some boards don't answer per-key frames) */
+  send(report: Uint8Array): Promise<void>
   onDisconnect(listener: () => void): () => void
   close(): Promise<void>
 }
@@ -55,6 +57,14 @@ export function razerPacket(cls: number, id: number, size: number, args: number[
   r.set(args.slice(0, 80), 8)
   r[88] = razerCrc(r)
   return r
+}
+
+/** The same report with another transaction id (each model uses its own per kind of command). */
+export function withTransaction(r: Uint8Array, tid: number): Uint8Array {
+  const out = r.slice()
+  out[1] = tid
+  out[88] = razerCrc(out)
+  return out
 }
 
 const rgb = (c: [number, number, number]) => c.map((v) => Math.min(255, Math.max(0, Math.round(v))))
@@ -102,8 +112,9 @@ export const RAZER_POLLING: { value: number; hz: number }[] = [
 export const settings = {
   getPolling: () => razerPacket(0x00, 0xc0, 0x01),
   setPolling: (code: number) => razerPacket(0x00, 0x40, 0x02, [0x00, code]),
-  getGameMode: () => razerPacket(0x03, 0x80, 0x03, [NOSTORE, GAME_LED]),
-  setGameMode: (on: boolean) => razerPacket(0x03, 0x00, 0x03, [NOSTORE, GAME_LED, on ? 1 : 0]),
+  /** store: 1 on most boards, 0 on the Huntsman V2 / V2 TKL */
+  getGameMode: (store = NOSTORE) => razerPacket(0x03, 0x80, 0x03, [store, GAME_LED]),
+  setGameMode: (on: boolean, store = NOSTORE) => razerPacket(0x03, 0x00, 0x03, [store, GAME_LED, on ? 1 : 0]),
   getKeyswitch: () => razerPacket(0x02, 0x82, 0x04),
   /** typing = 0, gaming = 1; Razer's software sends both packets */
   setKeyswitch: (gaming: boolean) =>
@@ -180,6 +191,7 @@ export function razerDefaults(): RegionData {
 // ---------- driver ----------
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+const isCustomEffect = (r: Uint8Array) => r[6] === 0x0f && r[7] === 0x02 && r[10] === 0x08 && r[8] === 0 && r[9] === 0
 
 export class RazerKeyboard implements KeyboardDriver {
   readonly sensor = new Emitter<SensorEvent>()
@@ -216,7 +228,8 @@ export class RazerKeyboard implements KeyboardDriver {
   }
 
   /** Sends one command; retries like Razer's own software when the board is busy or the answer is garbled. */
-  async call(report: Uint8Array): Promise<Uint8Array> {
+  async call(raw: Uint8Array): Promise<Uint8Array> {
+    const report = this.tag(raw)
     let last: unknown
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
@@ -231,8 +244,27 @@ export class RazerKeyboard implements KeyboardDriver {
     throw last
   }
 
+  /** Sends reports in order; per-key frames go without waiting for an answer on boards that don't give one. */
   private async send(reports: Uint8Array[]) {
-    for (const r of reports) await this.call(r)
+    const rz = this.device.razer
+    for (const r of reports) {
+      const frame = (r[6] === 0x0f && r[7] === 0x03) || isCustomEffect(r)
+      if (frame && rz?.frameNoAnswer) await this.transport.send(r)
+      else await this.call(r)
+    }
+  }
+
+  /** Stamps a report with the transaction id this model uses for that kind of command. */
+  private tag(r: Uint8Array): Uint8Array {
+    const t = this.device.razer?.tid
+    if (!t) return r
+    const [cls, id] = [r[6], r[7]]
+    if (cls === 0x0f && id === 0x03) return withTransaction(r, t.frame)
+    if (isCustomEffect(r)) return withTransaction(r, t.effect)
+    if (cls === 0x0f && (id === 0x04 || id === 0x84)) return withTransaction(r, t.brightness)
+    if (cls === 0x0f) return withTransaction(r, t.effect)
+    if (cls === 0x03) return withTransaction(r, t.game)
+    return r
   }
 
   async readAll(onProgress?: (region: RegionName, index: number, total: number) => void) {
@@ -246,11 +278,14 @@ export class RazerKeyboard implements KeyboardDriver {
         /* keep the default */
       }
     }
-    await read(settings.getPolling(), (a) => {
-      if (RAZER_POLLING.some((p) => p.value === a[1])) s.polling = a[1]
-    })
-    await read(settings.getGameMode(), (a) => (s.gameMode = a[2] === 1))
-    await read(settings.getKeyswitch(), (a) => (s.gaming = a[1] !== 0x14))
+    const rz = this.device.razer
+    if (rz?.pollingRates.length) {
+      await read(settings.getPolling(), (a) => {
+        if (RAZER_POLLING.some((p) => p.value === a[1])) s.polling = a[1]
+      })
+    }
+    await read(settings.getGameMode(rz?.gameStore ?? NOSTORE), (a) => (s.gameMode = a[2] === 1))
+    if (rz?.keyswitch) await read(settings.getKeyswitch(), (a) => (s.gaming = a[1] !== 0x14))
     this.state.settings = encodeRazerSettings(this.state.settings, s)
     onProgress?.('keys', 2, 2)
     return Object.fromEntries(Object.entries(this.state).map(([k, v]) => [k, v.slice()])) as RegionData
@@ -323,10 +358,12 @@ export class RazerKeyboard implements KeyboardDriver {
 
   /** Only what changed: each setting is its own command. */
   settingsReports(before: RazerSettings, after: RazerSettings): Uint8Array[] {
+    const rz = this.device.razer
     const out: Uint8Array[] = []
-    if (after.polling !== before.polling && RAZER_POLLING.some((p) => p.value === after.polling)) out.push(settings.setPolling(after.polling))
-    if (after.gameMode !== before.gameMode) out.push(settings.setGameMode(after.gameMode))
-    if (after.gaming !== before.gaming) out.push(...settings.setKeyswitch(after.gaming))
+    const pollingOk = RAZER_POLLING.some((p) => p.value === after.polling && rz?.pollingRates.includes(p.hz))
+    if (after.polling !== before.polling && pollingOk) out.push(settings.setPolling(after.polling))
+    if (after.gameMode !== before.gameMode) out.push(settings.setGameMode(after.gameMode, rz?.gameStore ?? NOSTORE))
+    if (after.gaming !== before.gaming && rz?.keyswitch) out.push(...settings.setKeyswitch(after.gaming))
     return out
   }
 
@@ -374,6 +411,10 @@ export class MockRazerTransport implements RazerTransport {
     if (cls === 0x02 && id === 0x82) reply[9] = this.typing ? 0x14 : 0x00
     reply[88] = razerCrc(reply)
     return reply
+  }
+
+  async send(report: Uint8Array) {
+    this.sent.push(report.slice())
   }
 
   onDisconnect(l: () => void) {

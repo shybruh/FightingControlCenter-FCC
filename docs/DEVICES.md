@@ -530,10 +530,29 @@ driver (`app/src/devices/mc-catalog.json`), with each board's own drawn layout.
 
 ## Razer
 
-Experimental, desktop app only. Lighting, per-key RGB, brightness, polling rate, game mode and keyswitch optimisation over
-Razer's command set ([PROTOCOL-RAZER.md](PROTOCOL-RAZER.md)). The lighting effect can't be read back, so FCC shows the
-saved profile; settings are read when the keyboard connects. Opens read-only until *Allow changes*.
+Experimental, desktop app only. Lighting effects, per-key RGB, brightness and game mode on every model, plus polling
+rate and keyswitch optimisation where the board has them, over Razer's command set ([PROTOCOL-RAZER.md](PROTOCOL-RAZER.md)).
+The lighting effect can't be read back, so FCC shows the saved profile; settings are read when the keyboard connects.
+They open read-only until *Allow changes*. Key layouts come from `tools/catalog/build-razer.js`.
 
-| Model | USB id | Switches |
-|---|---|---|
-| Razer Huntsman V2 | `1532:026c` | Optical (no actuation settings) |
+| Model | USB id | Polling rate | Keyswitch optimisation |
+|---|---|---|---|
+| Razer Huntsman V2 | `1532:026c` | up to 8,000 Hz | yes |
+| Razer Huntsman V2 TKL | `1532:026b` | up to 8,000 Hz | yes |
+| Razer Huntsman V2 Analog | `1532:0266` | — | — |
+| Razer Huntsman V3 Pro | `1532:02a6` | — | — |
+| Razer Huntsman V3 Pro TKL | `1532:02a7` | — | — |
+| Razer Huntsman Mini | `1532:0257` | — | — |
+| Razer Huntsman Elite | `1532:0226` | — | — |
+| Razer Huntsman Tournament Edition | `1532:0243` | — | — |
+| Razer Huntsman | `1532:0227` | — | — |
+| Razer BlackWidow V3 | `1532:024e` | — | — |
+| Razer BlackWidow V3 TKL | `1532:0a24` | — | — |
+| Razer BlackWidow V3 Mini (wired) | `1532:0258` | — | — |
+| Razer BlackWidow V3 Pro (wired) | `1532:025a` | — | — |
+| Razer BlackWidow V4 | `1532:0287` | up to 8,000 Hz | — |
+| Razer BlackWidow V4 Pro | `1532:028d` | up to 8,000 Hz | — |
+| Razer BlackWidow V4 X | `1532:0293` | — | — |
+| Razer BlackWidow V4 75% | `1532:02a5` | up to 8,000 Hz | — |
+| Razer BlackWidow V4 TKL (wired) | `1532:02d7` | up to 1,000 Hz | — |
+| Razer BlackWidow Elite | `1532:0228` | — | — |

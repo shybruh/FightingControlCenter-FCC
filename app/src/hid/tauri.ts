@@ -4,7 +4,7 @@ import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
 import type { RazerTransport } from './razer'
-import { MC_IDS, RAZER_IDS, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
+import { MC_IDS, RAZER_DEVICES, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
 import type { McExpect, McTransport } from './mc'
 import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
@@ -203,7 +203,8 @@ export class TauriRkTransport implements FeatureTransport {
 }
 
 /** Desktop transport for Razer boards: command and answer through the Rust bridge (src-tauri/src/razer.rs). */
-const RAZER_PRODUCTS = RAZER_IDS.map(([, p]) => p)
+/** [product id, interface it takes commands on] */
+const RAZER_PRODUCTS = RAZER_DEVICES.map((d) => [d.productId, d.razer!.iface])
 let lastRazerCollections = ''
 
 interface RazerInfo {
@@ -244,6 +245,10 @@ export class TauriRazerTransport implements RazerTransport {
 
   async request(report: Uint8Array) {
     return Uint8Array.from(await invoke<number[]>('razer_request', { data: Array.from(report) }))
+  }
+
+  send(report: Uint8Array) {
+    return invoke<void>('razer_send', { data: Array.from(report) })
   }
 
   onDisconnect(l: () => void) {

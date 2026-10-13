@@ -163,6 +163,15 @@ function razer(t: RazerTransport): RazerTransport {
         throw e
       }
     },
+    async send(report) {
+      log.packet('razer', 'out', report.slice(0, 8 + Math.max(report[5], 1)), `${cmd(report)} (no answer expected)`)
+      try {
+        await t.send(report)
+      } catch (e) {
+        log.error('razer', `${cmd(report)} failed`, errorText(e))
+        throw e
+      }
+    },
     onDisconnect(l) {
       return t.onDisconnect(() => {
         log.warn('razer', `disconnected: ${who(t)}`)

@@ -1,6 +1,6 @@
 # Razer protocol notes
 
-FCC's notes on the command protocol of Razer keyboards (Huntsman V2 so far). The encoder lives in `app/src/hid/razer.ts`
+FCC's notes on the command protocol of Razer keyboards (19 models, listed in [DEVICES.md](DEVICES.md#razer)). The encoder lives in `app/src/hid/razer.ts`
 and the native transport in `app/src-tauri/src/razer.rs`. The packet layout and command bytes follow what the
 open-source **OpenRazer** project documents (GPL-2.0-or-later); FCC's implementation is its own. Key positions in the LED
 matrix follow **OpenRGB**'s Razer layouts.
@@ -10,19 +10,32 @@ matrix follow **OpenRGB**'s Razer layouts.
 | | |
 |---|---|
 | Vendor id | `0x1532` |
-| Huntsman V2 | product id `0x026c` |
-| Interface | USB interface 3 (Windows: the collection there that declares feature report 0 of 90 bytes) |
+| Product ids | per model, see [DEVICES.md](DEVICES.md#razer) (Huntsman V2: `0x026c`) |
+| Interface | USB interface 1, 2 or 3 by model (Windows: the collection there that declares feature report 0 of 90 bytes) |
 | Reports | HID **feature** report 0, 90 bytes, sent with SET_REPORT and answered with GET_REPORT |
 | Timing | wait about 1 ms between a command and reading its answer |
 
 Desktop only: browsers block the keyboard-type collection these commands go to.
+
+## Differences between models
+
+The command set is the same on every supported board (the "extended matrix" family). Per model, FCC records
+(`app/src/devices/razer-catalog.json`, built by `tools/catalog/build-razer.js`):
+
+- the USB interface for commands: 1, 2 or 3;
+- transaction ids per kind of command: `0x1F` or `0x3F` for effects and brightness, sometimes a different one for
+  per-key frames (BlackWidow V3: effects `0x3F`, frames `0x1F`);
+- game mode storage: unsaved with id `0x1F` on the Huntsman V2 / V2 TKL, saved with id `0xFF` elsewhere;
+- whether per-key frames get an answer (the BlackWidow V4 / V4 Pro / V4 75% don't: FCC sends them without reading one);
+- whether the board has the polling-rate command and which rates, and whether it has keyswitch optimisation;
+- the LED matrix size (5 x 15 up to 9 x 22) and where each key sits in it.
 
 ## Report layout
 
 | Byte | Field |
 |---|---|
 | 0 | status: 0x00 in requests; in answers 0x02 ok, 0x01 busy (also fine), 0x03 failed, 0x04 timeout, 0x05 not supported |
-| 1 | transaction id, `0x1F` on the Huntsman V2 |
+| 1 | transaction id (`0x1F` on the Huntsman V2; per model and command, see above) |
 | 2–3 | remaining packets (big endian), 0 |
 | 4 | protocol type, 0 |
 | 5 | argument size |

@@ -1,4 +1,4 @@
-//! Razer keyboards: 90-byte feature report 0 on the control interface (USB interface 3 on the Huntsman V2), answered
+//! Razer keyboards: 90-byte feature report 0 on the control interface (USB interface 1, 2 or 3 by model), answered
 //! in the same report. The UI builds every command and checks every answer; this side finds the control collection,
 //! sizes the report the way that collection declares it, and keeps request and answer together.
 
@@ -14,8 +14,6 @@ use tauri::{AppHandle, Emitter, State};
 use crate::hidutil::{feature_reports, sized_for};
 
 const RAZER_VENDOR_ID: u16 = 0x1532;
-/// the interface Razer's software sends commands to on these boards
-const CONTROL_INTERFACE: i32 = 3;
 /// report id + 90 bytes
 const REPORT_LEN: usize = 90;
 /// the board needs a moment between a command and its answer
@@ -42,19 +40,22 @@ pub struct RazerInfo {
     control: String,
 }
 
-fn is_ours(d: &hidapi::DeviceInfo, products: &[u16]) -> bool {
-    d.vendor_id() == RAZER_VENDOR_ID && products.contains(&d.product_id())
+/// (product id, interface the model takes commands on)
+type Product = (u16, i32);
+
+fn is_ours(d: &hidapi::DeviceInfo, products: &[Product]) -> bool {
+    d.vendor_id() == RAZER_VENDOR_ID && products.iter().any(|&(pid, _)| pid == d.product_id())
 }
 
 #[tauri::command]
-pub fn razer_available(products: Vec<u16>) -> Result<bool, String> {
+pub fn razer_available(products: Vec<Product>) -> Result<bool, String> {
     let api = HidApi::new().map_err(|e| e.to_string())?;
     let available = api.device_list().any(|d| is_ours(d, &products));
     Ok(available)
 }
 
 #[tauri::command]
-pub fn razer_open(app: AppHandle, state: State<RazerState>, products: Vec<u16>) -> Result<RazerInfo, String> {
+pub fn razer_open(app: AppHandle, state: State<RazerState>, products: Vec<Product>) -> Result<RazerInfo, String> {
     let mut slot = state.0.lock().map_err(|e| e.to_string())?;
     if let Some(old) = slot.take() {
         old.stop.store(true, Ordering::Relaxed);
@@ -65,7 +66,8 @@ pub fn razer_open(app: AppHandle, state: State<RazerState>, products: Vec<u16>) 
     if candidates.is_empty() {
         return Err("Razer keyboard not found. Is it plugged in with the USB cable?".into());
     }
-    candidates.sort_by_key(|d| d.interface_number() != CONTROL_INTERFACE);
+    let control = |d: &hidapi::DeviceInfo| products.iter().find(|&&(pid, _)| pid == d.product_id()).map(|&(_, i)| i);
+    candidates.sort_by_key(|d| control(d) != Some(d.interface_number()));
 
     let label = |d: &hidapi::DeviceInfo| format!("{:04x}/{:04x} if{} {}", d.usage_page(), d.usage(), d.interface_number(), d.path().to_string_lossy());
     let mut seen = Vec::new();
@@ -150,6 +152,23 @@ pub fn razer_request(state: State<RazerState>, data: Vec<u8>) -> Result<Vec<u8>,
     // hidapi puts the report id first
     let end = n.min(answer.len()).max(1);
     Ok(answer[1..end].iter().copied().take(REPORT_LEN).collect())
+}
+
+/// Sends one 90-byte command without reading an answer (some boards don't answer per-key frames).
+#[tauri::command]
+pub fn razer_send(state: State<RazerState>, data: Vec<u8>) -> Result<(), String> {
+    if data.len() != REPORT_LEN {
+        return Err(format!("report must be {REPORT_LEN} bytes, got {}", data.len()));
+    }
+    let slot = state.0.lock().map_err(|e| e.to_string())?;
+    let conn = slot.as_ref().ok_or("Keyboard is not connected")?;
+    let mut report = Vec::with_capacity(REPORT_LEN + 1);
+    report.push(0);
+    report.extend_from_slice(&data);
+    let buf = sized_for(&report, &conn.declared)?;
+    conn.device.send_feature_report(&buf).map_err(|e| format!("Write failed ({} bytes): {e}", buf.len()))?;
+    std::thread::sleep(ANSWER_DELAY);
+    Ok(())
 }
 
 #[tauri::command]
