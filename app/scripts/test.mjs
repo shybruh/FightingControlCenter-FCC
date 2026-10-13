@@ -186,6 +186,30 @@ r = await run('razer-huntsman-mini', async (k, regs) => {
 })
 check('Huntsman Mini: 5 rows, tid 0x3F on frames', [r.all.filter((p) => cmd(p) === 'f/3').length, r.all.find((p) => cmd(p) === 'f/3')[1]], [5, 0x3f])
 
+// a built-in design on a Razer board: every key's colour in its own matrix cell
+const presets = await vite.ssrLoadModule('/src/lighting/presets.ts')
+for (const id of ['razer-blackwidow-v3-tkl', 'razer-huntsman-v2']) {
+  const wrong = []
+  r = await run(id, async (k, regs, d) => {
+    const sunset = presets.presetColors(presets.COLOR_PRESETS.find((p) => p.id === 'sunset'))
+    await k.writeRegion('colors', codec.withColorMap(regs.colors, sunset))
+    await k.writeRegion('led', codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: R.RAZER_FX.custom }))
+    const sent = k.frameReports().filter((p) => cmd(p) === 'f/3')
+    for (const key of layout.KEYS) {
+      const [row, col] = d.razer.matrix[key.id]
+      const got = Array.from(sent[row].slice(13 + col * 3, 16 + col * 3))
+      if (JSON.stringify(got) !== JSON.stringify(sunset.get(key.id))) wrong.push(key.label)
+    }
+  })
+  check(`${id}: Sunset design lands on every key`, wrong, [])
+}
+
+// fixed-speed effects preview at the model's own pace
+activateDevice(DEVICES.find((d) => d.id === 'razer-huntsman-v2'))
+const huntsmanPace = codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed
+activateDevice(DEVICES.find((d) => d.id === 'razer-blackwidow-v3-tkl'))
+check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [huntsmanPace, codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed], [1, 3])
+
 await vite.close()
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

@@ -607,18 +607,21 @@ function mcEffects(mc: McInfo): EffectDef[] {
     })
 }
 
-/** Razer effects as FCC shows them (ids are FCC's own, see RAZER_FX in hid/razer.ts). */
-const RAZER_EFFECTS: EffectDef[] = [
-  { id: 1, name: 'Static', color: true, speed: false, direction: false, preview: 0x01 },
-  // Razer runs breathing, spectrum and wave at a fixed speed, slower than the preview's default
-  { id: 2, name: 'Breathing', color: true, speed: false, direction: false, preview: 0x07, previewSpeed: 1 },
-  { id: 3, name: 'Spectrum cycle', color: false, speed: false, direction: false, preview: 0x08, previewSpeed: 1 },
-  // always a rainbow, like the Fighting68's endless flow
-  { id: 4, name: 'Wave', color: false, speed: false, direction: true, preview: 0x10, previewSpeed: 1 },
-  { id: 5, name: 'Reactive', color: true, speed: true, direction: false, preview: 0x02 },
-  { id: 6, name: 'Starlight', color: true, speed: true, direction: false, preview: 0x04 },
-  { id: 7, name: 'Custom per-key', color: false, speed: false, direction: false, preview: SONIX_CUSTOM },
-]
+/** Razer effects as FCC shows them (ids are FCC's own, see RAZER_FX in hid/razer.ts). Breathing, spectrum and wave run
+ *  at a fixed speed that differs per model, so their preview follows the model's `previewSpeed`. */
+function razerEffects(rz: RazerInfo | undefined): EffectDef[] {
+  const fixed = rz?.previewSpeed ?? 1
+  return [
+    { id: 1, name: 'Static', color: true, speed: false, direction: false, preview: 0x01 },
+    { id: 2, name: 'Breathing', color: true, speed: false, direction: false, preview: 0x07, previewSpeed: fixed },
+    { id: 3, name: 'Spectrum cycle', color: false, speed: false, direction: false, preview: 0x08, previewSpeed: fixed },
+    // always a rainbow, like the Fighting68's endless flow
+    { id: 4, name: 'Wave', color: false, speed: false, direction: true, preview: 0x10, previewSpeed: fixed },
+    { id: 5, name: 'Reactive', color: true, speed: true, direction: false, preview: 0x02 },
+    { id: 6, name: 'Starlight', color: true, speed: true, direction: false, preview: 0x04 },
+    { id: 7, name: 'Custom per-key', color: false, speed: false, direction: false, preview: SONIX_CUSTOM },
+  ]
+}
 const RAZER_CUSTOM = 7
 
 /** Makes `device` the active board: layout, switch limits and lighting effects everywhere in the app. */
@@ -633,7 +636,7 @@ export function activateDevice(device: DeviceDef) {
     setRtLimits(device.limits)
     setEffects(mcEffects(device.mc), mcEffectId(0))
   } else if (device.protocol === 'razer') {
-    setEffects(RAZER_EFFECTS, RAZER_CUSTOM)
+    setEffects(razerEffects(device.razer), RAZER_CUSTOM)
   } else {
     setRtLimits(device.limits)
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)

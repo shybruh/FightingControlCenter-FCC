@@ -90,6 +90,9 @@ const MEDIA = (row, from) => ['Prev', 'Play', 'Next', 'Mute'].map((n, i) => ['in
 // iface: USB interface for commands. tid: transaction ids [effects, per-key frame, brightness]. game: storage + tid for
 // game mode. frameNoAnswer: the board doesn't answer per-key frames. polling: Hz list when the board has the
 // polling-rate command. keyswitch: typing/gaming optimisation. matrix: OpenRazer's [rows, cols].
+// fx: how fast the board's firmware runs breathing / spectrum / wave (FCC's preview speed, 1 slow … 5 fast). Razer
+// sends every board the same commands, so the pace is the firmware's own. Measured: Huntsman V2 (1); the BlackWidow V3
+// TKL runs faster than that. Others follow their generation (boards on transaction id 0x3f are the older firmware).
 
 const MODELS = [
   { id: 'huntsman-v2', name: 'Huntsman V2', pid: 0x026c, iface: 3, tid: [0x1f, 0x1f, 0x1f], game: ['no', 0x1f], polling: [125, 250, 500, 1000, 2000, 4000, 8000], keyswitch: true, matrix: [6, 22], size: 'full', edits: MEDIA(0, 17) },
@@ -183,6 +186,7 @@ const catalog = MODELS.map((m) => {
     frameNoAnswer: !!m.frameNoAnswer,
     pollingRates: m.polling ?? [],
     keyswitch: !!m.keyswitch,
+    previewSpeed: m.fx ?? (m.tid[0] === 0x3f ? 3 : 1),
     rows: m.matrix[0],
     cols,
     keys: geometry(m, keys).map((k) => [LABEL[k.name] ?? k.name, HID[k.name] ?? 0, k.row, k.col, +k.x.toFixed(2), k.y, k.w, k.h]),

@@ -27,6 +27,31 @@ interface SavedPreset {
   name: string
   led: number[]
   colors: number[]
+  /** what the effect number meant where it was saved: effect numbers differ between keyboard protocols */
+  protocol?: string
+  effectName?: string
+  /** the preview animation of that effect */
+  preview?: number
+}
+
+const previewOf = (effect: number) => {
+  if (effect === CUSTOM_EFFECT) return SONIX_CUSTOM
+  return EFFECTS.find((e) => e.id === effect)?.preview ?? effect
+}
+
+/** Whether a saved preset's effect number means the same thing on this board. Older presets don't say where they were
+ *  saved; they're taken as they are when the effect exists here. */
+const sameBoardKind = (p: SavedPreset, protocol: string | undefined, effect: number) =>
+  p.protocol ? p.protocol === (protocol ?? 'sonix') : EFFECTS.some((e) => e.id === effect)
+
+/** A saved preset's lighting for this board: another kind of board's effect is matched by name, and when this board
+ *  has nothing by that name the colours are shown per key. */
+function presetLed(p: SavedPreset, protocol: string | undefined): Uint8Array {
+  const bytes = Uint8Array.from(p.led)
+  const l = decodeLed(bytes)
+  if (l.effect === 0 || sameBoardKind(p, protocol, l.effect)) return bytes
+  const byName = p.effectName && EFFECTS.find((e) => e.name.toLowerCase() === p.effectName!.toLowerCase())
+  return encodeLed(bytes, { ...l, effect: byName ? byName.id : CUSTOM_EFFECT })
 }
 
 function loadSaved(): SavedPreset[] {
@@ -247,6 +272,7 @@ function PresetsCard({ onApplyDesign }: { onApplyDesign(p: ColorPreset): void })
   const regions = useStore((s) => s.regions)!
   const updateMany = useStore((s) => s.updateMany)
   const showToast = useStore((s) => s.showToast)
+  const protocol = useStore((s) => s.device?.protocol)
   const [tab, setTab] = useState<'designs' | 'saved'>('designs')
   const [saved, setSaved] = useState<SavedPreset[]>(loadSaved)
   const [name, setName] = useState('')
@@ -262,7 +288,19 @@ function PresetsCard({ onApplyDesign }: { onApplyDesign(p: ColorPreset): void })
 
   const saveCurrent = () => {
     const n = name.trim() || `Lighting ${saved.length + 1}`
-    persist([...saved, { id: Math.random().toString(36).slice(2, 9), name: n, led: Array.from(regions.led), colors: Array.from(regions.colors) }])
+    const effect = decodeLed(regions.led).effect
+    persist([
+      ...saved,
+      {
+        id: Math.random().toString(36).slice(2, 9),
+        name: n,
+        led: Array.from(regions.led),
+        colors: Array.from(regions.colors),
+        protocol: protocol ?? 'sonix',
+        effectName: EFFECTS.find((e) => e.id === effect)?.name,
+        preview: previewOf(effect),
+      },
+    ])
     setName('')
     showToast(`Saved “${n}”`)
   }
@@ -323,14 +361,18 @@ function PresetsCard({ onApplyDesign }: { onApplyDesign(p: ColorPreset): void })
                 {saved.map((p) => {
                   const l = decodeLed(Uint8Array.from(p.led))
                   const cols = Uint8Array.from(p.colors)
-                  const preview = renderEffect(l, 1.2, [], (id) => decodeColor(cols, id) as RGB)
-                  const effectName = l.effect === 0 ? 'Off' : (EFFECTS.find((e) => e.id === l.effect)?.name ?? 'Effect')
+                  const here = sameBoardKind(p, protocol, l.effect)
+                  // the thumbnail shows the effect as it looked where it was saved
+                  const look = here ? previewOf(l.effect) : (p.preview ?? l.effect)
+                  const preview = renderEffect({ ...l, effect: look }, 1.2, [], (id) => decodeColor(cols, id) as RGB)
+                  const effectName =
+                    l.effect === 0 ? 'Off' : ((here ? EFFECTS.find((e) => e.id === l.effect)?.name : p.effectName) ?? 'Effect')
                   return (
                     <div key={p.id} className="lift group relative flex flex-col gap-2 rounded-lg border p-2 hover:bg-muted/50">
                       <button
                         className="flex flex-col gap-2 text-left"
                         onClick={() => {
-                          updateMany({ colors: cols, led: Uint8Array.from(p.led) })
+                          updateMany({ colors: cols, led: presetLed(p, protocol) })
                           showToast(`Applied “${p.name}”`)
                         }}
                       >

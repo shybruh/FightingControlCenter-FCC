@@ -23,6 +23,8 @@ export interface RazerInfo {
   pollingRates: number[]
   /** typing / gaming keyswitch optimisation */
   keyswitch: boolean
+  /** how fast the firmware runs its fixed-speed effects, as FCC's preview speed (1 slow … 5 fast) */
+  previewSpeed: number
 }
 
 export interface RazerModel {
@@ -60,6 +62,7 @@ export const RAZER_MODELS: RazerModel[] = catalog.map((m) => {
       frameNoAnswer: m.frameNoAnswer,
       pollingRates: m.pollingRates,
       keyswitch: m.keyswitch,
+      previewSpeed: m.previewSpeed,
     },
   }
 })
