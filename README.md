@@ -2,186 +2,103 @@
 
 # Fighting Control Center
 
-**In Early development**
+**A fast, modern configurator for Hall-effect keyboards** · *early development*
 
-<img src="docs/screenshots/lighting.png" alt="Lighting page with a live wave effect preview" width="900">
-
-**A fast, modern configurator for Hall-effect keyboards.**
-Works with ~135 Sonix-based boards (MCHOSE, AULA, Ajazz, Epomaker …) ~280 RongYuan-based ones (MonsGeek FUN60, FUN68, M1 V5 HE, Akko …) and MCHOSE's ACE / JET / MIX range.
-Tested end to end on the Fekker × VTER **Fighting68 HE** so far: [report yours](#report-your-keyboard) to get it verified.
+<img src="docs/screenshots/lighting.png" alt="Lighting page with a live wave effect preview" width="820">
 
 Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
 
-Windows desktop app (Tauri, ~2 MB) and a web version (Chrome / Edge)
-
+[Download](../../releases/latest) · [Supported keyboards](#supported-keyboards) · [Report your keyboard](#report-your-keyboard) · [Build from source](#build-from-source)
 
 </div>
 
----
+## What it is
 
-## Why
+One app instead of a different slow web driver for every brand. FCC talks to the keyboard directly over USB using each
+maker's own protocol (reverse-engineered and documented in [docs/](docs/)), and adds what a desktop app should have:
 
-Most Sonix-based HE keyboards are configured through the same official web driver. It works, but it's slow, cluttered
-and easy to get lost in. FCC is a from-scratch replacement: the same keyboard protocol (reverse-engineered and documented in [docs/PROTOCOL.md](docs/PROTOCOL.md)),
-wrapped in a clean, dark, keyboard-first UI, plus the things a desktop app should have: profiles you can switch
-mid-game, a tray icon, hotkeys and per-game auto-switching.
+- **Unlimited profiles**, switched from the sidebar, the tray, global hotkeys (Ctrl+Alt+1…9) or **automatically when a
+  game is focused**, and back when you leave it. Only what differs is rewritten, so switching is near-instant.
+- **Live key travel** in 0.01 mm, per-key actuation, rapid trigger (press / release / continuous), SOCD, Dynamic
+  Keystroke, Mod-Tap, Toggle and Rappy Snappy.
+- **Lighting** with a live on-screen preview, per-key painting and 16 built-in designs.
+- **Remapping and macros**: keys, combos, media and mouse buttons; macros recorded with real delays and editable.
+- Tray icon, start with Windows, automatic updates. Windows app (~2 MB) or a web version for Chrome / Edge.
 
-## Features
-
-### Performance & rapid trigger
-
-Per-key actuation, rapid trigger with separate press/release sensitivity, continuous RT, bottom-out optimisation
-and rampage mode. Select one key, a few, or the whole board.
-
-<img src="docs/screenshots/performance.png" alt="Performance page" width="900">
-
-### Live key travel
-
-See exactly how far every key is pressed, in 0.01 mm, with your actuation point and rapid-trigger distances on the
-gauge. Doubles as travel calibration.
-
-<img src="docs/screenshots/live-travel.png" alt="Live key travel meter" width="900">
-
-### Lighting
-
-All 19 firmware effects with a live on-screen preview (reactive effects respond to your typing), brightness,
-speed, direction, single colour or rainbow, and per-key painting.
-
-<img src="docs/screenshots/lighting-presets.png" alt="Lighting presets" width="900">
-
-16 built-in per-key designs (Sunset, Vaporwave, Fire, WASD focus…) and your own saved lighting presets.
-
-### Keymap
-
-Remap any key to another key, key + modifier combos, media keys, mouse buttons or the scroll wheel.
-
-<img src="docs/screenshots/keymap.png" alt="Keymap editor" width="900">
-
-### Advanced keys
-
-**Rappy Snappy**, **SOCD** (last input, key 1 / key 2 priority, neutral), **Dynamic Keystroke** (4 keys × 4 stages,
-tap or hold, per-stage trigger points), **Mod-Tap** and **Toggle**.
-
-<img src="docs/screenshots/advanced-dks.png" alt="Dynamic keystroke editor" width="900">
-
-### Macros
-
-Record with real or fixed delays, edit and reorder every action, insert keys and mouse clicks, watch the memory
-meter, and bind to a key: play once, repeat N times, or until pressed again.
-
-<img src="docs/screenshots/macros.png" alt="Macro editor" width="900">
-
-### Profiles & desktop app
-
-- **Unlimited profiles**, switched from the sidebar, the **tray**, **global hotkeys** (Ctrl+Alt+1…9) or
-  **automatically when a game is focused** (and back when you leave it)
-- **On-screen popup** shows the new profile over your game, without ever stealing focus
-- **Start with Windows** quietly in the tray; close-to-tray; single instance
-- Switching only rewrites what differs on the keyboard, so it's near-instant
-- Import / export profiles as files
-
-### Settings
-
-Polling rate (up to 8 kHz), sleep, stability mode, adaptive calibration, wake mode, full backup and factory reset.
-
-<img src="docs/screenshots/settings.png" alt="Settings page" width="900">
-
-## Supported keyboards
-
-| Status | Boards | |
-|---|---|---|
-| ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Tested end to end on real hardware |
-| ⚠️ Untested | 135 wired boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, Royal Kludge RK-series, MCHOSE, Looting, QSENN, Epomaker HE80, LEOBOG… | Detected automatically; open **read-only** until you choose *Allow changes* |
-| ⚠️ Untested | 285 RongYuan RY5088 boards: **MonsGeek FUN60** / FUN68 / M1 V5 HE, Akko MOD007B HE, … | Every feature, over MonsGeek's own protocol. The board reports its exact model. Read-only until *Allow changes* |
-| ⚠️ Untested | 28 MCHOSE boards: **ACE 60** / 60 Pro / 68 / 68 Air / 75, JET 75, ZERO 75X, MIX 87, … | Lighting, per-key RGB, keymap, actuation, rapid trigger, mod-tap, toggle, macros, settings. DKS / SOCD / live travel later. Read-only until *Allow changes* |
-| 🧪 Experimental | **Royal Kludge M75** family (`258a:0147`, `0163`, `0175`, `01ac`) | Keymap, lighting, per-key RGB and sleep. Not a Hall-effect board, so no rapid trigger, advanced keys or macros. Write-only: FCC shows your saved profile |
-| 🧪 Experimental | **Razer** keyboards (19 models): Huntsman V2 / V2 TKL / V3 Pro / Mini / Elite, BlackWidow V3 / V4 / V4 Pro / V4 75% / V4 X, … | Lighting effects, per-key RGB, brightness and game mode; polling rate and keyswitch optimisation where the board has them. No remapping yet. Desktop app only; close Razer Synapse while using FCC |
-| ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable instead |
-
-The Sonix boards use the same firmware family as the Fighting68, and the RongYuan boards follow MonsGeek's own driver
-([docs/PROTOCOL-RY.md](docs/PROTOCOL-RY.md)), so they *should* work. The full list with
-USB ids and switch limits is in **[docs/DEVICES.md](docs/DEVICES.md)**. The M75 is a side project for a non-HE board
-that speaks Royal Kludge's own protocol ([docs/PROTOCOL-RK.md](docs/PROTOCOL-RK.md)), and the Huntsman V2 uses Razer's
-command set ([docs/PROTOCOL-RAZER.md](docs/PROTOCOL-RAZER.md)).
-
-## Report your keyboard
-
-Tried FCC on a board that isn't verified yet? In the app, open **Settings → Report this keyboard** (or use the button
-on the yellow banner) and press **Open GitHub issue**. The report holds what's needed to verify or fix your board:
-USB id, firmware and the settings read from it (macro contents are left out). Tick what worked, add notes, submit.
-
-For maintainers: `node tools/report/decode.js <issue.md>` summarises a report, `--dump <dir>` extracts the raw
-regions and `--verify` marks the board verified in `app/src/devices/verified.json`.
+<table>
+  <tr>
+    <td><img src="docs/screenshots/performance.png" alt="Performance: per-key actuation and rapid trigger"></td>
+    <td><img src="docs/screenshots/live-travel.png" alt="Live key travel meter"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/keymap.png" alt="Keymap editor"></td>
+    <td><img src="docs/screenshots/advanced-dks.png" alt="Dynamic keystroke editor"></td>
+  </tr>
+</table>
 
 ## Install
 
-**Windows:** download `Fighting Control Center_x64-setup.exe` from [Releases](../../releases) and run it.
-The installer isn't code-signed yet, so SmartScreen may warn you: *More info → Run anyway*.
+**Windows:** download `Fighting Control Center_x64-setup.exe` from [Releases](../../releases/latest) and run it. It
+isn't code-signed yet, so SmartScreen may warn you: *More info → Run anyway*. The app updates itself from then on.
 
-**Portable:** download `FCC-portable-<version>.zip`, unzip anywhere and run the exe. Build it with
-`npm run desktop:portable`.
+**Portable:** `FCC-portable-<version>.zip`, unzip anywhere and run the exe.
 
-Both keep profiles and settings in `%APPDATA%\Fighting Control Center\settings.json`, so reinstalling, updating or
-deleting a portable copy keeps them (*Desktop → Open folder* shows it). To keep everything beside the exe instead
-(e.g. on a USB stick), put an empty `portable.txt` next to it: data then goes to an `FCC-data` folder there.
+Profiles and settings live in `%APPDATA%\Fighting Control Center\settings.json`, so reinstalling or deleting a portable
+copy keeps them. An empty `portable.txt` next to the exe keeps everything beside it instead (`FCC-data`).
 
-**Browser:** run the web version (below) in Chrome or Edge; no install needed.
+**No keyboard handy?** Click **Try demo mode** for a simulated board.
 
-## Build from source
+## Supported keyboards
 
-Requirements: Node.js 20+, and for the desktop app, Rust and the Microsoft C++ build tools.
+| | Boards | What works |
+|---|---|---|
+| ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Everything, tested end to end |
+| ⚠️ Untested | ~135 **Sonix** boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, MCHOSE, Looting, Epomaker HE80, LEOBOG… | Everything; same firmware family as the Fighting68 |
+| ⚠️ Untested | ~285 **RongYuan RY5088** boards: MonsGeek FUN60 / FUN68 / M1 V5 HE, Akko MOD007B HE… | Everything, over MonsGeek's own protocol |
+| ⚠️ Untested | 28 **MCHOSE** boards: ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87… | All but DKS, SOCD and live travel (for now) |
+| 🧪 Experimental | **Royal Kludge M75** family | Keymap, lighting, per-key RGB, sleep (not a Hall-effect board) |
+| 🧪 Experimental | 19 **Razer** keyboards: Huntsman V2 / V3 Pro / Mini, BlackWidow V3 / V4… | Lighting, per-key RGB, game mode, polling rate. Desktop app only; close Synapse first |
+| ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable |
 
-```bash
-git clone https://github.com/shybruh/FightingControlCenter-FCC.git
-cd FightingControlCenter-FCC
-npm --prefix app install
+Untested boards are detected automatically and open **read-only** until you choose *Allow changes*. The full list with
+USB ids is in [docs/DEVICES.md](docs/DEVICES.md).
 
-npm --prefix app run dev              # web version on http://localhost:5174
-npm --prefix app run desktop          # desktop app with hot reload
-npm --prefix app run desktop:build    # release build + installer (app/src-tauri/target/release/bundle/nsis)
-npm --prefix app test                 # catalog and protocol checks, no keyboard needed
-```
+## Report your keyboard
 
-No keyboard handy? Click **Try demo mode** for a simulated board (or **Demo: Royal Kludge M75**).
+Tried FCC on a board that isn't verified? Open **Settings → Report this keyboard** and press **Open GitHub issue**. The
+report holds the USB id, firmware and settings read from the board (no macro contents); tick what worked and submit.
+That's all it takes to get a board verified or fixed.
 
 ## Safety
 
 FCC writes to your keyboard's memory, so it's deliberately careful:
 
-- Only the commands the official driver itself sends are used. **There is no firmware-flashing code.**
-- Every packet waits for the keyboard's acknowledgement; writes are serialized and never interleave.
-- All values are clamped to each board's limits before encoding; unknown bytes are preserved.
-- A full backup of the keyboard is taken on every connect.
-- Untested boards start read-only. The Fn key can't be remapped. Factory reset is always one click away.
+- Only commands the official software itself sends. **No firmware-flashing code.**
+- Every write waits for the keyboard's acknowledgement; values are clamped to the board's limits.
+- A full backup is taken on every connect, and factory reset is one click away.
 
-## Tech
+## Build from source
 
-React 19 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · zustand · Tauri 2 (Rust, hidapi) · WebHID
+Node.js 20+; for the desktop app also Rust and the Microsoft C++ build tools.
 
-```
-app/src/hid/        protocol, transports (WebHID / Tauri / demo), device queue, codecs
-app/src/devices/    keyboard catalogue + detection
-app/src/components/ pages and UI
-app/src-tauri/      desktop shell: native HID bridge, tray, hotkeys, popup
-docs/               protocol notes (Sonix, RongYuan, MCHOSE, Royal Kludge), supported devices, screenshots
-tools/catalog/      scripts that regenerate the device catalogue
-tools/report/       board report decoder
+```bash
+git clone https://github.com/shybruh/FightingControlCenter-FCC.git
+cd FightingControlCenter-FCC
+npm --prefix app install
+npm --prefix app run dev              # web version on http://localhost:5174
+npm --prefix app run desktop          # desktop app with hot reload
+npm --prefix app run desktop:build    # release build + installer
+npm --prefix app test                 # catalog and protocol checks, no keyboard needed
 ```
 
-## Credits
+React 19 · TypeScript · Vite · Tailwind CSS 4 · zustand · Tauri 2 (Rust, hidapi) · WebHID. Protocol notes per brand are
+in [docs/](docs/); `tools/report/decode.js` reads board reports from issues.
 
-The RongYuan protocol notes of **monsgeek-akko-linux** were the starting point for the RY5088 driver, checked against
-MonsGeek's web driver. The Royal Kludge packet layout was learned from the open-source projects **Rangoli** and
-**Kludge Knight**. The Razer command set follows what **OpenRazer** documents, and Razer key positions follow
-**OpenRGB**'s layouts. FCC's implementations are its own. Per-model RK key layouts come from the layout files shipped with Royal Kludge's software.
+## Credits & license
 
-## Disclaimer
+The RongYuan driver started from **monsgeek-akko-linux**'s notes, the Royal Kludge packet layout from **Rangoli** and
+**Kludge Knight**, the Razer command set from **OpenRazer** and Razer key positions from **OpenRGB**. FCC's
+implementations are its own.
 
-Fighting Control Center is an independent project and is not affiliated with Fekker, VTER, Sonix, RongYuan, MonsGeek, Akko, MCHOSE, Royal Kludge, Razer or any keyboard
-brand listed here. Use it at your own risk; a factory reset from the app (or the keyboard) restores default settings.
-
-## License
-
-Fighting Control Center is free software, licensed under the [GNU General Public License v3.0 or later](LICENSE). You
-can use, study, change and share it; if you distribute a modified version, you must make its source available under
-the same license.
+FCC is an independent project, not affiliated with any keyboard brand listed here. Use it at your own risk.
+Licensed under the [GNU GPL v3.0 or later](LICENSE).
