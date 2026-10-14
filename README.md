@@ -94,6 +94,25 @@ npm --prefix app test                 # catalog and protocol checks, no keyboard
 React 19 · TypeScript · Vite · Tailwind CSS 4 · zustand · Tauri 2 (Rust, hidapi) · WebHID. Protocol notes per brand are
 in [docs/](docs/); `tools/report/decode.js` reads board reports from issues.
 
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org). Signing starts with the first release after the project is accepted into
+the program; earlier releases are unsigned.
+
+- Committers and reviewers: [shybruh](https://github.com/shybruh)
+- Approvers: [shybruh](https://github.com/shybruh)
+
+Every release is built from this repository by GitHub Actions; only tagged releases are signed, each after an approver
+confirms it.
+
+**Privacy:** FCC doesn't collect personal data: no accounts, no analytics, no telemetry. Settings and profiles stay on
+your computer. The only network request it makes on its own is the desktop app checking
+[GitHub Releases](../../releases) for a newer version, shortly after it starts and then every six hours;
+[GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)
+applies to that request. Anything else, such as a keyboard report, is only sent when you choose to open it as a GitHub
+issue.
+
 ## Credits & license
 
 The RongYuan driver started from **monsgeek-akko-linux**'s notes, the Royal Kludge packet layout from **Rangoli** and
