@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.3
 
 ### New keyboards
 - **SteelSeries Apex Pro Gen 3** (experimental, desktop app): lighting effects (static, breathing, spectrum, wave) and
