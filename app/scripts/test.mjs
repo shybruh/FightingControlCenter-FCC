@@ -274,6 +274,37 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   fs.rmSync(file)
 }
 
+// ---- the USB capture reader (tools/capture) on a built capture ----
+{
+  const { createRequire } = await import('node:module')
+  const require = createRequire(import.meta.url)
+  const { pcapng, control, interrupt, setup } = require('../../tools/capture/fixture.js')
+  const { readCapture, decode } = require('../../tools/capture/usb-capture.js')
+  const dev = Buffer.alloc(18)
+  dev.writeUInt16LE(0x1532, 8)
+  dev.writeUInt16LE(0x026c, 10)
+  dev[15] = 2
+  const name = Buffer.concat([Buffer.from([36, 3]), Buffer.from('Razer Huntsman V2', 'utf16le')])
+  const report = (level) => Buffer.from([0, 0x1f, 0, 0, 0, 3, 0x0f, 0x04, 1, 5, level])
+  const cap = pcapng([
+    control(0, 7, setup(0x80, 6, 0x0100, 0, 18), { reply: dev }),
+    control(0.01, 7, setup(0x80, 6, 0x0302, 0x409, 255), { reply: name }),
+    control(0.5, 7, setup(0x21, 9, 0x0300, 3, 11), { out: report(0x80) }),
+    control(0.52, 7, setup(0xa1, 1, 0x0300, 3, 11), { reply: report(0x80) }),
+    control(3, 7, setup(0x21, 9, 0x0300, 3, 11), { out: report(0xff), split: true }),
+    interrupt(3.1, 7, 0x81, Buffer.from([0, 0, 4, 0, 0, 0, 0, 0])),
+    interrupt(3.2, 7, 0x02, Buffer.from([0x55, 0xaa])),
+  ])
+  const { devices, events } = decode(readCapture(cap))
+  const d = devices.find((x) => x.id === '1.7')
+  check('capture: device named from its descriptors', [d.vid, d.pid, d.product], [0x1532, 0x026c, 'Razer Huntsman V2'])
+  check(
+    'capture: SET / GET feature reports (also with data in its own packet), interrupt OUT; typing left out',
+    events.map((e) => `${e.t} ${e.kind} ${e.report ?? ''} ${e.iface ?? e.ep} ${e.data.toString('hex')}`),
+    ['0.5 set feature 3 001f000000030f04010580', '0.521 get feature 3 001f000000030f04010580', '3 set feature 3 001f000000030f040105ff', '3.2 out  2 55aa'],
+  )
+}
+
 await vite.close()
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)
