@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.2
 
 ### New
 - **Request support for your keyboard**: when a keyboard FCC doesn't support yet is plugged in, the start screen says
@@ -9,7 +9,6 @@
   uses. Wireless receivers, mice and plain office keyboards are left out, and any board can be hidden.
 
 ### Improved
-- The board report dialog is wide enough again (it was squeezed to a narrow column).
 - **Razer underglow**: the BlackWidow V4 / V4 Pro (left and right underglow, V4 Pro wrist rest), Huntsman Elite and
   Huntsman V2 Analog show their extra lights as strips around the keyboard. Paint them like keys; designs and presets
   include them.
@@ -17,6 +16,9 @@
   faster than the Huntsman V2).
 - Saved lighting presets remember which kind of keyboard they were made on: on another brand the same effect is picked
   by name, or the colours are shown per key, instead of an unrelated effect with the same number.
+
+### Fixed
+- The board report dialog is wide enough again (it was squeezed to a narrow column).
 
 ## 0.3.1
 
