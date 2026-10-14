@@ -4,7 +4,8 @@ import { PACKET_LEN } from './protocol'
 import type { FeatureTransport } from './rk'
 import type { RyTransport } from './ry'
 import type { RazerTransport } from './razer'
-import { MC_IDS, RAZER_DEVICES, RK_PRODUCT_IDS, RY_IDS } from '../devices/registry'
+import type { SteelSeriesTransport } from './steelseries'
+import { MC_IDS, RAZER_DEVICES, RK_PRODUCT_IDS, RY_IDS, STEELSERIES_DEVICES } from '../devices/registry'
 import type { McExpect, McTransport } from './mc'
 import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
@@ -258,5 +259,51 @@ export class TauriRazerTransport implements RazerTransport {
   async close() {
     this.unlisten?.()
     await invoke('razer_close')
+  }
+}
+
+/** Desktop transport for SteelSeries boards: lighting reports through the Rust bridge (src-tauri/src/steelseries.rs). */
+/** [product id, interface it takes lighting on] */
+const STEELSERIES_PRODUCTS = STEELSERIES_DEVICES.map((d) => [d.productId, d.steelseries!.iface])
+let lastSteelSeriesCollections = ''
+
+export class TauriSteelSeriesTransport implements SteelSeriesTransport {
+  readonly name: string
+  readonly identity: DeviceIdentity
+  private disconnects = new Emitter<void>()
+  private unlisten: UnlistenFn | null = null
+
+  private constructor(info: RazerInfo) {
+    this.name = info.name || 'SteelSeries keyboard'
+    this.identity = { vendorId: info.vendor_id, productId: info.product_id, productName: info.name }
+  }
+
+  static available(): Promise<boolean> {
+    return invoke<boolean>('steelseries_available', { products: STEELSERIES_PRODUCTS })
+  }
+
+  static async open(): Promise<TauriSteelSeriesTransport> {
+    const info = await invoke<RazerInfo>('steelseries_open', { products: STEELSERIES_PRODUCTS })
+    const seen = JSON.stringify(info.collections)
+    if (seen !== lastSteelSeriesCollections) {
+      lastSteelSeriesCollections = seen
+      log.info('steelseries', `lighting collection: ${info.control}`, info.collections)
+    }
+    const t = new TauriSteelSeriesTransport(info)
+    t.unlisten = await listen('steelseries-disconnected', () => t.disconnects.emit())
+    return t
+  }
+
+  send(report: Uint8Array) {
+    return invoke<void>('steelseries_send', { data: Array.from(report) })
+  }
+
+  onDisconnect(l: () => void) {
+    return this.disconnects.on(l)
+  }
+
+  async close() {
+    this.unlisten?.()
+    await invoke('steelseries_close')
   }
 }

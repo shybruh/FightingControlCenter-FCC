@@ -19,6 +19,7 @@ import { RK_SLEEP_BYTE, RK_SLEEP_DEFAULT } from '../hid/rk'
 import { RY_POLLING, RyKeyboard, decodeRySettings, encodeRySettings, type RySettings } from '../hid/ry'
 import { decodeMcSettings, encodeMcSettings, type McSettings } from '../hid/mc'
 import { RAZER_POLLING, decodeRazerSettings, encodeRazerSettings, type RazerSettings } from '../hid/razer'
+import { SS_SETTING } from '../hid/steelseries'
 import { useStore } from '../store'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -33,6 +34,7 @@ export function SettingsPanel() {
   if (protocol === 'ry') return <RySettingsPanel />
   if (protocol === 'mc') return <McSettingsPanel />
   if (protocol === 'razer') return <RazerSettingsPanel />
+  if (protocol === 'steelseries') return <SteelSeriesSettingsPanel />
   return <SonixSettingsPanel />
 }
 
@@ -173,6 +175,71 @@ function RazerSettingsPanel() {
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
+            <ReportButton variant="ghost" />
+            <IntroButton />
+            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
+              <BugIcon data-icon="inline-start" />
+              Diagnostics
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/** SteelSeries boards: FCC streams the lighting; the one setting is which lighting packet the board takes. */
+function SteelSeriesSettingsPanel() {
+  const regions = useStore((s) => s.regions)!
+  const update = useStore((s) => s.update)
+  const device = useStore((s) => s.device)!
+  const original = regions.settings[SS_SETTING.original] === 1
+  const setOriginal = (v: boolean) => {
+    const settings = Uint8Array.from(regions.settings)
+    settings[SS_SETTING.original] = v ? 1 : 0
+    update('settings', settings)
+  }
+
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Lighting</CardTitle>
+          <CardDescription>
+            This keyboard has no lighting effects of its own: FCC draws every frame, the way SteelSeries GG does, so effects run while FCC is running
+            (also from the tray). Close SteelSeries GG while using FCC: both send lighting to the keyboard.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          <Field label="Lighting commands">
+            <Segmented
+              value={original ? 1 : 0}
+              options={[
+                { value: 0, label: 'Gen 3' },
+                { value: 1, label: 'Original' },
+              ]}
+              onChange={(v) => setOriginal(v === 1)}
+            />
+          </Field>
+          <p className="-mt-3 text-xs text-muted-foreground">
+            Gen 3 boards normally take the newer commands. If the keys don't change colour, try Original and tell us which one worked.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Device</CardTitle>
+          <CardDescription>Actuation, rapid trigger and the OLED screen aren't supported yet: they need a USB capture of SteelSeries GG first.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ModelPicker />
+          <Separator />
+          <Stat label="USB ID">
+            {device.vendorId.toString(16).padStart(4, '0')}:{device.productId.toString(16).padStart(4, '0')}
+          </Stat>
+          <Separator />
+          <div className="flex flex-wrap gap-2">
             <ReportButton variant="ghost" />
             <IntroButton />
             <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>

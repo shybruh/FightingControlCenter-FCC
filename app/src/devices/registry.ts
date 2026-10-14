@@ -14,6 +14,7 @@ import ryCatalog from './ry-catalog.json'
 import mcCatalog from './mc-catalog.json'
 import verifiedList from './verified.json'
 import { RAZER_MODELS, RAZER_VENDOR_ID, type RazerInfo } from './razer'
+import { STEELSERIES_MODELS, STEELSERIES_VENDOR_ID, type SteelSeriesInfo } from './steelseries'
 
 /** boards confirmed working through board reports */
 const VERIFIED = new Set(verifiedList.verified)
@@ -22,7 +23,7 @@ const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.h
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
 /** Which keyboard protocol a board speaks. */
-export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc' | 'razer'
+export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc' | 'razer' | 'steelseries'
 
 export type AdvancedKind = 'rs' | 'socd' | 'dks' | 'modtap' | 'toggle'
 
@@ -104,6 +105,8 @@ const RAZER_CAPS: Capabilities = {
   liveTravel: false,
   macroModes: [],
 }
+/** SteelSeries: lighting only, streamed by FCC; the profile is the source of truth. */
+const STEELSERIES_CAPS: Capabilities = { ...RAZER_CAPS }
 const RY_CAPS: Capabilities = {
   readBack: true,
   performance: true,
@@ -176,6 +179,7 @@ export interface DeviceDef {
   ry?: RyInfo
   mc?: McInfo
   razer?: RazerInfo
+  steelseries?: SteelSeriesInfo
 }
 
 /** MCHOSE first-generation ("glw") magnetic boards. */
@@ -421,7 +425,25 @@ export const RAZER_DEVICES: DeviceDef[] = RAZER_MODELS.map((m) => ({
   razer: m.razer,
 }))
 
-export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES, ...RAZER_DEVICES]
+const STEELSERIES_LAYOUTS = new Map(STEELSERIES_MODELS.map((m) => [m.id, m.keys]))
+
+export const STEELSERIES_DEVICES: DeviceDef[] = STEELSERIES_MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  vendorId: STEELSERIES_VENDOR_ID,
+  productId: m.productId,
+  layout: m.id,
+  fnLayout: null,
+  transport: 'wired' as const,
+  status: statusOf(m.id, 'untested'),
+  // FCC doesn't set travel on these (no documented command)
+  limits: { travel: 0, actuationMin: 0, actuationMax: 0, actuationDefault: 0, sensMin: 0, sensMax: 0, sensDefault: 0 },
+  protocol: 'steelseries' as const,
+  caps: STEELSERIES_CAPS,
+  steelseries: m.steelseries,
+}))
+
+export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES, ...RAZER_DEVICES, ...STEELSERIES_DEVICES]
 
 export const FIGHTING68 = DEVICES.find((d) => d.id === 'fighting68')!
 
@@ -457,6 +479,7 @@ export function layoutFor(device: DeviceDef): KeyDef[] {
     }))
   }
   if (device.protocol === 'razer') return RAZER_LAYOUTS.get(device.id) ?? []
+  if (device.protocol === 'steelseries') return STEELSERIES_LAYOUTS.get(device.id) ?? []
   if (device.protocol === 'rk' || device.protocol === 'ry') {
     return ((device.protocol === 'rk' ? RK_LAYOUTS : RY_LAYOUTS).get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
       id: slot,
@@ -624,6 +647,17 @@ function razerEffects(rz: RazerInfo | undefined): EffectDef[] {
 }
 const RAZER_CUSTOM = 7
 
+/** SteelSeries effects: FCC computes every frame (ids are FCC's own, see SS_FX in hid/steelseries.ts), so they all
+ *  take speed and colour like the preview does. */
+const STEELSERIES_EFFECTS: EffectDef[] = [
+  { id: 1, name: 'Static', color: true, speed: false, direction: false, preview: 0x01 },
+  { id: 2, name: 'Breathing', color: true, speed: true, direction: false, preview: 0x07 },
+  { id: 3, name: 'Spectrum cycle', color: false, speed: true, direction: false, preview: 0x08 },
+  { id: 4, name: 'Wave', color: false, speed: true, direction: true, preview: 0x10 },
+  { id: 5, name: 'Custom per-key', color: false, speed: false, direction: false, preview: SONIX_CUSTOM },
+]
+const STEELSERIES_CUSTOM = 5
+
 /** Makes `device` the active board: layout, switch limits and lighting effects everywhere in the app. */
 export function activateDevice(device: DeviceDef) {
   setLayout(layoutFor(device))
@@ -637,6 +671,8 @@ export function activateDevice(device: DeviceDef) {
     setEffects(mcEffects(device.mc), mcEffectId(0))
   } else if (device.protocol === 'razer') {
     setEffects(razerEffects(device.razer), RAZER_CUSTOM)
+  } else if (device.protocol === 'steelseries') {
+    setEffects(STEELSERIES_EFFECTS, STEELSERIES_CUSTOM)
   } else {
     setRtLimits(device.limits)
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)
@@ -674,6 +710,11 @@ export { RAZER_VENDOR_ID }
 export const RAZER_IDS = RAZER_DEVICES.map((d) => [d.vendorId, d.productId] as const)
 export const isRazerId = (vendorId: number, productId: number) => vendorId === RAZER_VENDOR_ID && RAZER_DEVICES.some((d) => d.productId === productId)
 
+/** SteelSeries boards take lighting on their command interface (USB interface 1 on the wired Apex Pro Gen 3). */
+export { STEELSERIES_VENDOR_ID }
+export const isSteelSeriesId = (vendorId: number, productId: number) =>
+  vendorId === STEELSERIES_VENDOR_ID && STEELSERIES_DEVICES.some((d) => d.productId === productId)
+
 /** The exact RY model from the id the board reports. */
 export function ryDeviceById(deviceId: number) {
   return RY_DEVICES.find((d) => d.ry?.deviceId === deviceId) ?? null
@@ -705,6 +746,10 @@ export function detect(vendorId: number, productId: number, productName: string,
   if (vendorId === RAZER_VENDOR_ID) {
     const razer = RAZER_DEVICES.find((d) => d.productId === productId) ?? null
     return { device: razer, candidates: razer ? [razer] : [], certain: !!razer }
+  }
+  if (vendorId === STEELSERIES_VENDOR_ID) {
+    const ss = STEELSERIES_DEVICES.find((d) => d.productId === productId) ?? null
+    return { device: ss, candidates: ss ? [ss] : [], certain: !!ss }
   }
   if (vendorId === RK_VENDOR_ID) {
     const rk = RK_DEVICES.find((d) => d.productId === productId) ?? null

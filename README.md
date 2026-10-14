@@ -58,6 +58,7 @@ copy keeps them. An empty `portable.txt` next to the exe keeps everything beside
 | ⚠️ Untested | 28 **MCHOSE** boards: ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87… | All but DKS, SOCD and live travel (for now) |
 | 🧪 Experimental | **Royal Kludge M75** family | Keymap, lighting, per-key RGB, sleep (not a Hall-effect board) |
 | 🧪 Experimental | 19 **Razer** keyboards: Huntsman V2 / V3 Pro / Mini, BlackWidow V3 / V4… | Lighting, per-key RGB, game mode, polling rate. Desktop app only; close Synapse first |
+| 🧪 Experimental | **SteelSeries Apex Pro Gen 3** | Lighting effects and per-key RGB, drawn by FCC while it runs. No actuation settings yet. Desktop app only; close SteelSeries GG first |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable |
 
 Untested boards are detected automatically and open **read-only** until you choose *Allow changes*. The full list with
@@ -110,7 +111,7 @@ issue.
 ## Credits & license
 
 The RongYuan driver started from **monsgeek-akko-linux**'s notes, the Royal Kludge packet layout from **Rangoli** and
-**Kludge Knight**, the Razer command set from **OpenRazer** and Razer key positions from **OpenRGB**. FCC's
+**Kludge Knight**, the Razer command set from **OpenRazer**, Razer key positions and the SteelSeries lighting report from **OpenRGB**. FCC's
 implementations are its own.
 
 FCC is an independent project, not affiliated with any keyboard brand listed here. Use it at your own risk.

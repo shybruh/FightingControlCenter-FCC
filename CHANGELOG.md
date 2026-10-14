@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### New keyboards
+- **SteelSeries Apex Pro Gen 3** (experimental, desktop app): lighting effects (static, breathing, spectrum, wave) and
+  per-key RGB. These boards have no effects of their own, so FCC draws every frame and streams it, like SteelSeries GG;
+  effects run while FCC runs (also from the tray). Actuation, rapid trigger and the OLED screen need a USB capture first.
+
 ### Fixed
 - The welcome tour, the update prompt and "Which keyboard is this?" open at their intended width again (they were
   squeezed into a narrow column).

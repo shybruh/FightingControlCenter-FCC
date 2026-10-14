@@ -238,6 +238,53 @@ const huntsmanPace = codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').prev
 activateDevice(DEVICES.find((d) => d.id === 'razer-blackwidow-v3-tkl'))
 check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [huntsmanPace, codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed], [1, 3])
 
+// ---- SteelSeries: FCC streams the lighting frames ----
+{
+  const SS = await vite.ssrLoadModule('/src/hid/steelseries.ts')
+  const d = DEVICES.find((x) => x.id === 'steelseries-apex-pro-gen3')
+  check('Apex Pro Gen 3: 1038:1640, SteelSeries protocol, interface 1, untested, no keymap', [d?.vendorId, d?.productId, d?.protocol, d?.steelseries?.iface, d?.status, d?.caps.keymap], [0x1038, 0x1640, 'steelseries', 1, 'untested', false])
+  activateDevice(d)
+  const keys = layout.KEYS
+  const codes = keys.map(SS.ssLedCode)
+  const byLabel = (l) => codes[keys.findIndex((k) => k.label === l)]
+  check('Apex Pro Gen 3: 104 keys, each with its own LED code; W is 0x1a, Fn 0xf0, right Win 0xe7', [keys.length, new Set(codes).size, codes.includes(0), byLabel('W'), byLabel('Fn'), codes.filter((c) => c === 0xe7).length], [104, 104, false, 0x1a, 0xf0, 1])
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  const mock = new SS.MockSteelSeriesTransport(d)
+  const kb = new SS.SteelSeriesKeyboard(mock, d)
+  // custom per-key: W red, everything else from the defaults (white), brightness 3 of 5
+  const regs = SS.ssDefaults()
+  const w = keys.find((k) => k.label === 'W')
+  regs.colors.set([w.id, 255, 0, 0], w.id * 4)
+  regs.led = codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: SS.SS_FX.custom, brightness: 3 })
+  kb.seed({ led: regs.led, colors: regs.colors })
+  await kb.readAll()
+  await wait(30)
+  const frame = mock.sent[1]
+  const entry = (f, code) => { for (let i = 0; i < f[1]; i++) if (f[2 + i * 4] === code) return Array.from(f.slice(3 + i * 4, 6 + i * 4)); return null }
+  check('first the Gen 3 start (0x4b), then a 0x40 frame for all 104 keys', [mock.sent[0][0], frame[0], frame[1]], [0x4b, 0x40, 104])
+  check('W red and the rest white, at brightness 3/5', [entry(frame, 0x1a), entry(frame, 0x04)], [[153, 0, 0], [153, 153, 153]])
+
+  mock.sent.length = 0
+  await kb.writeRegion('led', codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: 0 }))
+  await wait(30)
+  check('lighting off: an all-black frame', [mock.sent.at(-1)[0], mock.sent.at(-1)[1], mock.sent.at(-1).slice(2).filter((b, i) => i % 4 !== 0).every((b) => b === 0)], [0x40, 104, true])
+
+  mock.sent.length = 0
+  const settings = Uint8Array.from(regs.settings)
+  settings[SS.SS_SETTING.original] = 1
+  await kb.writeRegion('settings', settings)
+  await kb.writeRegion('led', codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: SS.SS_FX.spectrum }))
+  await wait(260)
+  const frames = mock.sent.filter((f) => f[0] === 0x3a)
+  check('Original commands: 0x3a frames, no start packet', [frames.length > 0, mock.sent.some((f) => f[0] === 0x4b)], [true, false])
+  check('spectrum streams frames (~20 a second) and the colours move', [frames.length >= 4, JSON.stringify(entry(frames[0], 0x04)) !== JSON.stringify(entry(frames.at(-1), 0x04))], [true, true])
+  await kb.close()
+  const after = mock.sent.length
+  await wait(120)
+  check('closing stops the frames and never sends 0x41 (it reboots Gen 3 boards)', [mock.sent.length, mock.sent.some((f) => f[0] === 0x41)], [after, false])
+}
+
 // ---- support requests: spotting unsupported keyboards, and the request itself ----
 {
   const S = await vite.ssrLoadModule('/src/support.ts')

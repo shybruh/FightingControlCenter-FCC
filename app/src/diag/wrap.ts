@@ -5,6 +5,7 @@ import type { McExpect, McTransport } from '../hid/mc'
 import type { FeatureTransport } from '../hid/rk'
 import type { RyTransport } from '../hid/ry'
 import type { RazerTransport } from '../hid/razer'
+import type { SteelSeriesTransport } from '../hid/steelseries'
 import type { Transport } from '../hid/transport'
 import { errorText, hex, log } from './log'
 
@@ -182,6 +183,37 @@ function razer(t: RazerTransport): RazerTransport {
   }
 }
 
+function steelseries(t: SteelSeriesTransport): SteelSeriesTransport {
+  // frames stream ~20 times a second: log the first of each kind and every 200th after it, not all of them
+  const counts = new Map<number, number>()
+  return {
+    get name() {
+      return t.name
+    },
+    get identity() {
+      return t.identity
+    },
+    async send(report) {
+      const n = counts.get(report[0]) ?? 0
+      counts.set(report[0], n + 1)
+      if (n % 200 === 0) log.packet('steelseries', 'out', report.slice(0, 2 + Math.min(report[1] ?? 0, 4) * 4), `report 0x${report[0].toString(16).padStart(2, '0')} #${n + 1}`)
+      try {
+        await t.send(report)
+      } catch (e) {
+        log.error('steelseries', `report 0x${report[0].toString(16).padStart(2, '0')} failed`, errorText(e))
+        throw e
+      }
+    },
+    onDisconnect(l) {
+      return t.onDisconnect(() => {
+        log.warn('steelseries', `disconnected: ${who(t)}`)
+        l()
+      })
+    },
+    close: () => t.close(),
+  }
+}
+
 /** The same connection with every packet logged. */
 export function withLogging(o: Opened): Opened {
   log.info('connect', `opened ${o.kind} transport: ${who(o.transport)}`, o.transport.identity)
@@ -196,5 +228,7 @@ export function withLogging(o: Opened): Opened {
       return { kind: 'mc', transport: mc(o.transport) }
     case 'razer':
       return { kind: 'razer', transport: razer(o.transport) }
+    case 'steelseries':
+      return { kind: 'steelseries', transport: steelseries(o.transport) }
   }
 }

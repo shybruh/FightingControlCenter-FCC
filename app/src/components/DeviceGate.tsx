@@ -33,7 +33,9 @@ export function ReadOnlyBanner() {
       <ShieldAlertIcon className="size-4 shrink-0 text-amber-300" />
       <span className="min-w-0 flex-1 text-muted-foreground">
         <span className="font-medium text-foreground">{device ? `${device.name} hasn't been tested with FCC yet.` : 'Unknown keyboard.'}</span>{' '}
-        {device?.protocol === 'razer'
+        {device?.protocol === 'steelseries'
+          ? "FCC draws its lighting the way SteelSeries GG does; changes are off until you allow them. Close SteelSeries GG first. If the keys don't change colour, try Settings → Lighting commands. Tell us how it goes!"
+          : device?.protocol === 'razer'
           ? "It can't report its lighting, so FCC shows your saved profile. Changes are off until you allow them; FCC uses Razer's documented command set, so it should work. Close Razer Synapse first. Tell us if it does!"
           : writeOnly
           ? "It can't report its settings, so FCC shows your saved profile. Changes are off until you allow them; the protocol matches existing Royal Kludge tools, so it should work. Tell us if it does!"

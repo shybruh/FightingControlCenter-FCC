@@ -4,7 +4,8 @@ import { WebHidMcTransport, type McTransport } from './mc'
 import { WebHidRkTransport, type FeatureTransport } from './rk'
 import { WebHidRyTransport, type RyTransport } from './ry'
 import type { RazerTransport } from './razer'
-import { TauriMcTransport, TauriRazerTransport, TauriRkTransport, TauriRyTransport, TauriTransport, isTauri } from './tauri'
+import type { SteelSeriesTransport } from './steelseries'
+import { TauriMcTransport, TauriRazerTransport, TauriRkTransport, TauriRyTransport, TauriSteelSeriesTransport, TauriTransport, isTauri } from './tauri'
 import { FILTERS, WebHidTransport, isConfigInterface, type Transport } from './transport'
 import { errorText, log } from '../diag/log'
 
@@ -15,6 +16,8 @@ export type Opened =
   | { kind: 'mc'; transport: McTransport }
   // desktop only: browsers block the keyboard collection Razer's commands go to
   | { kind: 'razer'; transport: RazerTransport }
+  // desktop only, like Razer
+  | { kind: 'steelseries'; transport: SteelSeriesTransport }
 
 const isRkInterface = (d: HIDDevice) =>
   d.vendorId === RK_VENDOR_ID && d.collections.some((c) => c.usagePage === RK_FILTER.usagePage && c.usage === RK_FILTER.usage)
@@ -77,6 +80,7 @@ export async function openDesktop(): Promise<Opened | null> {
     ry: await TauriRyTransport.available(),
     mc: await TauriMcTransport.available(),
     razer: await TauriRazerTransport.available(),
+    steelseries: await TauriSteelSeriesTransport.available(),
   }
   const summary = JSON.stringify(found)
   // auto-connect polls every 2 s; only changes are worth logging
@@ -90,6 +94,7 @@ export async function openDesktop(): Promise<Opened | null> {
     if (found.ry) return { kind: 'ry', transport: await TauriRyTransport.open() }
     if (found.mc) return { kind: 'mc', transport: await TauriMcTransport.open() }
     if (found.razer) return { kind: 'razer', transport: await TauriRazerTransport.open() }
+    if (found.steelseries) return { kind: 'steelseries', transport: await TauriSteelSeriesTransport.open() }
   } catch (e) {
     log.error('connect', 'opening the keyboard failed', errorText(e))
     throw e
@@ -98,5 +103,5 @@ export async function openDesktop(): Promise<Opened | null> {
 }
 
 export async function desktopAvailable() {
-  return (await TauriTransport.available()) || (await TauriRkTransport.available()) || (await TauriRyTransport.available()) || (await TauriMcTransport.available()) || (await TauriRazerTransport.available())
+  return (await TauriTransport.available()) || (await TauriRkTransport.available()) || (await TauriRyTransport.available()) || (await TauriMcTransport.available()) || (await TauriRazerTransport.available()) || (await TauriSteelSeriesTransport.available())
 }

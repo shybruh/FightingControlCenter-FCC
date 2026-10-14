@@ -5,6 +5,7 @@ import { MockRkTransport, RkKeyboard } from './hid/rk'
 import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
 import { McKeyboard, MockMcTransport } from './hid/mc'
 import { MockRazerTransport, RazerKeyboard } from './hid/razer'
+import { MockSteelSeriesTransport, SteelSeriesKeyboard } from './hid/steelseries'
 import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
@@ -282,6 +283,10 @@ export const useStore = create<State>((set, get) => {
       await source.transport.close()
       throw new Error("this Razer model isn't in FCC's list yet. Please send a board report")
     }
+    if ('kind' in source && source.kind === 'steelseries' && !device?.steelseries) {
+      await source.transport.close()
+      throw new Error("this SteelSeries model isn't in FCC's list yet. Please send a support request")
+    }
     if (probe && !device?.ry) {
       if ('kind' in source) await source.transport.close()
       throw new Error(`this keyboard (model ${probe.deviceId}) isn't in FCC's list yet. Please send a board report`)
@@ -299,7 +304,9 @@ export const useStore = create<State>((set, get) => {
             ? new McKeyboard(source.transport, device!)
             : source.kind === 'razer'
               ? new RazerKeyboard(source.transport, device!)
-              : new RyKeyboard(source.transport, device!, probe!)
+              : source.kind === 'steelseries'
+                ? new SteelSeriesKeyboard(source.transport, device!)
+                : new RyKeyboard(source.transport, device!, probe!)
     set({ kb })
     applyDevice(device)
     const sameFamily = (d: DeviceDef) => d.transport === 'wired' && d.protocol === (device?.protocol ?? 'sonix')
@@ -308,7 +315,7 @@ export const useStore = create<State>((set, get) => {
         !demo && !remembered && (!det.certain || !det.device) ? (det.candidates.length ? det.candidates : DEVICES.filter(sameFamily)) : null,
     })
     // boards that can't report their lighting (RK: anything) start from the saved profile
-    if (kb instanceof RkKeyboard || kb instanceof RazerKeyboard) {
+    if (kb instanceof RkKeyboard || kb instanceof RazerKeyboard || kb instanceof SteelSeriesKeyboard) {
       const active = get().profiles.find((p) => p.id === get().activeProfileId)
       if (active) kb.seed(Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Uint8Array.from(active.data[r])])))
     }
@@ -387,7 +394,9 @@ export const useStore = create<State>((set, get) => {
               ? { kind: 'mc', transport: new MockMcTransport(demoDevice) }
               : demoDevice?.protocol === 'razer'
                 ? { kind: 'razer', transport: new MockRazerTransport(demoDevice) }
-                : demo
+                : demoDevice?.protocol === 'steelseries'
+                  ? { kind: 'steelseries', transport: new MockSteelSeriesTransport(demoDevice) }
+                  : demo
             ? { kind: 'sonix', transport: new MockTransport() }
             : isTauri()
               ? await openDesktop()

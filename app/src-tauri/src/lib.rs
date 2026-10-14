@@ -6,6 +6,7 @@ mod mc;
 mod osd;
 mod portable;
 mod razer;
+mod steelseries;
 mod rk;
 mod scan;
 mod ry;
@@ -34,6 +35,7 @@ pub fn run() {
     .manage(osd::OsdGeneration::default())
     .manage(rk::RkState::default())
     .manage(razer::RazerState::default())
+    .manage(steelseries::SteelSeriesState::default())
     .manage(ry::RyState::default())
     .manage(mc::McState::default())
     .manage(scan::ScanState::default())
@@ -57,6 +59,10 @@ pub fn run() {
       razer::razer_request,
       razer::razer_send,
       razer::razer_close,
+      steelseries::steelseries_available,
+      steelseries::steelseries_open,
+      steelseries::steelseries_send,
+      steelseries::steelseries_close,
       rk::rk_available,
       rk::rk_open,
       rk::rk_send_feature,

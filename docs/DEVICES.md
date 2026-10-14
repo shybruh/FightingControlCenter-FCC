@@ -556,3 +556,13 @@ They open read-only until *Allow changes*. Key layouts come from `tools/catalog/
 | Razer BlackWidow V4 75% | `1532:02a5` | up to 8,000 Hz | — |
 | Razer BlackWidow V4 TKL (wired) | `1532:02d7` | up to 1,000 Hz | — |
 | Razer BlackWidow Elite | `1532:0228` | — | — |
+
+## SteelSeries
+
+Experimental, desktop app only. Lighting effects, per-key RGB and brightness, drawn by FCC and streamed to the keyboard
+the way SteelSeries GG does ([PROTOCOL-STEELSERIES.md](PROTOCOL-STEELSERIES.md)); effects run while FCC runs. Actuation,
+rapid trigger and the OLED screen aren't supported yet. Opens read-only until *Allow changes*.
+
+| Model | USB id |
+|---|---|
+| SteelSeries Apex Pro Gen 3 | `1038:1640` |
