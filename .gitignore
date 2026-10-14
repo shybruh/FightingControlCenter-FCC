@@ -21,3 +21,6 @@ website-media/
 
 # the website (deployed separately to the VPS)
 website/
+
+# promo video project (kept locally)
+promo/
