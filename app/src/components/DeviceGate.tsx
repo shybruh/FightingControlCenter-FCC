@@ -66,7 +66,7 @@ export function DeviceChoiceDialog() {
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="data-[size=default]:max-w-md data-[size=default]:sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>Which keyboard is this?</AlertDialogTitle>
           <AlertDialogDescription>

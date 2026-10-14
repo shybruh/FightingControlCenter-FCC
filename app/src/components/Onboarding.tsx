@@ -134,7 +134,7 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
 
   return (
     <AlertDialog open={open && !choosing} onOpenChange={(o) => !o && finish()}>
-      <AlertDialogContent className="max-w-lg gap-5">
+      <AlertDialogContent className="gap-5 data-[size=default]:max-w-lg data-[size=default]:sm:max-w-lg">
         <AutoHeight watch={step.id}>
           <div key={step.id} className="swap-in flex flex-col gap-4">
             <div className="flex items-center gap-3">

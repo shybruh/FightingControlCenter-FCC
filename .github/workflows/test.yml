@@ -1,0 +1,40 @@
+# Runs FCC's checks on every push and pull request: the type check, the web build, and npm test (every board's
+# catalogue entry, the protocol packets, support requests and the capture reader). No keyboard needed.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      - name: Type check and build
+        run: npm run build
+
+      - name: Tests
+        run: npm test

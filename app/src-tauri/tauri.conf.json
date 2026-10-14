@@ -51,6 +51,8 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "shybruh",
+    "copyright": "© 2026 shybruh. Licensed under GPL-3.0-or-later.",
     "targets": [
       "nsis"
     ],

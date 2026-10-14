@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- The welcome tour, the update prompt and "Which keyboard is this?" open at their intended width again (they were
+  squeezed into a narrow column).
+
+### Other
+- The app and installer name **shybruh** as publisher (Windows' file details and *Settings → Apps*), with the
+  copyright and license.
+
 ## 0.3.2
 
 ### New

@@ -34,7 +34,7 @@ export function UpdateDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const downloading = phase === 'downloading'
   return (
     <AlertDialog open={open} onOpenChange={(o) => !downloading && onOpenChange(o)}>
-      <AlertDialogContent className="max-w-lg">
+      <AlertDialogContent className="data-[size=default]:max-w-lg data-[size=default]:sm:max-w-lg">
         <AlertDialogHeader>
           <AlertDialogTitle>Version {version} is available</AlertDialogTitle>
           <AlertDialogDescription>
