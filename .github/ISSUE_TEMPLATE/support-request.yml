@@ -1,0 +1,18 @@
+name: Support request
+description: Ask for a keyboard FCC doesn't support yet. Create it from the app with "Keyboard not supported?".
+title: "Support request: "
+labels: ["support request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! In FCC, press **Keyboard not supported?** on the start screen (or **Request support** when FCC spots
+        the keyboard), fill in the brand and model, and press **Open GitHub issue**. If the box below is empty, the
+        request is on your clipboard: paste it in.
+  - type: textarea
+    id: request
+    attributes:
+      label: Request
+      description: The request from FCC, including the "Raw data" section at the end.
+    validations:
+      required: true

@@ -81,7 +81,7 @@ function ReportDialog({ report, onClose }: { report: Report | null; onClose(): v
 
   return (
     <AlertDialog open={!!report} onOpenChange={(o) => !o && onClose()}>
-      <AlertDialogContent className="max-w-xl">
+      <AlertDialogContent className="data-[size=default]:max-w-xl data-[size=default]:sm:max-w-xl">
         <AlertDialogHeader>
           <AlertDialogTitle>Report this keyboard</AlertDialogTitle>
           <AlertDialogDescription>

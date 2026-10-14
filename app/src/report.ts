@@ -31,18 +31,19 @@ export interface Report {
 
 const hex4 = (n: number) => n.toString(16).padStart(4, '0')
 
-function toBase64(bytes: Uint8Array) {
+export function toBase64(data: ArrayLike<number>) {
+  const bytes = data instanceof Uint8Array ? data : Uint8Array.from(data)
   let s = ''
   for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
   return btoa(s)
 }
 
-async function gzipBase64(text: string) {
+export async function gzipBase64(text: string) {
   const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))
   return toBase64(new Uint8Array(await new Response(stream).arrayBuffer()))
 }
 
-function platform() {
+export function platform() {
   const ua = navigator.userAgent
   const os = /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'unknown OS'
   const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : 'browser'
@@ -140,10 +141,10 @@ export async function buildReport({ identity, device, regions, demo }: ReportInp
   return { title: `Board report: ${name} (${usb})`, markdown, json }
 }
 
-/** New-issue link with the report filled in when it fits in a URL. */
-export function issueUrl(report: Report) {
-  const base = `${REPO_URL}issues/new?template=board-report.yml&title=${encodeURIComponent(report.title)}`
-  const full = `${base}&report=${encodeURIComponent(report.markdown)}`
+/** New-issue link with the report filled in when it fits in a URL (`field` is the issue form's text box). */
+export function issueUrl(report: Pick<Report, 'title' | 'markdown'>, template = 'board-report.yml', field = 'report') {
+  const base = `${REPO_URL}issues/new?template=${template}&title=${encodeURIComponent(report.title)}`
+  const full = `${base}&${field}=${encodeURIComponent(report.markdown)}`
   return { url: full.length <= MAX_URL ? full : base, prefilled: full.length <= MAX_URL }
 }
 

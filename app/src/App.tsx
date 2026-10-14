@@ -15,6 +15,7 @@ import { useDesktopIntegration } from './desktop/integration'
 import { useUpdateChecks } from './desktop/updates'
 import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
+import { SupportRequestDialog, UnsupportedNotice, openSupportRequest } from './components/SupportRequest'
 
 export default function App() {
   const status = useStore((s) => s.status)
@@ -31,6 +32,7 @@ export default function App() {
       {status === 'ready' ? <Main /> : <Connect />}
       <Notices />
       <Diagnostics />
+      <SupportRequestDialog />
       <Toaster theme="dark" position="bottom-right" />
     </TooltipProvider>
   )
@@ -91,12 +93,16 @@ function Connect() {
                 {status === 'connecting' ? 'Waiting for permission…' : 'Connect keyboard'}
               </Button>
               {!supported && <p className="text-xs text-destructive">This browser has no WebHID. Use Chrome or Edge.</p>}
+              <UnsupportedNotice active={status === 'idle'} />
               <div className="flex flex-wrap justify-center gap-1">
                 <Button variant="ghost" onClick={() => connect(true)}>
                   Try demo mode
                 </Button>
+                <Button variant="ghost" className="text-muted-foreground" disabled={!supported} onClick={() => openSupportRequest()}>
+                  Keyboard not supported?
+                </Button>
                 <Button variant="ghost" className="text-muted-foreground" onClick={() => useDiagnostics.getState().show('devices')}>
-                  Not detected? Diagnostics
+                  Diagnostics
                 </Button>
               </div>
             </>

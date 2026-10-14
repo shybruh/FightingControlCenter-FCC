@@ -238,6 +238,42 @@ const huntsmanPace = codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').prev
 activateDevice(DEVICES.find((d) => d.id === 'razer-blackwidow-v3-tkl'))
 check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [huntsmanPace, codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed], [1, 3])
 
+// ---- support requests: spotting unsupported keyboards, and the request itself ----
+{
+  const S = await vite.ssrLoadModule('/src/support.ts')
+  // a real Sonix descriptor fragment: vendor page 0xFF68, usage 0x61, feature report 0x05 of 64 bytes
+  const sonixConfig = [0x06, 0x68, 0xff, 0x09, 0x61, 0xa1, 0x01, 0x85, 0x05, 0x75, 0x08, 0x95, 0x40, 0xb1, 0x02, 0xc0]
+  const col = (vid, pid, product, page, usage, extra = {}) => ({
+    vendor_id: vid, product_id: pid, product, manufacturer: 'Maker', release: 0x0102, usage_page: page, usage, interface: page === 1 ? 0 : 2, bus: 'Usb', descriptor: null, ...extra,
+  })
+  const scan = [
+    col(0x0c45, 0x8030, 'Fighting68', 1, 6), col(0x0c45, 0x8030, 'Fighting68', 0xff68, 0x61), // supported
+    col(0x0c45, 0x7777, 'Mystery HE', 1, 6), col(0x0c45, 0x7777, 'Mystery HE', 0xff68, 0x61, { descriptor: sonixConfig }), // unknown, configurable
+    col(0x1234, 0x0001, 'Office Keyboard', 1, 6), // plain keyboard: no configuration interface
+    col(0x1234, 0x0002, 'Gaming Mouse', 1, 6), col(0x1234, 0x0002, 'Gaming Mouse', 0xff00, 1), // a mouse that also types
+    col(0x3151, 0x5007, 'AJAZZ 2.4G 8K', 1, 6), col(0x3151, 0x5007, 'AJAZZ 2.4G 8K', 0xffff, 2), // a wireless receiver
+    col(0x1234, 0x0003, 'BT Board', 1, 6, { bus: 'Bluetooth' }), col(0x1234, 0x0003, 'BT Board', 0xff00, 1, { bus: 'Bluetooth' }),
+  ]
+  const boards = S.fromScan(scan)
+  check('support: USB keyboards found (mouse, receiver and Bluetooth left out)', boards.map((k) => `${S.usbId(k)} ${k.known ? 'known' : 'new'}`), ['0c45:8030 known', '0c45:7777 new', '1234:0001 new'])
+  check('support: only the unknown configurable one gets the start-screen notice', S.unsupportedOf(boards, []).map(S.usbId), ['0c45:7777'])
+  check('support: hidden boards stay hidden', S.unsupportedOf(boards, ['0c45:7777']), [])
+  const mystery = boards.find((k) => k.productId === 0x7777)
+  check('support: chip guess from the vendor id', S.chipGuess(mystery), 'Sonix (the same family as most boards FCC supports)')
+  check('support: report sizes read from the descriptor', mystery.interfaces[1].reports.feature, { 5: 64 })
+
+  const req = await S.buildRequest(mystery, { brand: 'Acme', model: 'HE|65', link: 'https://example.com/he65', notes: 'Uses a web driver.' })
+  check('support: issue title', req.title, 'Support request: Acme HE/65 (0c45:7777)')
+  const fs = await import('node:fs')
+  const os = await import('node:os')
+  const { execFileSync } = await import('node:child_process')
+  const file = path.join(os.tmpdir(), 'fcc-request-test.md')
+  fs.writeFileSync(file, req.markdown)
+  const decoded = execFileSync(process.execPath, [path.join(app, '../tools/report/decode.js'), file], { encoding: 'utf8' })
+  check('support: decode.js reads the request back', [/Acme HE\|65/.test(decoded), /0c45:7777 "Mystery HE"/.test(decoded), /page 0xff68 usage 0x61 {2}feature 0x05:64B/.test(decoded)], [true, true, true])
+  fs.rmSync(file)
+}
+
 await vite.close()
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

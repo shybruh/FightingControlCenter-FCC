@@ -2,7 +2,14 @@
 
 ## Unreleased
 
+### New
+- **Request support for your keyboard**: when a keyboard FCC doesn't support yet is plugged in, the start screen says
+  so and offers *Request support* (or press *Keyboard not supported?*). Add the brand and model, and FCC opens a GitHub
+  issue with the board's USB id and the description it gives of its own USB interfaces, enough to tell which chip it
+  uses. Wireless receivers, mice and plain office keyboards are left out, and any board can be hidden.
+
 ### Improved
+- The board report dialog is wide enough again (it was squeezed to a narrow column).
 - **Razer underglow**: the BlackWidow V4 / V4 Pro (left and right underglow, V4 Pro wrist rest), Huntsman Elite and
   Huntsman V2 Analog show their extra lights as strips around the keyboard. Paint them like keys; designs and presets
   include them.

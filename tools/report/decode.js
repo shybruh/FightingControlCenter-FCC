@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Decodes an FCC board report (the GitHub issue text, or a saved fcc-report-*.md).
+// Decodes an FCC board report or support request (the GitHub issue text, or a saved fcc-report-*.md).
 //
 //   node tools/report/decode.js report.md            summary, checklist and what to change
 //   node tools/report/decode.js report.md --dump dir write each region as <name>.bin (+ report.json)
@@ -22,12 +22,40 @@ const dumpDir = flag('--dump')
 const verify = flag('--verify')
 const text = args[0] ? fs.readFileSync(args[0], 'utf8') : fs.readFileSync(0, 'utf8')
 
+const unpack = (b64) => JSON.parse(zlib.gunzipSync(Buffer.from(b64.replace(/\s+/g, ''), 'base64')).toString('utf8'))
+
+// a support request ("Keyboard not supported?" in the app): the board's USB interfaces, to tell which chip it is
+const request = text.match(/```fcc-request\s*([\s\S]*?)```/)
+if (request) {
+  const r = unpack(request[1])
+  if (r.format !== 'fcc-request') throw new Error('not an FCC support request')
+  const h = (n, w) => n.toString(16).padStart(w, '0')
+  console.log(`Keyboard  ${[r.details.brand, r.details.model].filter(Boolean).join(' ') || '(not given)'}${r.details.link ? `  ${r.details.link}` : ''}`)
+  console.log(`USB       ${h(r.usb.vendorId, 4)}:${h(r.usb.productId, 4)} "${r.usb.product}" by "${r.usb.manufacturer}"${r.usb.release != null ? `, release 0x${h(r.usb.release, 4)}` : ''}`)
+  console.log(`FCC       ${r.app}, ${r.platform}${r.known ? ' (already in the catalogue!)' : ''}`)
+  console.log('\nInterfaces')
+  for (const i of r.interfaces) {
+    const reports = i.reports
+      ? ['input', 'output', 'feature'].map((k) => Object.entries(i.reports[k]).map(([id, n]) => `${k} 0x${h(Number(id), 2)}:${n}B`).join(' ')).filter(Boolean).join('  ')
+      : 'reports unknown'
+    console.log(`  if${i.interface ?? '?'}  page 0x${h(i.usagePage, 4)} usage 0x${h(i.usage, 2)}  ${reports}${i.descriptor ? '' : '  (no descriptor)'}`)
+  }
+  if (dumpDir) {
+    fs.mkdirSync(dumpDir, { recursive: true })
+    r.interfaces.forEach((i, n) => i.descriptor && fs.writeFileSync(path.join(dumpDir, `if${i.interface ?? n}-${h(i.usagePage, 4)}-${h(i.usage, 2)}.desc.bin`), Buffer.from(i.descriptor, 'base64')))
+    fs.writeFileSync(path.join(dumpDir, 'request.json'), JSON.stringify(r, null, 2))
+    console.log(`\nDescriptors written to ${dumpDir}`)
+  }
+  console.log('\nNext\n  Vendor pages (0xFFxx) are where configuration happens: compare their report ids and sizes with docs/PROTOCOL*.md.')
+  process.exit(0)
+}
+
 const block = text.match(/```fcc-report\s*([\s\S]*?)```/)
 if (!block) {
-  console.error('No ```fcc-report block found. Was the "Raw data" section removed?')
+  console.error('No ```fcc-report or ```fcc-request block found. Was the "Raw data" section removed?')
   process.exit(1)
 }
-const report = JSON.parse(zlib.gunzipSync(Buffer.from(block[1].replace(/\s+/g, ''), 'base64')).toString('utf8'))
+const report = unpack(block[1])
 if (report.format !== 'fcc-report') throw new Error('not an FCC report')
 
 const hex4 = (n) => n.toString(16).padStart(4, '0')

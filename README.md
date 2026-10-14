@@ -69,6 +69,10 @@ Tried FCC on a board that isn't verified? Open **Settings → Report this keyboa
 report holds the USB id, firmware and settings read from the board (no macro contents); tick what worked and submit.
 That's all it takes to get a board verified or fixed.
 
+**Keyboard not supported yet?** Plug it in with the cable and press **Keyboard not supported?** on the start screen
+(FCC also points it out by itself). Add the brand and model and open the GitHub issue: it carries the USB id and the
+board's own description of its interfaces, which is usually enough to tell which chip it uses.
+
 ## Safety
 
 FCC writes to your keyboard's memory, so it's deliberately careful:
