@@ -3,7 +3,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { DEVICES, MC_USAGE, MC_USAGE_PAGE, RAZER_VENDOR_ID, STEELSERIES_VENDOR_ID, isSteelSeriesId, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS, WIRED_IDS, isMcId, isRazerId, isRyId } from '../devices/registry'
+import { DEVICES, MC_USAGE, MC_USAGE_PAGE, RAZER_VENDOR_ID, STEELSERIES_VENDOR_ID, isSteelSeriesId, isSinowealthId, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_USAGE, RY_USAGE_PAGE, RY_VENDOR_IDS, WIRED_IDS, isMcId, isRazerId, isRyId } from '../devices/registry'
 import { isTauri } from '../hid/tauri'
 import { CONFIG_USAGE, CONFIG_USAGE_PAGE } from '../hid/protocol'
 import { parseDescriptor, usageName, type ReportSummary } from './descriptor'
@@ -37,6 +37,11 @@ export function claimFor(vendorId: number, productId: number, usagePage: number,
   const model = DEVICES.find((d) => d.vendorId === vendorId && d.productId === productId)
   if (WIRED_IDS.some((d) => d.vendorId === vendorId && d.productId === productId)) {
     return usagePage === CONFIG_USAGE_PAGE && usage === CONFIG_USAGE ? 'Sonix HE driver: config collection ✓' : 'Sonix HE board, not its config collection'
+  }
+  if (isSinowealthId(vendorId, productId)) {
+    return usagePage >= 0xff00
+      ? 'Sinowealth 010c driver: uses the vendor collection that declares report 0x06, after checking the model'
+      : 'Sinowealth 010c board, other collection'
   }
   if (vendorId === RK_VENDOR_ID) {
     const known = RK_PRODUCT_IDS.includes(productId)

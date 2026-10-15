@@ -15,6 +15,7 @@ import mcCatalog from './mc-catalog.json'
 import verifiedList from './verified.json'
 import { RAZER_MODELS, RAZER_VENDOR_ID, type RazerInfo } from './razer'
 import { STEELSERIES_MODELS, STEELSERIES_VENDOR_ID, type SteelSeriesInfo } from './steelseries'
+import { SINOWEALTH_010C_PID, SINOWEALTH_MODELS, SINOWEALTH_VENDOR_ID, type SinowealthInfo } from './sinowealth'
 
 /** boards confirmed working through board reports */
 const VERIFIED = new Set(verifiedList.verified)
@@ -23,7 +24,7 @@ const statusOf = (id: string, status: DeviceStatus): DeviceStatus => (VERIFIED.h
 export type DeviceStatus = 'verified' | 'untested' | 'unsupported'
 
 /** Which keyboard protocol a board speaks. */
-export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc' | 'razer' | 'steelseries'
+export type Protocol = 'sonix' | 'rk' | 'ry' | 'mc' | 'razer' | 'steelseries' | 'sinowealth'
 
 export type AdvancedKind = 'rs' | 'socd' | 'dks' | 'modtap' | 'toggle'
 
@@ -107,6 +108,8 @@ const RAZER_CAPS: Capabilities = {
 }
 /** SteelSeries: lighting only, streamed by FCC; the profile is the source of truth. */
 const STEELSERIES_CAPS: Capabilities = { ...RAZER_CAPS }
+/** boards whose lighting FCC streams (SteelSeries, Sinowealth 010c): lighting only */
+const STREAMED_CAPS: Capabilities = { ...RAZER_CAPS }
 const RY_CAPS: Capabilities = {
   readBack: true,
   performance: true,
@@ -180,6 +183,8 @@ export interface DeviceDef {
   mc?: McInfo
   razer?: RazerInfo
   steelseries?: SteelSeriesInfo
+  /** plus which LED index each FCC key id lights */
+  sinowealth?: SinowealthInfo & { leds: Record<number, number> }
 }
 
 /** MCHOSE first-generation ("glw") magnetic boards. */
@@ -443,7 +448,31 @@ export const STEELSERIES_DEVICES: DeviceDef[] = STEELSERIES_MODELS.map((m) => ({
   steelseries: m.steelseries,
 }))
 
-export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES, ...RAZER_DEVICES, ...STEELSERIES_DEVICES]
+/** Sinowealth "010c" boards: keys numbered in layout order, LED indexes from the catalogue. Built on first use: the
+ *  key legends it takes its labels from are defined further down. */
+function sinowealthLayout(id: string): KeyDef[] {
+  const m = SINOWEALTH_MODELS.find((x) => x.id === id)
+  return (m?.keys ?? []).map(([hid, , x, y, w, h], i): KeyDef => ({ id: i, label: hid ? (LEGEND[hid] ?? hidName(hid)) : 'Fn', sub: SHIFTED[hid], hid, x, y, w, ...(h !== 1 ? { h } : {}) }))
+}
+
+export const SINOWEALTH_DEVICES: DeviceDef[] = SINOWEALTH_MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  // the same vendor id as Royal Kludge boards (Sinowealth chips)
+  vendorId: SINOWEALTH_VENDOR_ID,
+  productId: m.productId,
+  layout: m.id,
+  fnLayout: null,
+  transport: 'wired' as const,
+  status: statusOf(m.id, 'untested'),
+  // mechanical switches: no travel settings
+  limits: { travel: 0, actuationMin: 0, actuationMax: 0, actuationDefault: 0, sensMin: 0, sensMax: 0, sensDefault: 0 },
+  protocol: 'sinowealth' as const,
+  caps: STREAMED_CAPS,
+  sinowealth: { ...m.sinowealth, leds: Object.fromEntries(m.keys.map(([, led], id) => [id, led])) },
+}))
+
+export const DEVICES: DeviceDef[] = [...SONIX_DEVICES, ...RK_DEVICES, ...RY_DEVICES, ...MC_DEVICES, ...RAZER_DEVICES, ...STEELSERIES_DEVICES, ...SINOWEALTH_DEVICES]
 
 export const FIGHTING68 = DEVICES.find((d) => d.id === 'fighting68')!
 
@@ -480,6 +509,7 @@ export function layoutFor(device: DeviceDef): KeyDef[] {
   }
   if (device.protocol === 'razer') return RAZER_LAYOUTS.get(device.id) ?? []
   if (device.protocol === 'steelseries') return STEELSERIES_LAYOUTS.get(device.id) ?? []
+  if (device.protocol === 'sinowealth') return sinowealthLayout(device.id)
   if (device.protocol === 'rk' || device.protocol === 'ry') {
     return ((device.protocol === 'rk' ? RK_LAYOUTS : RY_LAYOUTS).get(device.id) ?? []).map(([slot, hid, x, y, w, h]) => ({
       id: slot,
@@ -671,7 +701,7 @@ export function activateDevice(device: DeviceDef) {
     setEffects(mcEffects(device.mc), mcEffectId(0))
   } else if (device.protocol === 'razer') {
     setEffects(razerEffects(device.razer), RAZER_CUSTOM)
-  } else if (device.protocol === 'steelseries') {
+  } else if (device.protocol === 'steelseries' || device.protocol === 'sinowealth') {
     setEffects(STEELSERIES_EFFECTS, STEELSERIES_CUSTOM)
   } else {
     setRtLimits(device.limits)
@@ -715,6 +745,11 @@ export { STEELSERIES_VENDOR_ID }
 export const isSteelSeriesId = (vendorId: number, productId: number) =>
   vendorId === STEELSERIES_VENDOR_ID && STEELSERIES_DEVICES.some((d) => d.productId === productId)
 
+/** Sinowealth "010c" boards share the RK vendor id; the model is confirmed by asking the board. */
+export { SINOWEALTH_010C_PID }
+export const isSinowealthId = (vendorId: number, productId: number) =>
+  vendorId === RK_VENDOR_ID && SINOWEALTH_DEVICES.some((d) => d.productId === productId)
+
 /** The exact RY model from the id the board reports. */
 export function ryDeviceById(deviceId: number) {
   return RY_DEVICES.find((d) => d.ry?.deviceId === deviceId) ?? null
@@ -750,6 +785,11 @@ export function detect(vendorId: number, productId: number, productName: string,
   if (vendorId === STEELSERIES_VENDOR_ID) {
     const ss = STEELSERIES_DEVICES.find((d) => d.productId === productId) ?? null
     return { device: ss, candidates: ss ? [ss] : [], certain: !!ss }
+  }
+  if (vendorId === RK_VENDOR_ID && SINOWEALTH_DEVICES.some((d) => d.productId === productId)) {
+    // several models share this id: the driver checks which one answered
+    const sw = SINOWEALTH_DEVICES.filter((d) => d.productId === productId)
+    return { device: sw[0], candidates: sw, certain: sw.length === 1 }
   }
   if (vendorId === RK_VENDOR_ID) {
     const rk = RK_DEVICES.find((d) => d.productId === productId) ?? null

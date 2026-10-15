@@ -566,3 +566,13 @@ rapid trigger and the OLED screen aren't supported yet. Opens read-only until *A
 | Model | USB id |
 |---|---|
 | SteelSeries Apex Pro Gen 3 | `1038:1640` |
+
+## Sinowealth
+
+Experimental, desktop app only. Lighting effects and per-key RGB, drawn by FCC and streamed to the keyboard
+([PROTOCOL-SINOWEALTH.md](PROTOCOL-SINOWEALTH.md)); effects run while FCC runs. Several brands share this USB id, so FCC
+asks the board for its model first and only drives the ones listed. Opens read-only until *Allow changes*.
+
+| Model | USB id | Model id |
+|---|---|---|
+| AULA F99 | `258a:010c` | `0xa4` |

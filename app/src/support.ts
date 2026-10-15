@@ -7,7 +7,7 @@
 // Nothing typed on the keyboard is ever read; serial numbers are left out.
 
 import { invoke } from '@tauri-apps/api/core'
-import { DEVICES, MC_IDS, RAZER_VENDOR_ID, RK_VENDOR_ID, RY_VENDOR_IDS, STEELSERIES_VENDOR_ID, isMcId, isRazerId, isRyId, isSteelSeriesId } from './devices/registry'
+import { DEVICES, MC_IDS, RAZER_VENDOR_ID, RK_VENDOR_ID, RY_VENDOR_IDS, STEELSERIES_VENDOR_ID, isMcId, isRazerId, isRyId, isSinowealthId, isSteelSeriesId } from './devices/registry'
 import { parseDescriptor, usageName, type ReportSummary } from './diag/descriptor'
 import { CONFIG_USAGE_PAGE } from './hid/protocol'
 import { isTauri } from './hid/tauri'
@@ -53,7 +53,7 @@ const isVendor = (i: UsbInterface) => i.usagePage >= 0xff00
 const NOT_A_KEYBOARD = /mouse|receiver|dongle|headset|controller|gamepad|touchpad|2\.4 ?g|wireless/i
 
 export function isKnownId(vendorId: number, productId: number) {
-  return DEVICES.some((d) => d.vendorId === vendorId && d.productId === productId) || isRyId(vendorId, productId) || isMcId(vendorId, productId) || isRazerId(vendorId, productId) || isSteelSeriesId(vendorId, productId)
+  return DEVICES.some((d) => d.vendorId === vendorId && d.productId === productId) || isRyId(vendorId, productId) || isMcId(vendorId, productId) || isRazerId(vendorId, productId) || isSteelSeriesId(vendorId, productId) || isSinowealthId(vendorId, productId)
 }
 
 /** What the USB vendor id (and the interfaces) suggest about the chip, for the request and the dialog. */

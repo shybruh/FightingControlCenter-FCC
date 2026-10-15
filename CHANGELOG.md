@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### New keyboards
+- **AULA F99** (experimental, desktop app): lighting effects and per-key RGB, drawn by FCC and streamed like the
+  SteelSeries boards. Other brands' keyboards share its USB id, so FCC first asks the board which model it is and
+  leaves any other model alone.
+
 ### New
 - **Key test** page: press every key and see it turn green as it registers, with a list of keys not pressed yet. It
   also spots **switch chatter** (a key that fires twice within 30 ms of letting go, the cause of double-typed letters).

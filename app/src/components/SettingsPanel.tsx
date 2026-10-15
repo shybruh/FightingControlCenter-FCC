@@ -35,6 +35,7 @@ export function SettingsPanel() {
   if (protocol === 'mc') return <McSettingsPanel />
   if (protocol === 'razer') return <RazerSettingsPanel />
   if (protocol === 'steelseries') return <SteelSeriesSettingsPanel />
+  if (protocol === 'sinowealth') return <SinowealthSettingsPanel />
   return <SonixSettingsPanel />
 }
 
@@ -231,6 +232,47 @@ function SteelSeriesSettingsPanel() {
         <CardHeader>
           <CardTitle>Device</CardTitle>
           <CardDescription>Actuation, rapid trigger and the OLED screen aren't supported yet: they need a USB capture of SteelSeries GG first.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ModelPicker />
+          <Separator />
+          <Stat label="USB ID">
+            {device.vendorId.toString(16).padStart(4, '0')}:{device.productId.toString(16).padStart(4, '0')}
+          </Stat>
+          <Separator />
+          <div className="flex flex-wrap gap-2">
+            <ReportButton variant="ghost" />
+            <IntroButton />
+            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
+              <BugIcon data-icon="inline-start" />
+              Diagnostics
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/** Sinowealth 010c boards (AULA F99 …): FCC streams the lighting; nothing to set. */
+function SinowealthSettingsPanel() {
+  const device = useStore((s) => s.device)!
+  return (
+    <div className="grid items-start gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Lighting</CardTitle>
+          <CardDescription>
+            FCC draws this keyboard's lighting and streams it, so effects run while FCC is running (also from the tray). About a second after FCC
+            closes, the keyboard goes back to its own lighting. Close the keyboard's own software while using FCC.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Device</CardTitle>
+          <CardDescription>Key remapping, macros and the keyboard's own effects aren't supported yet: they need a USB capture of its software first.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <ModelPicker />

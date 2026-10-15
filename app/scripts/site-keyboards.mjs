@@ -25,7 +25,7 @@ const vite = await createServer({ root: app, logLevel: 'error', server: { middle
 const { DEVICES } = await vite.ssrLoadModule('/src/devices/registry.ts')
 await vite.close()
 
-const FAMILY = { sonix: 'Sonix', ry: 'RongYuan', mc: 'MCHOSE', rk: 'Royal Kludge', razer: 'Razer', steelseries: 'SteelSeries' }
+const FAMILY = { sonix: 'Sonix', ry: 'RongYuan', mc: 'MCHOSE', rk: 'Royal Kludge', razer: 'Razer', steelseries: 'SteelSeries', sinowealth: 'Sinowealth' }
 const BRANDS = ['SteelSeries', 'Razer', 'MCHOSE', 'MonsGeek', 'Akko', 'AJAZZ', 'AULA', 'Royal Kludge', 'RK', 'Fekker', 'VTER', 'Madlions', 'IROK', 'ATK', 'Womier', 'Ajazz', 'Leobog', 'Attack Shark', 'Redragon', 'Glorious', 'Darmoshark', 'Yunzii']
 const hex = (n) => n.toString(16).padStart(4, '0')
 
@@ -51,7 +51,7 @@ const rows = new Map()
 for (const d of DEVICES) {
   // some receivers aren't marked as dongles in the catalogue, but say so in their name
   if (d.transport === 'dongle' || d.status === 'unsupported' || /dongle|receiver/i.test(d.name)) continue
-  const status = d.status === 'verified' ? 'verified' : d.protocol === 'rk' || d.protocol === 'razer' || d.protocol === 'steelseries' ? 'experimental' : 'untested'
+  const status = d.status === 'verified' ? 'verified' : d.protocol === 'rk' || d.protocol === 'razer' || d.protocol === 'steelseries' || d.protocol === 'sinowealth' ? 'experimental' : 'untested'
   const own = split(d.name)
   const company = d.ry ? RY_COMPANY.get(d.ry.deviceId) : undefined
   const { brand, name } =

@@ -6,6 +6,7 @@ import type { FeatureTransport } from '../hid/rk'
 import type { RyTransport } from '../hid/ry'
 import type { RazerTransport } from '../hid/razer'
 import type { SteelSeriesTransport } from '../hid/steelseries'
+import type { SinowealthTransport } from '../hid/sinowealth'
 import type { Transport } from '../hid/transport'
 import { errorText, hex, log } from './log'
 
@@ -214,6 +215,46 @@ function steelseries(t: SteelSeriesTransport): SteelSeriesTransport {
   }
 }
 
+function sinowealth(t: SinowealthTransport): SinowealthTransport {
+  // frames stream ~20 times a second: log the first and every 200th, but every request in full
+  let frames = 0
+  return {
+    get name() {
+      return t.name
+    },
+    get identity() {
+      return t.identity
+    },
+    async send(report) {
+      if (frames++ % 200 === 0) log.packet('sinowealth', 'out', report.slice(0, 16), `frame #${frames}`)
+      try {
+        await t.send(report)
+      } catch (e) {
+        log.error('sinowealth', 'frame failed', errorText(e))
+        throw e
+      }
+    },
+    async request(report) {
+      log.packet('sinowealth', 'out', report.slice(0, 8), 'model request')
+      try {
+        const answer = await t.request(report)
+        log.packet('sinowealth', 'in', answer.slice(0, 24), `model 0x${(answer[13] ?? 0).toString(16).padStart(2, '0')}`)
+        return answer
+      } catch (e) {
+        log.error('sinowealth', 'model request failed', errorText(e))
+        throw e
+      }
+    },
+    onDisconnect(l) {
+      return t.onDisconnect(() => {
+        log.warn('sinowealth', `disconnected: ${who(t)}`)
+        l()
+      })
+    },
+    close: () => t.close(),
+  }
+}
+
 /** The same connection with every packet logged. */
 export function withLogging(o: Opened): Opened {
   log.info('connect', `opened ${o.kind} transport: ${who(o.transport)}`, o.transport.identity)
@@ -230,5 +271,7 @@ export function withLogging(o: Opened): Opened {
       return { kind: 'razer', transport: razer(o.transport) }
     case 'steelseries':
       return { kind: 'steelseries', transport: steelseries(o.transport) }
+    case 'sinowealth':
+      return { kind: 'sinowealth', transport: sinowealth(o.transport) }
   }
 }

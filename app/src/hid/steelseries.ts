@@ -9,21 +9,15 @@
 // Never sent: 0x41 ("onboard lighting"), which OpenRGB uses on exit and which reboots Gen 3 boards.
 // Keymap, actuation and rapid trigger have no documented command and aren't offered.
 
-import { KEYS } from '../data/layout'
+import { KEYS, type KeyDef } from '../data/layout'
 import type { DeviceDef } from '../devices/registry'
-import { renderEffect, type RGB } from '../lighting/preview'
-import { SONIX_CUSTOM, decodeLed, encodeLed } from './codec'
-import type { KeyboardDriver, RegionData, SensorEvent } from './device'
-import { REGIONS, type RegionName } from './protocol'
+import type { RGB } from '../lighting/preview'
+import { STREAM_FX, STREAM_PREVIEW, StreamedKeyboard, streamedDefaults, type StreamTransport } from './streamed'
 import { Emitter, type DeviceIdentity } from './transport'
 
 /** A pipe that sends one feature report 0 (without its id) to the keyboard; these boards don't answer lighting. */
-export interface SteelSeriesTransport {
-  readonly name: string
-  readonly identity: DeviceIdentity
+export interface SteelSeriesTransport extends StreamTransport {
   send(report: Uint8Array): Promise<void>
-  onDisconnect(listener: () => void): () => void
-  close(): Promise<void>
 }
 
 // ---------- packets ----------
@@ -56,146 +50,56 @@ export const ssLedCode = (k: { hid: number; label: string }) => (k.hid ? k.hid :
 // ---------- host-side state ----------
 
 /** FCC effect ids for SteelSeries boards (FCC keeps 0 for "off"). */
-export const SS_FX = { static: 1, breathing: 2, spectrum: 3, wave: 4, custom: 5 } as const
+export const SS_FX = STREAM_FX
 /** the preview animation that renders each effect */
-export const SS_PREVIEW: Record<number, number> = { 1: 0x01, 2: 0x07, 3: 0x08, 4: 0x10, 5: SONIX_CUSTOM }
-const ANIMATED = new Set<number>([SS_FX.breathing, SS_FX.spectrum, SS_FX.wave])
+export const SS_PREVIEW = STREAM_PREVIEW
 
 /** settings region: [0] = 1 to use the first-generation frame packet */
 export const SS_SETTING = { original: 0 } as const
 
 /** Starting state: spectrum cycle at full brightness, white per-key colours. */
-export function ssDefaults(): RegionData {
-  const out = Object.fromEntries(Object.entries(REGIONS).map(([k, def]) => [k, new Uint8Array(def.size)])) as RegionData
-  out.led = encodeLed(out.led, { effect: SS_FX.spectrum, r: 0, g: 255, b: 0, rainbow: false, brightness: 5, speed: 3, direction: 0 })
-  for (const k of KEYS) if (k.id < 128) out.colors.set([k.id, 255, 255, 255], k.id * 4)
-  return out
-}
+export const ssDefaults = streamedDefaults
 
 // ---------- driver ----------
 
-/** ~20 frames a second, close to SteelSeries' own software */
-const FRAME_MS = 50
-/** a still picture is sent again now and then, so the board never drops back to its own lighting */
-const KEEP_ALIVE_MS = 1000
-
-export class SteelSeriesKeyboard implements KeyboardDriver {
-  readonly sensor = new Emitter<SensorEvent>()
-  readonly disconnected = new Emitter<void>()
-  private state: RegionData = ssDefaults()
-  private readonly transport: SteelSeriesTransport
+export class SteelSeriesKeyboard extends StreamedKeyboard<SteelSeriesTransport> {
+  /** a still picture is sent again once a second, so the board never drops back to its own lighting */
+  protected readonly keepAliveMs = 1000
   private readonly device: DeviceDef
-  private timer: ReturnType<typeof setInterval> | null = null
-  private sending = false
-  private started = performance.now()
-  private initialised = false
-  private unsub: () => void
 
   constructor(transport: SteelSeriesTransport, device: DeviceDef) {
-    this.transport = transport
+    super(transport)
     this.device = device
-    this.unsub = transport.onDisconnect(() => {
-      this.stop()
-      this.disconnected.emit()
-    })
-  }
-
-  get name() {
-    return this.transport.name
-  }
-
-  get identity() {
-    return this.transport.identity
-  }
-
-  /** Lighting can't be read, so the app seeds it (from the active profile) before readAll. */
-  seed(regions: Partial<RegionData>) {
-    this.state = { ...this.state, ...Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, Uint8Array.from(v)])) }
-  }
-
-  async readAll(onProgress?: (region: RegionName, index: number, total: number) => void) {
-    onProgress?.('keys', 1, 1)
-    this.restart()
-    return Object.fromEntries(Object.entries(this.state).map(([k, v]) => [k, v.slice()])) as RegionData
-  }
-
-  async readRegion(name: RegionName) {
-    return this.state[name].slice()
-  }
-
-  async writeRegion(name: RegionName, data: Uint8Array) {
-    this.state[name] = data.slice()
-    if (name === 'settings') this.initialised = false
-    if (name === 'led' || name === 'colors' || name === 'settings') this.restart()
-    // keymap, macros and the rest have no SteelSeries command FCC knows; they stay in the profile only
   }
 
   private original() {
     return this.state.settings[SS_SETTING.original] === 1
   }
 
-  /** The frame for time `t` (seconds): the preview's colours, scaled by brightness. */
-  frame(t: number): Uint8Array {
-    const led = decodeLed(this.state.led)
-    const codes = KEYS.map((k) => [k, ssLedCode(k)] as const).filter(([, code]) => code)
-    const id = this.original() ? SS_PACKET.frameOriginal : SS_PACKET.frame
-    if (led.effect === 0) return ssFrame(id, codes.map(([, code]) => [code, [0, 0, 0]]))
-    const colors = this.state.colors
-    const shown = renderEffect({ ...led, effect: SS_PREVIEW[led.effect] ?? 0x01, brightness: 5 }, t, [], (kid) => [colors[kid * 4 + 1], colors[kid * 4 + 2], colors[kid * 4 + 3]])
-    const level = Math.min(5, Math.max(1, led.brightness || 5)) / 5
-    return ssFrame(
-      id,
-      codes.map(([k, code]) => {
-        const [r, g, b] = shown.get(k.id) ?? [0, 0, 0]
-        return [code, [r * level, g * level, b * level]]
-      }),
-    )
+  async writeRegion(name: Parameters<StreamedKeyboard<SteelSeriesTransport>['writeRegion']>[0], data: Uint8Array) {
+    // switching between Gen 3 and original packets starts a new session
+    if (name === 'settings') this.resetSession()
+    return super.writeRegion(name, data)
   }
 
-  /** (Re)starts drawing: every frame for moving effects, now and then for still ones. */
-  private restart() {
-    this.stop()
-    const animated = ANIMATED.has(decodeLed(this.state.led).effect)
-    void this.draw()
-    this.timer = setInterval(() => void this.draw(), animated ? FRAME_MS : KEEP_ALIVE_MS)
+  protected beforeFrames() {
+    return this.original() ? null : Uint8Array.of(SS_PACKET.init)
   }
 
-  private async draw() {
-    // a slow frame is skipped, never queued
-    if (this.sending) return
-    this.sending = true
-    try {
-      if (!this.initialised && !this.original()) {
-        await this.transport.send(Uint8Array.of(SS_PACKET.init))
-        this.initialised = true
-      }
-      await this.transport.send(this.frame((performance.now() - this.started) / 1000))
-    } catch {
-      // unplugged mid-frame: the disconnect handler stops the loop
-    } finally {
-      this.sending = false
+  protected frameReport(colors: Map<KeyDef, RGB>) {
+    const keys: [number, RGB][] = []
+    for (const k of KEYS) {
+      const code = ssLedCode(k)
+      if (code) keys.push([code, colors.get(k) ?? [0, 0, 0]])
     }
+    return ssFrame(this.original() ? SS_PACKET.frameOriginal : SS_PACKET.frame, keys)
   }
 
-  private stop() {
-    if (this.timer) clearInterval(this.timer)
-    this.timer = null
+  protected send(report: Uint8Array) {
+    return this.transport.send(report)
   }
 
-  async commit() {
-    /* frames apply immediately */
-  }
-
-  async command() {
-    /* calibration / factory reset have no documented command */
-  }
-
-  async close() {
-    this.stop()
-    this.unsub()
-    // deliberately no "onboard lighting" (0x41) packet: it reboots Gen 3 boards. The last frame stays.
-    await this.transport.close()
-  }
+  // deliberately no "onboard lighting" (0x41) packet on close: it reboots Gen 3 boards. The last frame stays.
 
   /** for tests: which model this driver serves */
   get model() {

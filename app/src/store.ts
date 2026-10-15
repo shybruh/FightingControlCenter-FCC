@@ -6,6 +6,7 @@ import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
 import { McKeyboard, MockMcTransport } from './hid/mc'
 import { MockRazerTransport, RazerKeyboard } from './hid/razer'
 import { MockSteelSeriesTransport, SteelSeriesKeyboard } from './hid/steelseries'
+import { MockSinowealthTransport, SinowealthKeyboard } from './hid/sinowealth'
 import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
@@ -285,6 +286,10 @@ export const useStore = create<State>((set, get) => {
       await source.transport.close()
       throw new Error("this Razer model isn't in FCC's list yet. Please send a board report")
     }
+    if ('kind' in source && source.kind === 'sinowealth' && !device?.sinowealth) {
+      await source.transport.close()
+      throw new Error("this keyboard isn't in FCC's list yet. Please send a support request")
+    }
     if ('kind' in source && source.kind === 'steelseries' && !device?.steelseries) {
       await source.transport.close()
       throw new Error("this SteelSeries model isn't in FCC's list yet. Please send a support request")
@@ -308,6 +313,8 @@ export const useStore = create<State>((set, get) => {
               ? new RazerKeyboard(source.transport, device!)
               : source.kind === 'steelseries'
                 ? new SteelSeriesKeyboard(source.transport, device!)
+                : source.kind === 'sinowealth'
+                  ? new SinowealthKeyboard(source.transport, device!)
                 : new RyKeyboard(source.transport, device!, probe!)
     set({ kb })
     applyDevice(device)
@@ -317,7 +324,7 @@ export const useStore = create<State>((set, get) => {
         !demo && !remembered && (!det.certain || !det.device) ? (det.candidates.length ? det.candidates : DEVICES.filter(sameFamily)) : null,
     })
     // boards that can't report their lighting (RK: anything) start from the saved profile
-    if (kb instanceof RkKeyboard || kb instanceof RazerKeyboard || kb instanceof SteelSeriesKeyboard) {
+    if (kb instanceof RkKeyboard || kb instanceof RazerKeyboard || kb instanceof SteelSeriesKeyboard || kb instanceof SinowealthKeyboard) {
       const active = get().profiles.find((p) => p.id === get().activeProfileId)
       if (active) kb.seed(Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Uint8Array.from(active.data[r])])))
     }
@@ -398,6 +405,8 @@ export const useStore = create<State>((set, get) => {
                 ? { kind: 'razer', transport: new MockRazerTransport(demoDevice) }
                 : demoDevice?.protocol === 'steelseries'
                   ? { kind: 'steelseries', transport: new MockSteelSeriesTransport(demoDevice) }
+                  : demoDevice?.protocol === 'sinowealth'
+                    ? { kind: 'sinowealth', transport: new MockSinowealthTransport(demoDevice) }
                   : demo
             ? { kind: 'sonix', transport: new MockTransport() }
             : isTauri()

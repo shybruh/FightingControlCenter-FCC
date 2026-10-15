@@ -285,6 +285,49 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   check('closing stops the frames and never sends 0x41 (it reboots Gen 3 boards)', [mock.sent.length, mock.sent.some((f) => f[0] === 0x41)], [after, false])
 }
 
+// ---- Sinowealth 010c (AULA F99): model check first, then streamed frames ----
+{
+  const SW = await vite.ssrLoadModule('/src/hid/sinowealth.ts')
+  const { detect } = await vite.ssrLoadModule('/src/devices/registry.ts')
+  const f99 = DEVICES.find((x) => x.id === 'aula-f99')
+  check('AULA F99: 258a:010c, Sinowealth protocol, interface 1, model 0xa4, untested', [f99?.vendorId, f99?.productId, f99?.protocol, f99?.sinowealth?.iface, f99?.sinowealth?.model, f99?.status], [0x258a, 0x010c, 'sinowealth', 1, 0xa4, 'untested'])
+  activateDevice(f99)
+  const keys = layout.KEYS
+  const leds = keys.map((k) => f99.sinowealth.leds[k.id])
+  const ledOf = (label) => f99.sinowealth.leds[keys.find((k) => k.label === label).id]
+  check('F99: 99 keys, every LED index used once and inside the report; Esc 0, W 14, Fn 59, numpad Enter 112', [keys.length, new Set(leds).size, Math.max(...leds) * 3 + 10 < 520, ledOf('Esc'), ledOf('W'), ledOf('Fn'), f99.sinowealth.leds[keys.find((k) => k.hid === 0x58).id]], [99, 99, true, 0, 14, 59, 112])
+  check('detection: 258a:010c is the F99, Royal Kludge boards on the same vendor id stay RK', [detect(0x258a, 0x010c, 'Gaming Keyboard').device?.id, detect(0x258a, 0x0147, '').device?.protocol], ['aula-f99', 'rk'])
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  // another brand's board on the same USB id: asked once, then left alone
+  const other = new SW.MockSinowealthTransport(f99, 0x05)
+  const kbOther = new SW.SinowealthKeyboard(other, f99)
+  let refused = ''
+  try { await kbOther.readAll() } catch (e) { refused = e.message }
+  await wait(60)
+  check('a board answering another model id: refused, and nothing but the model request is sent', [/model 0x05/.test(refused), other.sent.length, Array.from(other.sent[0].slice(0, 7))], [true, 1, [0x06, 0x82, 0x01, 0x00, 0x01, 0x00, 0x06]])
+  await kbOther.close()
+
+  // the F99: W blue at brightness 3/5
+  const mock = new SW.MockSinowealthTransport(f99)
+  const kb = new SW.SinowealthKeyboard(mock, f99)
+  const regs = (await vite.ssrLoadModule('/src/hid/streamed.ts')).streamedDefaults()
+  const w = keys.find((k) => k.label === 'W')
+  regs.colors.set([w.id, 0, 0, 255], w.id * 4)
+  regs.led = codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: 5, brightness: 3 })
+  kb.seed({ led: regs.led, colors: regs.colors })
+  await kb.readAll()
+  await wait(30)
+  const frame = mock.sent[1]
+  check('F99 frame: report 0x06, 520 bytes, header, W blue at LED 14 (brightness 3/5), Esc white', [frame[0], frame.length, Array.from(frame.slice(0, 8)), Array.from(frame.slice(8 + 14 * 3, 11 + 14 * 3)), Array.from(frame.slice(8, 11))], [0x06, 520, [0x06, 0x08, 0x00, 0x00, 0x01, 0x00, 0x7a, 0x01], [0, 0, 153], [153, 153, 153]])
+  await wait(1150)
+  check('a still picture is sent again twice a second (the board drops streamed lighting after ~1 s)', mock.sent.length >= 4, true)
+  await kb.close()
+  const after = mock.sent.length
+  await wait(600)
+  check('closing stops the frames', mock.sent.length, after)
+}
+
 // ---- share codes: lighting and rapid trigger, across keyboards ----
 {
   const Sh = await vite.ssrLoadModule('/src/share.ts')
