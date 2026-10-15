@@ -59,7 +59,7 @@ copy keeps them. An empty `portable.txt` next to the exe keeps everything beside
 | ⚠️ Untested | 28 **MCHOSE** boards: ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87… | All but DKS, SOCD and live travel (for now) |
 | 🧪 Experimental | **Royal Kludge M75** family | Keymap, lighting, per-key RGB, sleep (not a Hall-effect board) |
 | 🧪 Experimental | 19 **Razer** keyboards: Huntsman V2 / V3 Pro / Mini, BlackWidow V3 / V4… | Lighting, per-key RGB, game mode, polling rate. Desktop app only; close Synapse first |
-| 🧪 Experimental | **AULA F99** | Lighting effects and per-key RGB, drawn by FCC while it runs. FCC checks the board's model first, since other brands share its USB id |
+| 🧪 Experimental | **AULA F99 / F75 / F87 Pro**, **LEOBOG Hi75C Pro** | Lighting effects and per-key RGB, drawn by FCC while it runs. FCC checks the board's model first, since these boards share one USB id |
 | 🧪 Experimental | **SteelSeries Apex Pro Gen 3** | Lighting effects and per-key RGB, drawn by FCC while it runs. No actuation settings yet. Desktop app only; close SteelSeries GG first |
 | ⛔ Not yet | Wireless 2.4 GHz dongles | Use the USB cable |
 

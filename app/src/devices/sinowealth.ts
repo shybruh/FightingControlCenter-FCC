@@ -70,6 +70,93 @@ const AULA_F99: SinowealthKey[] = [
   ...run(5, 16.25, [[0x62, 101], [0x63, 107]]),
 ]
 
+/** The 75% boards' shared rows 1–4: number row to shift row, with a nav column of `nav` [hid, led] per row. */
+function seventyFive(nav: [number, number][], shiftRight: SinowealthKey[]): SinowealthKey[] {
+  return [
+    ...run(1, 0, [[0x35, 1], [0x1e, 7], [0x1f, 13], [0x20, 19], [0x21, 25], [0x22, 31], [0x23, 37], [0x24, 43], [0x25, 49], [0x26, 55], [0x27, 61], [0x2d, 67], [0x2e, 73]]),
+    key(1, 13, 0x2a, 79, 2),
+    key(1, 15.25, ...nav[0]),
+    key(2, 0, 0x2b, 2, 1.5),
+    ...run(2, 1.5, [[0x14, 8], [0x1a, 14], [0x08, 20], [0x15, 26], [0x17, 32], [0x1c, 38], [0x18, 44], [0x0c, 50], [0x12, 56], [0x13, 62], [0x2f, 68], [0x30, 74]]),
+    key(2, 13.5, 0x31, 80, 1.5),
+    key(2, 15.25, ...nav[1]),
+    key(3, 0, 0x39, 3, 1.75),
+    ...run(3, 1.75, [[0x04, 9], [0x16, 15], [0x07, 21], [0x09, 27], [0x0a, 33], [0x0b, 39], [0x0d, 45], [0x0e, 51], [0x0f, 57], [0x33, 63], [0x34, 69]]),
+    key(3, 12.75, 0x28, 81, 2.25),
+    key(3, 15.25, ...nav[2]),
+    key(4, 0, 0xe1, 4, 2.25),
+    ...run(4, 2.25, [[0x1d, 10], [0x1b, 16], [0x06, 22], [0x19, 28], [0x05, 34], [0x11, 40], [0x10, 46], [0x36, 52], [0x37, 58], [0x38, 64]]),
+    ...shiftRight,
+  ]
+}
+
+/** Function row of the 75% boards: Esc, then F1–F12 in groups of four. */
+const FN_ROW_75: SinowealthKey[] = [
+  key(0, 0, 0x29, 0),
+  ...run(0, 1.25, [[0x3a, 12], [0x3b, 18], [0x3c, 24], [0x3d, 30]]),
+  ...run(0, 5.5, [[0x3e, 36], [0x3f, 42], [0x40, 48], [0x41, 54]]),
+  ...run(0, 9.75, [[0x42, 60], [0x43, 66], [0x44, 72], [0x45, 78]]),
+]
+
+/** AULA F75: 75% with a knob top right; Del / PgUp / PgDn / End on the right. OpenRGB lists two keys right of Space. */
+const AULA_F75: SinowealthKey[] = [
+  ...FN_ROW_75,
+  ...seventyFive([[0x4c, 85], [0x4b, 86], [0x4e, 87]], [key(4, 12.25, 0xe5, 70, 1.75), key(4, 14.25, 0x52, 82), key(4, 15.25, 0x4d, 88)]),
+  key(5, 0, 0xe0, 5, 1.25),
+  key(5, 1.25, 0xe3, 11, 1.25),
+  key(5, 2.5, 0xe2, 17, 1.25),
+  key(5, 3.75, 0x2c, 35, 6.25),
+  ...run(5, 10, [[0x00, 53], [0xe4, 59]]),
+  ...run(5, 13.25, [[0x50, 77], [0x51, 83], [0x4f, 89]]),
+]
+
+/** LEOBOG Hi75C Pro: 75%; Del / End / PgUp / PgDn on the right. */
+const LEOBOG_HI75C_PRO: SinowealthKey[] = [
+  ...FN_ROW_75,
+  ...seventyFive([[0x4c, 85], [0x4d, 86], [0x4b, 87]], [key(4, 12.25, 0xe5, 70, 1.75), key(4, 14.25, 0x52, 82), key(4, 15.25, 0x4e, 88)]),
+  key(5, 0, 0xe0, 5, 1.25),
+  key(5, 1.25, 0xe3, 11, 1.25),
+  key(5, 2.5, 0xe2, 17, 1.25),
+  key(5, 3.75, 0x2c, 35, 6.25),
+  ...run(5, 10, [[0xe6, 53], [0x00, 59], [0xe4, 65]]),
+  ...run(5, 13.25, [[0x50, 77], [0x51, 83], [0x4f, 89]]),
+]
+
+/** AULA F87 Pro: tenkeyless. */
+const AULA_F87_PRO: SinowealthKey[] = [
+  key(0, 0, 0x29, 0),
+  ...run(0, 2, [[0x3a, 12], [0x3b, 18], [0x3c, 24], [0x3d, 30]]),
+  ...run(0, 6.5, [[0x3e, 36], [0x3f, 42], [0x40, 48], [0x41, 54]]),
+  ...run(0, 11, [[0x42, 60], [0x43, 66], [0x44, 72], [0x45, 78]]),
+  ...run(0, 15.25, [[0x46, 84], [0x47, 90], [0x48, 96]]),
+  ...run(1, 0, [[0x35, 1], [0x1e, 7], [0x1f, 13], [0x20, 19], [0x21, 25], [0x22, 31], [0x23, 37], [0x24, 43], [0x25, 49], [0x26, 55], [0x27, 61], [0x2d, 67], [0x2e, 73]]),
+  key(1, 13, 0x2a, 79, 2),
+  ...run(1, 15.25, [[0x49, 85], [0x4a, 91], [0x4b, 97]]),
+  key(2, 0, 0x2b, 2, 1.5),
+  ...run(2, 1.5, [[0x14, 8], [0x1a, 14], [0x08, 20], [0x15, 26], [0x17, 32], [0x1c, 38], [0x18, 44], [0x0c, 50], [0x12, 56], [0x13, 62], [0x2f, 68], [0x30, 74]]),
+  key(2, 13.5, 0x31, 80, 1.5),
+  ...run(2, 15.25, [[0x4c, 86], [0x4d, 92], [0x4e, 98]]),
+  key(3, 0, 0x39, 3, 1.75),
+  ...run(3, 1.75, [[0x04, 9], [0x16, 15], [0x07, 21], [0x09, 27], [0x0a, 33], [0x0b, 39], [0x0d, 45], [0x0e, 51], [0x0f, 57], [0x33, 63], [0x34, 69]]),
+  key(3, 12.75, 0x28, 81, 2.25),
+  key(4, 0, 0xe1, 4, 2.25),
+  ...run(4, 2.25, [[0x1d, 10], [0x1b, 16], [0x06, 22], [0x19, 28], [0x05, 34], [0x11, 40], [0x10, 46], [0x36, 52], [0x37, 58], [0x38, 64]]),
+  key(4, 12.25, 0xe5, 82, 2.75),
+  key(4, 16.25, 0x52, 94),
+  key(5, 0, 0xe0, 5, 1.25),
+  key(5, 1.25, 0xe3, 11, 1.25),
+  key(5, 2.5, 0xe2, 17, 1.25),
+  key(5, 3.75, 0x2c, 35, 6.25),
+  key(5, 10, 0xe6, 53, 1.25),
+  key(5, 11.25, 0x00, 59, 1.25),
+  key(5, 12.5, 0x65, 65, 1.25),
+  key(5, 13.75, 0xe4, 83, 1.25),
+  ...run(5, 15.25, [[0x50, 89], [0x51, 95], [0x4f, 101]]),
+]
+
 export const SINOWEALTH_MODELS: SinowealthModel[] = [
   { id: 'aula-f99', name: 'AULA F99', productId: SINOWEALTH_010C_PID, keys: AULA_F99, sinowealth: { iface: 1, model: 0xa4 } },
+  { id: 'aula-f75', name: 'AULA F75', productId: SINOWEALTH_010C_PID, keys: AULA_F75, sinowealth: { iface: 1, model: 0xcd } },
+  { id: 'aula-f87-pro', name: 'AULA F87 Pro', productId: SINOWEALTH_010C_PID, keys: AULA_F87_PRO, sinowealth: { iface: 1, model: 0x0b } },
+  { id: 'leobog-hi75c-pro', name: 'LEOBOG Hi75C Pro', productId: SINOWEALTH_010C_PID, keys: LEOBOG_HI75C_PRO, sinowealth: { iface: 1, model: 0xa3 } },
 ]

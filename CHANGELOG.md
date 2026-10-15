@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New keyboards
+- **AULA F75**, **AULA F87 Pro** and **LEOBOG Hi75C Pro** (experimental, desktop app): lighting effects and per-key RGB,
+  like the AULA F99. They share one USB id, so the board's answer to FCC's model check decides which one it is.
+
 ## 0.3.4
 
 ### New keyboards

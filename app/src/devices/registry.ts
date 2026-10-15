@@ -767,7 +767,7 @@ export interface Detection {
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
 
 /** Works out which board is connected from its USB ids and product name. */
-export function detect(vendorId: number, productId: number, productName: string, ryDeviceId?: number): Detection {
+export function detect(vendorId: number, productId: number, productName: string, ryDeviceId?: number, swModel?: number | null): Detection {
   if (ryDeviceId !== undefined) {
     // RY boards report their model id; the USB ids are shared by many models
     const exact = ryDeviceById(ryDeviceId)
@@ -787,8 +787,12 @@ export function detect(vendorId: number, productId: number, productName: string,
     return { device: ss, candidates: ss ? [ss] : [], certain: !!ss }
   }
   if (vendorId === RK_VENDOR_ID && SINOWEALTH_DEVICES.some((d) => d.productId === productId)) {
-    // several models share this id: the driver checks which one answered
+    // several models share this id: the board's answer to the model request says which one it is
     const sw = SINOWEALTH_DEVICES.filter((d) => d.productId === productId)
+    if (swModel !== undefined) {
+      const exact = sw.find((d) => d.sinowealth?.model === swModel) ?? null
+      return { device: exact, candidates: exact ? [exact] : [], certain: !!exact }
+    }
     return { device: sw[0], candidates: sw, certain: sw.length === 1 }
   }
   if (vendorId === RK_VENDOR_ID) {

@@ -37,7 +37,13 @@ second and moving effects about 20 times a second. There's no "off" command: off
 
 | Model id | Board | LED index |
 |---|---|---|
-| `0xa4` | AULA F99 | column × 6 + row on the 96% grid (Esc 0, W 14, numpad Enter 112) |
+| `0xa4` | AULA F99 (96%) | column × 6 + row on the board's grid (Esc 0, W 14, numpad Enter 112) |
+| `0xcd` | AULA F75 (75%) | same scheme (F1 12, Del 85, Right 89) |
+| `0x0b` | AULA F87 Pro (TKL) | same scheme (Print Screen 84, Right 101) |
+| `0xa3` | LEOBOG Hi75C Pro (75%) | same scheme (Del 85, PgDn 88) |
 
-OpenRGB also lists the AULA F75 (`0xcd`), AULA F87 Pro (`0x0b`), LEOBOG Hi75C Pro (`0xa3`) and Redragon K686 Eisa Pro
-(`0x20`, `0x05`); adding one is a layout plus its model id in `app/src/devices/sinowealth.ts`.
+The board's answer to the model request picks the model; a choice made by hand never overrides it.
+
+OpenRGB also lists the Redragon K686 Eisa Pro (`0x20`, `0x05`). FCC leaves it out for now: its table mixes ANSI and ISO
+keys in a way that doesn't map to one clear layout, and Redragon is the brand earlier bricks hit. Adding it is a layout
+plus its model ids in `app/src/devices/sinowealth.ts` once someone with the board can confirm the keys.

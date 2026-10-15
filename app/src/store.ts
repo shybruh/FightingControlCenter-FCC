@@ -6,7 +6,7 @@ import { MockRyTransport, RyKeyboard, type RyProbe } from './hid/ry'
 import { McKeyboard, MockMcTransport } from './hid/mc'
 import { MockRazerTransport, RazerKeyboard } from './hid/razer'
 import { MockSteelSeriesTransport, SteelSeriesKeyboard } from './hid/steelseries'
-import { MockSinowealthTransport, SinowealthKeyboard } from './hid/sinowealth'
+import { MockSinowealthTransport, SinowealthKeyboard, readModel } from './hid/sinowealth'
 import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
@@ -263,9 +263,17 @@ export const useStore = create<State>((set, get) => {
     if ('kind' in source && source.kind === 'ry') probe = await RyKeyboard.probe(source.transport)
     else if (source instanceof RyKeyboard) probe = source.probe
     if (probe) log.info('ry', `board reports model id ${probe.deviceId}, firmware 0x${probe.version.toString(16)}`)
-    const det = detect(id.vendorId, id.productId, id.productName, probe?.deviceId)
+    // so do Sinowealth 010c boards, which several brands share
+    let swModel: number | null | undefined
+    if ('kind' in source && source.kind === 'sinowealth') {
+      swModel = await readModel(source.transport)
+      log.info('sinowealth', `board reports model 0x${(swModel ?? 0).toString(16).padStart(2, '0')}`)
+    }
+    const det = detect(id.vendorId, id.productId, id.productName, probe?.deviceId, swModel)
     const remembered = deviceById(readJson<Record<string, string>>(CHOICES_KEY, {})[identityKey(id)])
-    const device = demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : (remembered ?? det.device)
+    // a Sinowealth board's own model answer decides, never a choice made by hand: frames only go to the model it says it is
+    const device =
+      demo === true ? FIGHTING68 : typeof demo === 'string' ? (deviceById(demo) ?? null) : swModel !== undefined ? det.device : (remembered ?? det.device)
     log.info('connect', `detected: ${device?.name ?? 'no model'}${det.certain ? ' (certain)' : ''}${remembered ? ' (remembered choice)' : ''}`, {
       usb: id,
       kind: 'kind' in source ? source.kind : 'existing driver',
@@ -288,7 +296,8 @@ export const useStore = create<State>((set, get) => {
     }
     if ('kind' in source && source.kind === 'sinowealth' && !device?.sinowealth) {
       await source.transport.close()
-      throw new Error("this keyboard isn't in FCC's list yet. Please send a support request")
+      const model = swModel == null ? 'unknown' : `0x${swModel.toString(16).padStart(2, '0')}`
+      throw new Error(`this keyboard (model ${model}) isn't one FCC knows. Other brands share its USB id, so FCC leaves it alone. Please send a support request`)
     }
     if ('kind' in source && source.kind === 'steelseries' && !device?.steelseries) {
       await source.transport.close()

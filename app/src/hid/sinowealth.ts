@@ -43,6 +43,14 @@ export function swFrame(colors: Map<number, RGB>) {
 
 export class SinowealthModelError extends Error {}
 
+const hex2 = (n: number | null | undefined) => (n == null ? '?' : `0x${n.toString(16).padStart(2, '0')}`)
+
+/** Asks the board which model it is (OpenRGB's request); null when the answer is too short to say. */
+export async function readModel(t: SinowealthTransport): Promise<number | null> {
+  const answer = await t.request(SW_MODEL_REQUEST)
+  return answer.length > SW_MODEL_BYTE ? answer[SW_MODEL_BYTE] : null
+}
+
 export class SinowealthKeyboard extends StreamedKeyboard<SinowealthTransport> {
   /** the board leaves streamed lighting after about a second without frames */
   protected readonly keepAliveMs = 500
@@ -57,14 +65,13 @@ export class SinowealthKeyboard extends StreamedKeyboard<SinowealthTransport> {
 
   /** Asks the board which model it is; refuses anything but the expected one. */
   protected async prepare() {
+    // asked again here even after detection did: frames only ever go to the model this driver was made for
     const want = this.device.sinowealth?.model
-    const answer = await this.transport.request(SW_MODEL_REQUEST)
-    const got = answer.length > SW_MODEL_BYTE ? answer[SW_MODEL_BYTE] : null
+    const got = await readModel(this.transport)
     this.reportedModel = got
     if (want === undefined || got !== want) {
-      const hex = (n: number | null | undefined) => (n == null ? '?' : `0x${n.toString(16).padStart(2, '0')}`)
       throw new SinowealthModelError(
-        `this keyboard reports model ${hex(got)}, not the ${this.device.name} (${hex(want)}). Other brands share its USB id, so FCC leaves it alone. Please send a support request`,
+        `this keyboard reports model ${hex2(got)}, not the ${this.device.name} (${hex2(want)}). Other brands share its USB id, so FCC leaves it alone. Please send a support request`,
       )
     }
   }

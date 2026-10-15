@@ -576,3 +576,6 @@ asks the board for its model first and only drives the ones listed. Opens read-o
 | Model | USB id | Model id |
 |---|---|---|
 | AULA F99 | `258a:010c` | `0xa4` |
+| AULA F75 | `258a:010c` | `0xcd` |
+| AULA F87 Pro | `258a:010c` | `0x0b` |
+| LEOBOG Hi75C Pro | `258a:010c` | `0xa3` |

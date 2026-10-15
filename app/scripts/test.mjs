@@ -298,6 +298,29 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   check('F99: 99 keys, every LED index used once and inside the report; Esc 0, W 14, Fn 59, numpad Enter 112', [keys.length, new Set(leds).size, Math.max(...leds) * 3 + 10 < 520, ledOf('Esc'), ledOf('W'), ledOf('Fn'), f99.sinowealth.leds[keys.find((k) => k.hid === 0x58).id]], [99, 99, true, 0, 14, 59, 112])
   check('detection: 258a:010c is the F99, Royal Kludge boards on the same vendor id stay RK', [detect(0x258a, 0x010c, 'Gaming Keyboard').device?.id, detect(0x258a, 0x0147, '').device?.protocol], ['aula-f99', 'rk'])
 
+  // every 010c model: the board's model answer picks it; LEDs unique and inside the report; no keys on top of each other
+  const sw = DEVICES.filter((d) => d.protocol === 'sinowealth')
+  check('010c models: the model answer picks the board (F99 0xa4, F75 0xcd, F87 Pro 0x0b, Hi75C Pro 0xa3), anything else none',
+    [0xa4, 0xcd, 0x0b, 0xa3, 0x05].map((m) => detect(0x258a, 0x010c, 'Gaming Keyboard', undefined, m).device?.id ?? null),
+    ['aula-f99', 'aula-f75', 'aula-f87-pro', 'leobog-hi75c-pro', null])
+  const layoutProblems = []
+  for (const d of sw) {
+    activateDevice(d)
+    const ks = layout.KEYS
+    const ls = ks.map((k) => d.sinowealth.leds[k.id])
+    if (new Set(ls).size !== ls.length) layoutProblems.push(`${d.name}: LED used twice`)
+    if (Math.max(...ls) * 3 + 10 >= 520) layoutProblems.push(`${d.name}: LED outside the report`)
+    for (const a of ks) for (const b of ks) {
+      if (a.id >= b.id) continue
+      const overlap = a.x < b.x + b.w - 0.01 && b.x < a.x + a.w - 0.01 && a.y < b.y + (b.h ?? 1) - 0.01 && b.y < a.y + (a.h ?? 1) - 0.01
+      if (overlap) layoutProblems.push(`${d.name}: ${a.label} overlaps ${b.label}`)
+    }
+    for (const must of ['Esc', 'W', 'A', 'S', 'D', 'Space', 'Enter']) if (!ks.some((k) => k.label === must)) layoutProblems.push(`${d.name}: no ${must}`)
+  }
+  check('010c layouts: LEDs unique and inside the report, no overlapping keys, the basics present', layoutProblems, [])
+  check('key counts: F99 99, F75 80, F87 Pro 87, Hi75C Pro 81', sw.map((d) => { activateDevice(d); return layout.KEYS.length }), [99, 80, 87, 81])
+  activateDevice(f99)
+
   const wait = (ms) => new Promise((r) => setTimeout(r, ms))
   // another brand's board on the same USB id: asked once, then left alone
   const other = new SW.MockSinowealthTransport(f99, 0x05)
