@@ -114,5 +114,10 @@ The RongYuan driver started from **monsgeek-akko-linux**'s notes, the Royal Klud
 **Kludge Knight**, the Razer command set from **OpenRazer**, Razer key positions and the SteelSeries lighting report from **OpenRGB**. FCC's
 implementations are its own.
 
+**AI use:** FCC is developed with the help of AI coding assistants (Claude and Qwen 3.5). Every change is tested before
+release: protocol details are cross-checked against the official software's behaviour and open-source projects
+(OpenRGB, OpenRazer and others), automated checks run on every push, and boards that haven't been confirmed on real
+hardware open read-only until you allow changes.
+
 FCC is an independent project, not affiliated with any keyboard brand listed here. Use it at your own risk.
 Licensed under the [GNU GPL v3.0 or later](LICENSE).
