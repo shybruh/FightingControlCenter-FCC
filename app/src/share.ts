@@ -96,7 +96,8 @@ function fromBase64Url(text: string) {
 }
 
 async function pipe(bytes: Uint8Array, stream: CompressionStream | DecompressionStream, limit = Infinity) {
-  const reader = new Blob([bytes]).stream().pipeThrough(stream).getReader()
+  // a copy on a plain ArrayBuffer, which is what Blob takes
+  const reader = new Blob([new Uint8Array(bytes)]).stream().pipeThrough(stream).getReader()
   const chunks: Uint8Array[] = []
   let size = 0
   for (;;) {
