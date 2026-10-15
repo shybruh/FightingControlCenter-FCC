@@ -5,12 +5,13 @@ import {
   KeySquareIcon,
   LayersIcon,
   ListVideoIcon,
-  MonitorIcon,
+  RepeatIcon,
   MoreHorizontalIcon,
   PanelLeftCloseIcon,
   PanelLeftOpenIcon,
   PlusIcon,
   SettingsIcon,
+  SlidersHorizontalIcon,
   SunIcon,
   UploadIcon,
   ZapIcon,
@@ -43,7 +44,8 @@ import { PasteIcon, ShareDialogs, openPasteCode, openShareCode } from './ShareDi
 // start-up, so opening one never shows a blank moment
 const PAGE_CODE = {
   AdvancedPanel: () => import('./AdvancedPanel').then((m) => ({ default: m.AdvancedPanel })),
-  DesktopPanel: () => import('./DesktopPanel').then((m) => ({ default: m.DesktopPanel })),
+  AppSettingsPanel: () => import('./AppSettingsPanel').then((m) => ({ default: m.AppSettingsPanel })),
+  SwitchingPanel: () => import('./DesktopPanel').then((m) => ({ default: m.SwitchingPanel })),
   KeymapPanel: () => import('./KeymapPanel').then((m) => ({ default: m.KeymapPanel })),
   KeyTestPanel: () => import('./KeyTestPanel').then((m) => ({ default: m.KeyTestPanel })),
   LightingPanel: () => import('./LightingPanel').then((m) => ({ default: m.LightingPanel })),
@@ -52,7 +54,8 @@ const PAGE_CODE = {
   SettingsPanel: () => import('./SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
 }
 const AdvancedPanel = lazy(PAGE_CODE.AdvancedPanel)
-const DesktopPanel = lazy(PAGE_CODE.DesktopPanel)
+const AppSettingsPanel = lazy(PAGE_CODE.AppSettingsPanel)
+const SwitchingPanel = lazy(PAGE_CODE.SwitchingPanel)
 const KeymapPanel = lazy(PAGE_CODE.KeymapPanel)
 const KeyTestPanel = lazy(PAGE_CODE.KeyTestPanel)
 const LightingPanel = lazy(PAGE_CODE.LightingPanel)
@@ -67,6 +70,8 @@ interface Page {
   id: string
   label: string
   icon: LucideIcon
+  /** shown at the foot of the sidebar instead of with the keyboard pages */
+  bottom?: boolean
   /** one line for the intro tour */
   blurb: string
   render(): ReactNode
@@ -79,8 +84,9 @@ const PAGES: Page[] = [
   { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', blurb: 'DKS, mod-tap, toggle and SOCD', render: () => <AdvancedPanel /> },
   { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', blurb: 'Record and edit macros', render: () => <MacroPanel /> },
   { id: 'keytest', label: 'Key test', icon: KeySquareIcon, blurb: 'Check that every key and switch registers', render: () => <KeyTestPanel /> },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon, blurb: 'Model, keyboard options, backup and reports', render: () => <SettingsPanel /> },
-  ...(isTauri() ? [{ id: 'desktop', label: 'Desktop', icon: MonitorIcon, blurb: 'Tray, hotkeys, start with Windows, per-game profiles', render: () => <DesktopPanel /> }] : []),
+  { id: 'keyboard', label: 'Keyboard', icon: SlidersHorizontalIcon, blurb: 'Keyboard options, model, backup and reports', render: () => <SettingsPanel /> },
+  ...(isTauri() ? [{ id: 'switching', label: 'Profile switching', icon: RepeatIcon, blurb: 'Hotkeys and per-game profiles', render: () => <SwitchingPanel /> }] : []),
+  { id: 'app', label: 'Settings', icon: SettingsIcon, bottom: true, blurb: isTauri() ? 'Start with Windows, tray, updates and help' : 'Intro and diagnostics', render: () => <AppSettingsPanel /> },
 ]
 
 const COLLAPSED_KEY = 'fcc.sidebar.collapsed'
@@ -227,6 +233,7 @@ function Sidebar({
   const { activateProfile, createProfile, duplicateProfile, renameProfile, deleteProfile, exportProfile, importProfile } = useStore.getState()
   const [editing, setEditing] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const top = pages.filter((p) => !p.bottom)
 
   return (
     <aside
@@ -251,9 +258,9 @@ function Sidebar({
         <div
           aria-hidden
           className="nav-indicator absolute top-1 right-0 left-0 h-8 rounded-md bg-sidebar-accent"
-          style={{ transform: `translateY(${Math.max(0, pages.findIndex((p) => p.id === page)) * 34}px)` }}
+          style={{ transform: `translateY(${Math.max(0, top.findIndex((p) => p.id === page)) * 34}px)`, opacity: top.some((p) => p.id === page) ? 1 : 0 }}
         />
-        {pages.map((p) => (
+        {top.map((p) => (
           <RailItem key={p.id} plain collapsed={collapsed} label={p.label} active={page === p.id} onClick={() => setPage(p.id)}>
             <p.icon className="size-4 shrink-0" />
             <span className="rail-label truncate">{p.label}</span>
@@ -391,6 +398,14 @@ function Sidebar({
             Changes save to the active profile and the keyboard instantly. Switching profiles writes the whole profile to the keyboard.
           </p>
         )}
+        {pages
+          .filter((p) => p.bottom)
+          .map((p) => (
+            <RailItem key={p.id} collapsed={collapsed} label={p.label} active={page === p.id} onClick={() => setPage(p.id)}>
+              <p.icon className="size-4 shrink-0" />
+              <span className="rail-label truncate">{p.label}</span>
+            </RailItem>
+          ))}
         <RailItem collapsed={collapsed} label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} className="text-muted-foreground" onClick={onToggle}>
           {collapsed ? <PanelLeftOpenIcon className="size-4 shrink-0" /> : <PanelLeftCloseIcon className="size-4 shrink-0" />}
           <span className="rail-label">Collapse</span>

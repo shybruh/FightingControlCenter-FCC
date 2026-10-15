@@ -68,7 +68,7 @@ USB ids is in [docs/DEVICES.md](docs/DEVICES.md).
 
 ## Report your keyboard
 
-Tried FCC on a board that isn't verified? Open **Settings → Report this keyboard** and press **Open GitHub issue**. The
+Tried FCC on a board that isn't verified? Open **Keyboard → Report this keyboard** and press **Open GitHub issue**. The
 report holds the USB id, firmware and settings read from the board (no macro contents); tick what worked and submit.
 That's all it takes to get a board verified or fixed.
 

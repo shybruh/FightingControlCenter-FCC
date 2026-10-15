@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Tidier pages.** *Settings* is now the app's own settings, at the foot of the sidebar: start with Windows, close to
+  tray, updates, the settings folder, the intro and Diagnostics. The keyboard's options, model, backup and report moved
+  to a **Keyboard** page, and hotkeys, game profiles and the switch popup to **Profile switching** (was *Desktop*).
+
 ## 0.3.6
 
 ### Fixes

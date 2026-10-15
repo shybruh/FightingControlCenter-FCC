@@ -41,4 +41,4 @@ showing them. Nothing is stored on the keyboard: when FCC exits, the last frame 
 
 - OpenRGB sends the full-size Apex Pro Gen 3 (`1038:1640`) the first-generation frame (`0x3a`), although its own notes say
   every OmniPoint 3.0 board takes the Gen 3 packets. FCC defaults to Gen 3 (`0x4b` + `0x40`) and offers
-  *Settings → Lighting commands → Original* to try `0x3a`; a real board decides.
+  *Keyboard → Lighting commands → Original* to try `0x3a`; a real board decides.

@@ -90,7 +90,7 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
         <ul className="flex list-disc flex-col gap-1.5 pl-4">
           <li>Every change is saved to the active profile and sent to the keyboard right away. There is no save button.</li>
           <li>Make a new profile with + in the sidebar, then switch with one click. Switching writes the whole profile to the keyboard.</li>
-          {isTauri() && <li>Switch from the tray, with a hotkey, or automatically when a game starts (Desktop page).</li>}
+          {isTauri() && <li>Switch from the tray, with a hotkey, or automatically when a game starts (Profile switching page).</li>}
         </ul>
       ),
     },
@@ -121,7 +121,7 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
           {device?.status === 'verified'
             ? 'Your keyboard is verified. If something ever acts up, '
             : "Your keyboard hasn't been verified yet. Once you've tried it, "}
-          <span className="text-foreground">Settings → Report this keyboard</span> builds a report for GitHub with everything needed to fix or
+          <span className="text-foreground">Keyboard → Report this keyboard</span> builds a report for GitHub with everything needed to fix or
           verify it. It's how new boards get supported.
         </p>
       ),

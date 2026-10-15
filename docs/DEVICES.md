@@ -15,7 +15,7 @@ Tested end to end on real hardware.
 
 ## Untested (135)
 
-Wired boards that speak the same protocol. FCC detects them, reads and backs up their settings, and opens them **read-only** until you choose *Allow changes*. If yours works (or doesn't), send a report from the app (*Settings → Report this keyboard*) so it can be marked verified.
+Wired boards that speak the same protocol. FCC detects them, reads and backs up their settings, and opens them **read-only** until you choose *Allow changes*. If yours works (or doesn't), send a report from the app (*Keyboard → Report this keyboard*) so it can be marked verified.
 
 | Model | USB id | Travel | Rapid trigger |
 |---|---|---|---|
@@ -174,7 +174,7 @@ Wireless dongles use a different (32-byte) packet format, and a few boards have 
 | MINI60HE MAX Dongle | `0c45:fefc` | 3.40 mm | 0.01–3.40 mm |
 | X85 | `0c45:8006` | 4.00 mm | 0.08–4.00 mm |
 
-Several models share a USB id; FCC tells them apart by the USB product name and asks when it can't. You can always change the model in Settings → Device.
+Several models share a USB id; FCC tells them apart by the USB product name and asks when it can't. You can always change the model on the Keyboard page (Device).
 
 ## Royal Kludge
 

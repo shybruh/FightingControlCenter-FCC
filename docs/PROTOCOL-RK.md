@@ -16,7 +16,7 @@ packets produced by existing open-source RK tools (see *Credits*).
 | Reports | HID **feature** reports, report id `0x0a`, 64 data bytes (65 with the id) |
 | Direction | write only: the board never answers and can't be read back |
 
-Because nothing can be read, FCC keeps the board's state in the active profile and sends that. *Settings → Write
+Because nothing can be read, FCC keeps the board's state in the active profile and sends that. *Keyboard → Write
 profile to keyboard* resends everything if the board was changed elsewhere (Fn shortcuts, another app).
 
 Every report below is shown with the report id as byte 0. Byte 1 is the number of reports in the transfer and byte 2

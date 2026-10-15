@@ -19,19 +19,21 @@ import { UpdateDialog } from './UpdateButton'
 import { useStore } from '../store'
 import { Segmented, SwitchRow } from './ui'
 
-export function DesktopPanel() {
+/** Hotkeys, game rules and the popup that shows a switch: everything that changes the active profile on its own. */
+export function SwitchingPanel() {
   return (
     <div className="grid items-start gap-4 lg:grid-cols-2">
       <div className="flex flex-col gap-4">
-        <GeneralCard />
         <HotkeysCard />
+        <PopupCard />
       </div>
       <GamesCard />
     </div>
   )
 }
 
-function GeneralCard() {
+/** Startup, tray, updates and where settings are kept (the app's own Settings page). */
+export function DesktopAppCards() {
   const d = useDesktop()
   const [autostart, setAutostart] = useState<boolean | null>(null)
 
@@ -40,30 +42,70 @@ function GeneralCard() {
   }, [])
 
   return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Startup and tray</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col">
+          <SwitchRow
+            label="Start with Windows"
+            hint="Starts quietly in the tray so hotkeys and game profiles are always ready."
+            checked={!!autostart}
+            onChange={async (v) => {
+              await (v ? enableAutostart() : disableAutostart())
+              setAutostart(await autostartEnabled())
+            }}
+          />
+          <SwitchRow
+            label="Close to tray"
+            hint="Closing the window keeps FCC running in the tray. Quit from the tray menu."
+            checked={d.closeToTray}
+            onChange={(v) => d.set({ closeToTray: v })}
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Updates</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col">
+          <UpdatesRow />
+          <div className="flex items-center justify-between gap-3 border-t pt-3">
+            <div className="flex min-w-0 flex-col">
+              <span className="text-sm font-medium">Saved settings</span>
+              <span className="text-xs text-muted-foreground" title={settingsFilePath ?? undefined}>
+                {settingsFilePath
+                  ? 'Kept in your Windows user folder, so reinstalling or updating keeps them.'
+                  : settingsPortable
+                    ? 'Portable mode: kept in the FCC-data folder next to the app.'
+                    : "The settings file couldn't be used, so they're only in the app's own storage. Diagnostics → Log has details."}
+              </span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => void openSettingsFolder()}>
+              <FolderOpenIcon data-icon="inline-start" />
+              Open folder
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </>
+  )
+}
+
+function PopupCard() {
+  const d = useDesktop()
+  return (
     <Card>
       <CardHeader>
-        <CardTitle>App</CardTitle>
-        <CardDescription>Startup and tray behaviour.</CardDescription>
+        <CardTitle>On-screen popup</CardTitle>
+        <CardDescription>Shows the new profile over your game when a hotkey or game rule switches it.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col">
-        <SwitchRow
-          label="Start with Windows"
-          hint="Starts quietly in the tray so hotkeys and game profiles are always ready."
-          checked={!!autostart}
-          onChange={async (v) => {
-            await (v ? enableAutostart() : disableAutostart())
-            setAutostart(await autostartEnabled())
-          }}
-        />
-        <SwitchRow
-          label="On-screen popup"
-          hint="Briefly shows the new profile over your game when a hotkey or game rule switches it."
-          checked={d.osdEnabled}
-          onChange={(v) => d.set({ osdEnabled: v })}
-        />
+        <SwitchRow label="Show the popup" checked={d.osdEnabled} onChange={(v) => d.set({ osdEnabled: v })} />
         {d.osdEnabled && (
-          <div className="flex items-center justify-between gap-3 pb-3">
-            <span className="text-sm text-muted-foreground">Popup position</span>
+          <div className="flex items-center justify-between gap-3 pb-1">
+            <span className="text-sm text-muted-foreground">Position</span>
             <div className="flex items-center gap-2">
               <Segmented
                 value={d.osdPosition}
@@ -87,29 +129,6 @@ function GeneralCard() {
             </div>
           </div>
         )}
-        <SwitchRow
-          label="Close to tray"
-          hint="Closing the window keeps FCC running in the tray. Quit from the tray menu."
-          checked={d.closeToTray}
-          onChange={(v) => d.set({ closeToTray: v })}
-        />
-        <UpdatesRow />
-        <div className="flex items-center justify-between gap-3 border-t pt-3">
-          <div className="flex min-w-0 flex-col">
-            <span className="text-sm font-medium">Saved settings</span>
-            <span className="text-xs text-muted-foreground" title={settingsFilePath ?? undefined}>
-              {settingsFilePath
-                ? 'Kept in your Windows user folder, so reinstalling or updating keeps them.'
-                : settingsPortable
-                  ? 'Portable mode: kept in the FCC-data folder next to the app.'
-                  : "The settings file couldn't be used, so they're only in the app's own storage. Diagnostics → Log has details."}
-            </span>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => void openSettingsFolder()}>
-            <FolderOpenIcon data-icon="inline-start" />
-            Open folder
-          </Button>
-        </div>
       </CardContent>
     </Card>
   )
@@ -417,9 +436,9 @@ function UpdatesRow() {
             ? `Couldn't check: ${error ?? 'unknown error'}`
             : 'Checks GitHub for new versions a few seconds after start.'
   return (
-    <div className="flex items-center justify-between gap-3 border-t py-3">
+    <div className="flex items-center justify-between gap-3 pb-3">
       <div className="flex min-w-0 flex-col">
-        <span className="text-sm font-medium">Updates{current && <span className="font-normal text-muted-foreground"> · version {current}</span>}</span>
+        <span className="text-sm font-medium">FCC{current && <span className="font-normal text-muted-foreground"> · version {current}</span>}</span>
         <span className={cn('text-xs', phase === 'error' ? 'text-destructive' : 'text-muted-foreground')}>{status}</span>
       </div>
       <div className="flex shrink-0 gap-1">

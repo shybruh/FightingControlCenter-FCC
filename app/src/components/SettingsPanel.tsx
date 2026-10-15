@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { BugIcon, DownloadIcon, RefreshCwIcon, SparklesIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,6 @@ import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
 import { ReportButton } from './ReportDialog'
-import { useDiagnostics } from './Diagnostics'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
@@ -95,7 +94,6 @@ function RkSettingsPanel() {
               Write profile to keyboard
             </Button>
             <ReportButton variant="ghost" />
-            <IntroButton />
           </div>
         </CardContent>
       </Card>
@@ -177,11 +175,6 @@ function RazerSettingsPanel() {
               Write profile to keyboard
             </Button>
             <ReportButton variant="ghost" />
-            <IntroButton />
-            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
-              <BugIcon data-icon="inline-start" />
-              Diagnostics
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -242,11 +235,6 @@ function SteelSeriesSettingsPanel() {
           <Separator />
           <div className="flex flex-wrap gap-2">
             <ReportButton variant="ghost" />
-            <IntroButton />
-            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
-              <BugIcon data-icon="inline-start" />
-              Diagnostics
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -283,11 +271,6 @@ function SinowealthSettingsPanel() {
           <Separator />
           <div className="flex flex-wrap gap-2">
             <ReportButton variant="ghost" />
-            <IntroButton />
-            <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
-              <BugIcon data-icon="inline-start" />
-              Diagnostics
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -378,11 +361,6 @@ function DeviceCard({ children }: { children: ReactNode }) {
             Re-read from keyboard
           </Button>
           <ReportButton variant="ghost" />
-          <IntroButton />
-          <Button variant="ghost" onClick={() => useDiagnostics.getState().show('log')}>
-            <BugIcon data-icon="inline-start" />
-            Diagnostics
-          </Button>
         </div>
       </CardContent>
     </Card>
@@ -519,16 +497,6 @@ function McSettingsPanel() {
         <DangerCard />
       </div>
     </div>
-  )
-}
-
-function IntroButton() {
-  const openIntro = useStore((s) => s.openIntro)
-  return (
-    <Button variant="ghost" onClick={openIntro}>
-      <SparklesIcon data-icon="inline-start" />
-      Show intro
-    </Button>
   )
 }
 

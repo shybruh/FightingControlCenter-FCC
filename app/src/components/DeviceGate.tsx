@@ -36,7 +36,7 @@ export function ReadOnlyBanner() {
         {device?.protocol === 'sinowealth'
           ? "FCC checked its model and draws its lighting the way OpenRGB does; changes are off until you allow them. Close the keyboard's own software first. Tell us how it goes!"
           : device?.protocol === 'steelseries'
-          ? "FCC draws its lighting the way SteelSeries GG does; changes are off until you allow them. Close SteelSeries GG first. If the keys don't change colour, try Settings → Lighting commands. Tell us how it goes!"
+          ? "FCC draws its lighting the way SteelSeries GG does; changes are off until you allow them. Close SteelSeries GG first. If the keys don't change colour, try Keyboard → Lighting commands. Tell us how it goes!"
           : device?.protocol === 'razer'
           ? "It can't report its lighting, so FCC shows your saved profile. Changes are off until you allow them; FCC uses Razer's documented command set, so it should work. Close Razer Synapse first. Tell us if it does!"
           : writeOnly
@@ -74,7 +74,7 @@ export function DeviceChoiceDialog() {
         <AlertDialogHeader>
           <AlertDialogTitle>Which keyboard is this?</AlertDialogTitle>
           <AlertDialogDescription>
-            Several models share this keyboard's USB id. Pick yours so the layout and switch limits are right. You can change it later in Settings.
+            Several models share this keyboard's USB id. Pick yours so the layout and switch limits are right. You can change it later on the Keyboard page.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <ul className="flex max-h-72 flex-col gap-1 overflow-auto">
