@@ -4,7 +4,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { errorText, log } from '../diag/log'
-import { isTauri } from '../hid/tauri'
+import { isTauri } from './env'
 
 const PREFIX = 'fcc.'
 const SAVE_DELAY_MS = 400

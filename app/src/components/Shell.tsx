@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { Suspense, lazy, useRef, useState, type ReactNode } from 'react'
 import {
   GaugeIcon,
   KeyboardIcon,
@@ -32,19 +32,33 @@ import { decodeInfo } from '../hid/codec'
 import { isTauri } from '../hid/tauri'
 import type { Capabilities } from '../devices/registry'
 import { useStore } from '../store'
-import { AdvancedPanel } from './AdvancedPanel'
-import { DesktopPanel } from './DesktopPanel'
 import { UpdateButton } from './UpdateButton'
-import { KeymapPanel } from './KeymapPanel'
-import { KeyTestPanel } from './KeyTestPanel'
-import { LightingPanel } from './LightingPanel'
-import { MacroPanel } from './MacroPanel'
-import { PerformancePanel } from './PerformancePanel'
 import { PageScroll } from './ScrollArea'
 import { StatusDot } from './StatusDot'
 import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
-import { SettingsPanel } from './SettingsPanel'
 import { Onboarding } from './Onboarding'
+
+// pages load separately so the start screen doesn't wait for them; they're fetched in the background shortly after
+// start-up, so opening one never shows a blank moment
+const PAGE_CODE = {
+  AdvancedPanel: () => import('./AdvancedPanel').then((m) => ({ default: m.AdvancedPanel })),
+  DesktopPanel: () => import('./DesktopPanel').then((m) => ({ default: m.DesktopPanel })),
+  KeymapPanel: () => import('./KeymapPanel').then((m) => ({ default: m.KeymapPanel })),
+  KeyTestPanel: () => import('./KeyTestPanel').then((m) => ({ default: m.KeyTestPanel })),
+  LightingPanel: () => import('./LightingPanel').then((m) => ({ default: m.LightingPanel })),
+  MacroPanel: () => import('./MacroPanel').then((m) => ({ default: m.MacroPanel })),
+  PerformancePanel: () => import('./PerformancePanel').then((m) => ({ default: m.PerformancePanel })),
+  SettingsPanel: () => import('./SettingsPanel').then((m) => ({ default: m.SettingsPanel })),
+}
+const AdvancedPanel = lazy(PAGE_CODE.AdvancedPanel)
+const DesktopPanel = lazy(PAGE_CODE.DesktopPanel)
+const KeymapPanel = lazy(PAGE_CODE.KeymapPanel)
+const KeyTestPanel = lazy(PAGE_CODE.KeyTestPanel)
+const LightingPanel = lazy(PAGE_CODE.LightingPanel)
+const MacroPanel = lazy(PAGE_CODE.MacroPanel)
+const PerformancePanel = lazy(PAGE_CODE.PerformancePanel)
+const SettingsPanel = lazy(PAGE_CODE.SettingsPanel)
+setTimeout(() => Object.values(PAGE_CODE).forEach((load) => void load()), 1500)
 
 interface Page {
   /** capability the board needs for this page */
@@ -106,7 +120,7 @@ export function Main() {
       <Onboarding pages={pages} />
         <PageScroll resetKey={current.id}>
           <div key={current.id} className="page-enter mx-auto w-full max-w-6xl p-4 pb-16 md:p-6 md:pb-16">
-            {current.render()}
+            <Suspense fallback={null}>{current.render()}</Suspense>
           </div>
         </PageScroll>
       </main>

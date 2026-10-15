@@ -24,6 +24,8 @@ function releaseNotes(version: string) {
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   define: { __APP_VERSION__: JSON.stringify(appVersion), __RELEASE_NOTES__: JSON.stringify(releaseNotes(appVersion)) },
+  // the keyboard catalogues (~900 kB of data, needed at start for detection) make one chunk large on purpose
+  build: { chunkSizeWarningLimit: 1200 },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

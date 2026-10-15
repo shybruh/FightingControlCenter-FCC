@@ -9,6 +9,10 @@
 - **What's new**: after an update, FCC shows that version's changes once. *Desktop → Updates → What's new* opens them
   again.
 
+### Improved
+- Starts a little faster, and the on-screen profile popup no longer loads the whole keyboard list (its start-up code
+  went from 1.1 MB to 0.2 MB). Pages load separately, in the background right after start.
+
 ## 0.3.3
 
 ### New keyboards

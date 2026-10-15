@@ -10,9 +10,7 @@ import type { McExpect, McTransport } from './mc'
 import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
-export function isTauri(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-}
+export { isTauri } from '../desktop/env'
 
 interface DeviceInfo {
   name: string

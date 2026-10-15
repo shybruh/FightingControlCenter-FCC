@@ -4,7 +4,7 @@ import './index.css'
 import './motion.css'
 import { Osd } from './desktop/Osd'
 import { hideBrowserChrome } from './desktop/browserChrome'
-import { isTauri } from './hid/tauri'
+import { isTauri } from './desktop/env'
 import { restoreSettings } from './desktop/settingsFile'
 
 // The desktop build loads this bundle twice: the main window and the on-screen popup overlay.
