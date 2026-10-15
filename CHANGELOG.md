@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.5
 
 ### New keyboards
 - **AULA F75**, **AULA F87 Pro** and **LEOBOG Hi75C Pro** (experimental, desktop app): lighting effects and per-key RGB,

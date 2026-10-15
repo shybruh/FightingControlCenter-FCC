@@ -1,6 +1,6 @@
 [package]
 name = "fcc"
-version = "0.3.4"
+version = "0.3.5"
 description = "Fighting Control Center: configurator for Hall-effect keyboards"
 authors = ["FCC"]
 license = "GPL-3.0-or-later"
