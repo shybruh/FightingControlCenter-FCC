@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.4
 
 ### New keyboards
 - **AULA F99** (experimental, desktop app): lighting effects and per-key RGB, drawn by FCC and streamed like the
@@ -13,7 +13,6 @@
   Works with every keyboard, including the ones FCC can't show key travel for.
 - **What's new**: after an update, FCC shows that version's changes once. *Desktop → Updates → What's new* opens them
   again.
-
 - **Share codes**: *Share code…* in a profile's menu turns its lighting and its actuation / rapid-trigger settings into
   one line of text; *Paste share code* adds one as a new profile. Codes work across keyboards: effects are matched by
   name, settings by key, and everything stays within the board's own limits. The import says what it left out
