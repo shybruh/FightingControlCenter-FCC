@@ -6,6 +6,10 @@
 - **AULA F75**, **AULA F87 Pro** and **LEOBOG Hi75C Pro** (experimental, desktop app): lighting effects and per-key RGB,
   like the AULA F99. They share one USB id, so the board's answer to FCC's model check decides which one it is.
 
+### Fixes
+- The **AULA F99** was taken for a Royal Kludge keyboard (they share a vendor id) and refused with "newer firmware".
+  FCC now looks for these boards before Royal Kludge ones, and the Royal Kludge driver never picks one up.
+
 ## 0.3.4
 
 ### New keyboards

@@ -1,5 +1,5 @@
 // Finds a supported keyboard over WebHID (browser) or the native bridge (desktop) and says which protocol it speaks.
-import { MC_FILTERS, MC_USAGE, MC_USAGE_PAGE, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_FILTERS, RY_USAGE, RY_USAGE_PAGE, isMcId, isRyId } from '../devices/registry'
+import { MC_FILTERS, MC_USAGE, MC_USAGE_PAGE, RK_FILTER, RK_PRODUCT_IDS, RK_VENDOR_ID, RY_FILTERS, RY_USAGE, RY_USAGE_PAGE, isMcId, isRyId, isSinowealthId } from '../devices/registry'
 import { WebHidMcTransport, type McTransport } from './mc'
 import { WebHidRkTransport, type FeatureTransport } from './rk'
 import { WebHidRyTransport, type RyTransport } from './ry'
@@ -52,7 +52,7 @@ async function openHid(devices: HIDDevice[]): Promise<Opened | null> {
   const sonix = devices.find(isConfigInterface)
   if (sonix) return { kind: 'sonix', transport: await WebHidTransport.open(sonix) }
   // 0x258a is shared by many Sinowealth devices: a known RK model wins
-  const rk = devices.find((d) => isRkInterface(d) && RK_PRODUCT_IDS.includes(d.productId)) ?? devices.find(isRkInterface)
+  const rk = devices.find((d) => isRkInterface(d) && RK_PRODUCT_IDS.includes(d.productId)) ?? devices.find((d) => isRkInterface(d) && !isSinowealthId(d.vendorId, d.productId))
   if (rk) return { kind: 'rk', transport: await WebHidRkTransport.open(rk) }
   const ry = devices.find(isRyInterface)
   if (ry) return { kind: 'ry', transport: await WebHidRyTransport.open(ry) }
@@ -93,12 +93,13 @@ export async function openDesktop(): Promise<Opened | null> {
   }
   try {
     if (found.sonix) return { kind: 'sonix', transport: await TauriTransport.open() }
+    // 010c boards share RK's vendor id and also have a System Control collection: theirs is checked first
+    if (found.sinowealth) return { kind: 'sinowealth', transport: await TauriSinowealthTransport.open() }
     if (found.rk) return { kind: 'rk', transport: await TauriRkTransport.open() }
     if (found.ry) return { kind: 'ry', transport: await TauriRyTransport.open() }
     if (found.mc) return { kind: 'mc', transport: await TauriMcTransport.open() }
     if (found.razer) return { kind: 'razer', transport: await TauriRazerTransport.open() }
     if (found.steelseries) return { kind: 'steelseries', transport: await TauriSteelSeriesTransport.open() }
-    if (found.sinowealth) return { kind: 'sinowealth', transport: await TauriSinowealthTransport.open() }
   } catch (e) {
     log.error('connect', 'opening the keyboard failed', errorText(e))
     throw e

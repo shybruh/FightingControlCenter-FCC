@@ -15,6 +15,8 @@ use tauri::{AppHandle, Emitter, State};
 use crate::hidutil::{feature_reports, sized_for};
 
 const RK_VENDOR_ID: u16 = 0x258a;
+/// Sinowealth's shared 010c keyboards (sinowealth.rs)
+const SINOWEALTH_010C_PID: u16 = 0x010c;
 const USAGE_PAGE: u16 = 0x0001;
 const USAGE: u16 = 0x0080;
 /// the feature report the legacy protocol uses
@@ -54,7 +56,10 @@ fn find<'a>(api: &'a HidApi, products: &[u16]) -> Option<&'a hidapi::DeviceInfo>
         api.device_list()
             .filter(|d| d.vendor_id() == RK_VENDOR_ID && d.usage_page() == USAGE_PAGE && d.usage() == USAGE)
     };
-    matches().find(|d| products.contains(&d.product_id())).or_else(|| matches().next())
+    // never a Sinowealth 010c board (AULA, LEOBOG …): it isn't RK and has its own driver
+    matches()
+        .find(|d| products.contains(&d.product_id()))
+        .or_else(|| matches().find(|d| d.product_id() != SINOWEALTH_010C_PID))
 }
 
 #[tauri::command]
