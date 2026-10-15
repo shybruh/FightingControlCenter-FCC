@@ -16,12 +16,14 @@ import { useUpdateChecks } from './desktop/updates'
 import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
 import { SupportRequestDialog, UnsupportedNotice, openSupportRequest } from './components/SupportRequest'
+import { WhatsNewDialog, useWhatsNewAfterUpdate } from './components/WhatsNew'
 
 export default function App() {
   const status = useStore((s) => s.status)
   const tryReconnect = useStore((s) => s.tryReconnect)
   useDesktopIntegration()
   useUpdateChecks()
+  useWhatsNewAfterUpdate()
 
   useEffect(() => {
     tryReconnect()
@@ -33,6 +35,7 @@ export default function App() {
       <Notices />
       <Diagnostics />
       <SupportRequestDialog />
+      <WhatsNewDialog />
       <Toaster theme="dark" position="bottom-right" />
     </TooltipProvider>
   )

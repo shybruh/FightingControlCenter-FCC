@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Key test** page: press every key and see it turn green as it registers, with a list of keys not pressed yet. It
+  also spots **switch chatter** (a key that fires twice within 30 ms of letting go, the cause of double-typed letters).
+  Works with every keyboard, including the ones FCC can't show key travel for.
+- **What's new**: after an update, FCC shows that version's changes once. *Desktop → Updates → What's new* opens them
+  again.
+
 ## 0.3.3
 
 ### New keyboards

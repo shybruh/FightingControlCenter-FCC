@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import {
   GaugeIcon,
   KeyboardIcon,
+  KeySquareIcon,
   LayersIcon,
   ListVideoIcon,
   MonitorIcon,
@@ -35,6 +36,7 @@ import { AdvancedPanel } from './AdvancedPanel'
 import { DesktopPanel } from './DesktopPanel'
 import { UpdateButton } from './UpdateButton'
 import { KeymapPanel } from './KeymapPanel'
+import { KeyTestPanel } from './KeyTestPanel'
 import { LightingPanel } from './LightingPanel'
 import { MacroPanel } from './MacroPanel'
 import { PerformancePanel } from './PerformancePanel'
@@ -61,6 +63,7 @@ const PAGES: Page[] = [
   { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, needs: 'keymap', blurb: 'Remap keys, media keys and shortcuts', render: () => <KeymapPanel /> },
   { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', blurb: 'DKS, mod-tap, toggle and SOCD', render: () => <AdvancedPanel /> },
   { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', blurb: 'Record and edit macros', render: () => <MacroPanel /> },
+  { id: 'keytest', label: 'Key test', icon: KeySquareIcon, blurb: 'Check that every key and switch registers', render: () => <KeyTestPanel /> },
   { id: 'settings', label: 'Settings', icon: SettingsIcon, blurb: 'Model, keyboard options, backup and reports', render: () => <SettingsPanel /> },
   ...(isTauri() ? [{ id: 'desktop', label: 'Desktop', icon: MonitorIcon, blurb: 'Tray, hotkeys, start with Windows, per-game profiles', render: () => <DesktopPanel /> }] : []),
 ]

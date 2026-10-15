@@ -1,3 +1,4 @@
+import { WhatsNewButton } from './WhatsNew'
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart'
@@ -421,17 +422,20 @@ function UpdatesRow() {
         <span className="text-sm font-medium">Updates{current && <span className="font-normal text-muted-foreground"> · version {current}</span>}</span>
         <span className={cn('text-xs', phase === 'error' ? 'text-destructive' : 'text-muted-foreground')}>{status}</span>
       </div>
-      {phase === 'available' || phase === 'downloading' ? (
-        <Button size="sm" onClick={() => setOpen(true)}>
-          <DownloadIcon data-icon="inline-start" />
-          Update
-        </Button>
-      ) : (
-        <Button variant="outline" size="sm" disabled={phase === 'checking'} onClick={() => void checkForUpdates(true)}>
-          <RefreshCwIcon data-icon="inline-start" />
-          Check now
-        </Button>
-      )}
+      <div className="flex shrink-0 gap-1">
+        <WhatsNewButton />
+        {phase === 'available' || phase === 'downloading' ? (
+          <Button size="sm" onClick={() => setOpen(true)}>
+            <DownloadIcon data-icon="inline-start" />
+            Update
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" disabled={phase === 'checking'} onClick={() => void checkForUpdates(true)}>
+            <RefreshCwIcon data-icon="inline-start" />
+            Check now
+          </Button>
+        )}
+      </div>
       <UpdateDialog open={open} onOpenChange={setOpen} />
     </div>
   )
