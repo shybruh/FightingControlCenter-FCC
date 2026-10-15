@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.6
 
 ### Fixes
 - **AULA / LEOBOG and SteelSeries lighting:** colours on the keys now match the screen. Reds came out pink (and other
