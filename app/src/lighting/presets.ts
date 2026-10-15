@@ -39,6 +39,21 @@ const MODS = { has: (id: number) => {
 const NUMBERS = hidSet(0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2d, 0x2e)
 const NAV = hidSet(0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x46, 0x47, 0x48)
 const SPACE = { valueOf: () => KEYS.find((k) => k.hid === 0x2c)?.id ?? -1 }
+// shooter: movement, abilities, reload / interact, weapons 1–5, crouch / sprint / jump
+const FPS = hidSet(0x1a, 0x04, 0x16, 0x07, 0x14, 0x08, 0x15, 0x09, 0x0a, 0x06, 0x19, 0x1d, 0x1b, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x2b, 0xe1, 0xe0, 0x2c)
+// MOBA: abilities, summoner spells, items 1–6, recall, scoreboard
+const MOBA_SKILLS = hidSet(0x14, 0x1a, 0x08, 0x15)
+const MOBA_EXTRA = hidSet(0x07, 0x09, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x05, 0x2b)
+const HOME_ROW = hidSet(0x04, 0x16, 0x07, 0x09, 0x0d, 0x0e, 0x0f, 0x33)
+const BUMPS = hidSet(0x09, 0x0d)
+
+/** A stable 0–1 value per key position (for scattered patterns that look the same every time). */
+const scatter = (k: KeyDef) => {
+  const n = Math.sin((k.x + 0.37) * 12.9898 + (k.y + 0.11) * 78.233) * 43758.5453
+  return n - Math.floor(n)
+}
+/** Checkerboard parity from the key's place on the board. */
+const parity = (k: KeyDef) => (Math.floor(k.x + k.w / 2) + Math.round(k.y)) % 2
 
 export const COLOR_PRESETS: ColorPreset[] = [
   { id: 'sunset', name: 'Sunset', color: (k) => ramp(['#ffb347', '#ff5e62', '#c33764', '#6a3093'], diag(k)) },
@@ -68,6 +83,36 @@ export const COLOR_PRESETS: ColorPreset[] = [
     name: 'Zones',
     color: (k) =>
       NUMBERS.has(k.id) ? hex('#a855f7') : WASD.has(k.id) ? hex('#ef4444') : ARROWS.has(k.id) || NAV.has(k.id) ? hex('#22d3ee') : MODS.has(k.id) || k.id === +SPACE ? hex('#334155') : hex('#e2e8f0'),
+  },
+  // ---- FCC designs ----
+  { id: 'sakura', name: 'Sakura', color: (k) => ramp(['#fff0f5', '#ffb7c5', '#ff69b4'], diag(k) + (scatter(k) - 0.5) * 0.12) },
+  { id: 'lava', name: 'Lava', color: (k) => ramp(['#ffd000', '#ff4d00', '#c1121f'], fy(k) * 0.8 + scatter(k) * 0.25) },
+  { id: 'lagoon', name: 'Lagoon', color: (k) => ramp(['#00ffd5', '#00a3ff', '#7a00ff'], fx(k)) },
+  { id: 'toxic', name: 'Toxic', color: (k) => ramp(['#ccff00', '#39ff14', '#00b36b'], diag(k)) },
+  { id: 'peach', name: 'Peach', color: (k) => ramp(['#ffd1a9', '#ff9e7a', '#ff6f91'], fx(k) * 0.6 + fy(k) * 0.4) },
+  { id: 'gold', name: 'Gold rush', color: (k) => ramp(['#fff3b0', '#ffcc33', '#b8860b'], fy(k) * 0.6 + fx(k) * 0.4) },
+  { id: 'mono', name: 'Monochrome', color: (k) => ramp(['#ffffff', '#9ca3af', '#4b5563'], fx(k)) },
+  {
+    id: 'galaxy',
+    name: 'Galaxy',
+    color: (k) => (scatter(k) > 0.86 ? hex('#ffffff') : ramp(['#2e1065', '#6d28d9', '#1d4ed8', '#0e7490'], diag(k) + (scatter(k) - 0.5) * 0.2)),
+  },
+  { id: 'checker', name: 'Checker', color: (k) => (parity(k) ? hex('#ff2d95') : hex('#00e5ff')) },
+  { id: 'stripes', name: 'Candy stripes', color: (k) => (Math.round(k.y) % 2 ? hex('#ffffff') : hex('#ff1f4b')) },
+  {
+    id: 'fps',
+    name: 'FPS',
+    color: (k) => (WASD.has(k.id) ? hex('#ff1f3d') : FPS.has(k.id) ? hex('#ff8a1f') : MODS.has(k.id) ? hex('#2a0a10') : hex('#120306')),
+  },
+  {
+    id: 'moba',
+    name: 'MOBA',
+    color: (k) => (MOBA_SKILLS.has(k.id) ? hex('#00d1ff') : MOBA_EXTRA.has(k.id) ? hex('#ffd000') : hex('#06121a')),
+  },
+  {
+    id: 'home-row',
+    name: 'Home row',
+    color: (k) => (BUMPS.has(k.id) ? hex('#ffffff') : HOME_ROW.has(k.id) ? hex('#7dd3fc') : hex('#1e293b')),
   },
   { id: 'white', name: 'Pure white', color: () => [255, 255, 255] },
 ]

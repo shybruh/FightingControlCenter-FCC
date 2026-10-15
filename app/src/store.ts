@@ -80,6 +80,8 @@ interface State {
   deleteProfile(id: string): void
   activateProfile(id: string): Promise<void>
   importProfile(json: string): void
+  /** Adds a profile made of the current settings with `patch` on top, and switches to it (share codes). */
+  addProfileWith(name: string, patch: Partial<Record<RegionName, Uint8Array>>): Promise<void>
   exportProfile(id: string): void
 
   /** Switches the connected board to a different model (layout + limits) and remembers the choice. */
@@ -543,6 +545,16 @@ export const useStore = create<State>((set, get) => {
       }
       switchChain = switchChain.then(run, run)
       return switchChain
+    },
+
+    async addProfileWith(name, patch) {
+      const { regions, profiles, activeProfileId } = get()
+      if (!regions || blocked()) return
+      const p: Profile = { id: uid(), name: name.trim().slice(0, 60) || 'Shared', data: snapshot({ ...regions, ...patch }), updatedAt: Date.now() }
+      const next = [...profiles, p]
+      set({ profiles: next })
+      saveProfiles(next, activeProfileId)
+      await get().activateProfile(p.id)
     },
 
     importProfile(json) {

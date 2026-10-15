@@ -21,7 +21,8 @@ maker's own protocol (reverse-engineered and documented in [docs/](docs/)), and 
   game is focused**, and back when you leave it. Only what differs is rewritten, so switching is near-instant.
 - **Live key travel** in 0.01 mm, per-key actuation, rapid trigger (press / release / continuous), SOCD, Dynamic
   Keystroke, Mod-Tap, Toggle and Rappy Snappy.
-- **Lighting** with a live on-screen preview, per-key painting and 16 built-in designs.
+- **Lighting** with a live on-screen preview, per-key painting and 28 built-in designs.
+- **Share codes**: lighting and rapid-trigger setups as one line of text that works on other keyboards too.
 - **Remapping and macros**: keys, combos, media and mouse buttons; macros recorded with real delays and editable.
 - Tray icon, start with Windows, automatic updates. Windows app (~2 MB) or a web version for Chrome / Edge.
 

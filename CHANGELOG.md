@@ -9,6 +9,13 @@
 - **What's new**: after an update, FCC shows that version's changes once. *Desktop → Updates → What's new* opens them
   again.
 
+- **Share codes**: *Share code…* in a profile's menu turns its lighting and its actuation / rapid-trigger settings into
+  one line of text; *Paste share code* adds one as a new profile. Codes work across keyboards: effects are matched by
+  name, settings by key, and everything stays within the board's own limits. The import says what it left out
+  (macros, advanced keys and the keymap are never included).
+- **12 new lighting designs**: Sakura, Lava, Lagoon, Toxic, Peach, Gold rush, Monochrome, Galaxy, Checker, Candy
+  stripes, and gaming layouts for FPS, MOBA and home-row typing.
+
 ### Improved
 - Starts a little faster, and the on-screen profile popup no longer loads the whole keyboard list (its start-up code
   went from 1.1 MB to 0.2 MB). Pages load separately, in the background right after start.

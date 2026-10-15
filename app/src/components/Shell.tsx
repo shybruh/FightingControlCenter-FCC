@@ -37,6 +37,7 @@ import { PageScroll } from './ScrollArea'
 import { StatusDot } from './StatusDot'
 import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
 import { Onboarding } from './Onboarding'
+import { PasteIcon, ShareDialogs, openPasteCode, openShareCode } from './ShareDialogs'
 
 // pages load separately so the start screen doesn't wait for them; they're fetched in the background shortly after
 // start-up, so opening one never shows a blank moment
@@ -343,7 +344,8 @@ function Sidebar({
                       <DropdownMenuContent align="start" className="w-40">
                         <DropdownMenuItem onClick={() => setEditing(p.id)}>Rename</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => duplicateProfile(p.id)}>Duplicate</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => exportProfile(p.id)}>Export…</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openShareCode(p.id)}>Share code…</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportProfile(p.id)}>Export file…</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem variant="destructive" disabled={active || profiles.length <= 1} onClick={() => deleteProfile(p.id)}>
                           Delete
@@ -358,11 +360,18 @@ function Sidebar({
         </ul>
 
         {!collapsed && (
-          <RailItem collapsed={false} label="Import profile" className="text-muted-foreground" onClick={() => fileRef.current?.click()}>
-            <UploadIcon className="size-4 shrink-0" />
-            <span>Import profile</span>
-          </RailItem>
+          <>
+            <RailItem collapsed={false} label="Paste share code" className="text-muted-foreground" onClick={openPasteCode}>
+              <PasteIcon className="size-4 shrink-0" />
+              <span>Paste share code</span>
+            </RailItem>
+            <RailItem collapsed={false} label="Import profile" className="text-muted-foreground" onClick={() => fileRef.current?.click()}>
+              <UploadIcon className="size-4 shrink-0" />
+              <span>Import profile</span>
+            </RailItem>
+          </>
         )}
+        <ShareDialogs />
         <input
           ref={fileRef}
           type="file"

@@ -285,6 +285,56 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   check('closing stops the frames and never sends 0x41 (it reboots Gen 3 boards)', [mock.sent.length, mock.sent.some((f) => f[0] === 0x41)], [after, false])
 }
 
+// ---- share codes: lighting and rapid trigger, across keyboards ----
+{
+  const Sh = await vite.ssrLoadModule('/src/share.ts')
+  const f68 = DEVICES.find((x) => x.id === 'fighting68')
+  const fun60 = DEVICES.find((x) => x.id === 'ry-2299')
+  const razer = DEVICES.find((x) => x.id === 'razer-huntsman-v2')
+  const blank = () => ({ led: new Uint8Array(16), colors: new Uint8Array(512), rt: new Uint8Array(1024) })
+
+  // on the Fighting68: Wave at brightness 4, W red, W actuation 0.40 mm with RT 0.10 / 0.15 mm
+  activateDevice(f68)
+  const src = blank()
+  const waveId = codec.EFFECTS.find((e) => e.name === 'Wave')?.id ?? codec.EFFECTS[1].id
+  src.led = codec.encodeLed(src.led, { effect: waveId, r: 10, g: 20, b: 30, rainbow: true, brightness: 4, speed: 2, direction: 1 })
+  const wF = layout.KEYS.find((k) => k.label === 'W')
+  src.colors = codec.withColorMap(src.colors, new Map([[wF.id, [255, 0, 0]]]))
+  src.rt = codec.withRT(src.rt, [wF.id], { actuation: 40, press: 10, release: 15, flags: 1 })
+  const code = await Sh.encodeShareCode(Sh.sharedFrom({ name: 'My setup', from: 'Fighting68', ...src, caps: f68.caps }, { lighting: true, rt: true }))
+  check('share code: one line, FCC1- prefix, compact', [code.startsWith('FCC1-'), /^[A-Za-z0-9_-]+$/.test(code.slice(5)), code.length < 4000], [true, true, true])
+
+  // back onto the same model: the same settings
+  const back = Sh.planImport(await Sh.decodeShareCode(code), blank(), f68.caps)
+  check('same model: effect, per-key colour and rapid trigger come back as they were', [
+    codec.decodeLed(back.patch.led).effect === waveId, codec.decodeLed(back.patch.led).brightness, Array.from(codec.decodeColor(back.patch.colors, wF.id)),
+    (({ actuation, press, release, flags }) => [actuation, press, release, flags])(codec.decodeRT(back.patch.rt, wF.id)),
+  ], [true, 4, [255, 0, 0], [40, 10, 15, 1]])
+
+  // onto a MonsGeek FUN60 (another brand): the key is found by what it is, travel stays inside the board's range
+  activateDevice(fun60)
+  const wR = layout.KEYS.find((k) => k.label === 'W')
+  const onFun = Sh.planImport(await Sh.decodeShareCode(code), blank(), fun60.caps)
+  const rtR = codec.decodeRT(onFun.patch.rt, wR.id)
+  check('other brand: W gets the red and the rapid trigger, within this board\'s limits', [
+    Array.from(codec.decodeColor(onFun.patch.colors, wR.id)), rtR.press > 0 && rtR.release > 0,
+    rtR.actuation >= codec.RT_LIMITS.actuationMin && rtR.actuation <= codec.RT_LIMITS.actuationMax,
+  ], [[255, 0, 0], true, true])
+
+  // onto a Razer: no adjustable switches, so rapid trigger is left out and said so
+  activateDevice(razer)
+  const onRazer = Sh.planImport(await Sh.decodeShareCode(code), blank(), razer.caps)
+  check('board without rapid trigger: lighting applies, RT left out with a reason', ['led' in onRazer.patch, 'rt' in onRazer.patch, onRazer.skipped.some((s) => /rapid trigger/.test(s))], [true, false, true])
+
+  // codes that must be refused
+  const reject = async (c) => { try { await Sh.decodeShareCode(c); return 'accepted' } catch (e) { return e.message } }
+  const tampered = await Sh.encodeShareCode({ v: 1, name: 'x', from: 'y', rt: { keys: [['h1a', 5000, 10, 10, 0]] } })
+  const future = await Sh.encodeShareCode({ v: 2, name: 'x', from: 'y' })
+  const results = [await reject('hello'), await reject('FCC1-!!!'), await reject('FCC1-' + 'A'.repeat(20000)), await reject('FCC1-AAAA'), await reject(tampered), await reject(future)]
+  check('refused: not a code, bad characters, too long, damaged, out-of-range values, newer format', results.map((r) => r !== 'accepted'), [true, true, true, true, true, true])
+  activateDevice(f68)
+}
+
 // ---- support requests: spotting unsupported keyboards, and the request itself ----
 {
   const S = await vite.ssrLoadModule('/src/support.ts')
