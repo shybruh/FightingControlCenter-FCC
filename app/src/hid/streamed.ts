@@ -1,5 +1,5 @@
 // Keyboards without lighting effects of their own (SteelSeries Gen 3, Sinowealth "010c" boards …): FCC draws every
-// frame with the on-screen preview's renderer and streams it, as the makers' own apps do. Moving effects are sent ~20
+// frame with the on-screen preview's renderer and streams it (colours corrected for LEDs, see ledLevel), as the makers' own apps do. Moving effects are sent ~20
 // times a second, still pictures again now and then so the board doesn't fall back to its own lighting. Brightness
 // scales the colours. Nothing is stored on the keyboard.
 
@@ -18,6 +18,14 @@ const ANIMATED = new Set<number>([STREAM_FX.breathing, STREAM_FX.spectrum, STREA
 
 /** ~20 frames a second, close to the makers' own software */
 const FRAME_MS = 50
+
+/**
+ * Screen colour → LED level. A screen shows 85/255 as about 9% light, an LED driven with 85 gives 33%: without this,
+ * colours with a little of another channel wash out on the keys (FCC's red #ff2d55 came out pink on an AULA F99).
+ */
+const GAMMA = 2.2
+const TO_LED = Uint8Array.from({ length: 256 }, (_, v) => Math.round(255 * (v / 255) ** GAMMA))
+export const ledLevel = (v: number) => TO_LED[Math.min(255, Math.max(0, Math.round(v)))]
 
 /** Starting state: spectrum cycle at full brightness, white per-key colours. */
 export function streamedDefaults(): RegionData {
@@ -93,7 +101,7 @@ export abstract class StreamedKeyboard<T extends StreamTransport> implements Key
     // keymap, macros and the rest have no command here; they stay in the profile only
   }
 
-  /** Every key's colour at time `t` (seconds): the preview's colours, scaled by brightness. */
+  /** Every key's LED levels at time `t` (seconds): the preview's colours made LED-linear, scaled by brightness. */
   colorsAt(t: number): Map<KeyDef, RGB> {
     const led = decodeLed(this.state.led)
     const out = new Map<KeyDef, RGB>()
@@ -106,7 +114,7 @@ export abstract class StreamedKeyboard<T extends StreamTransport> implements Key
     const level = Math.min(5, Math.max(1, led.brightness || 5)) / 5
     for (const k of KEYS) {
       const [r, g, b] = shown.get(k.id) ?? [0, 0, 0]
-      out.set(k, [Math.round(r * level), Math.round(g * level), Math.round(b * level)])
+      out.set(k, [Math.round(ledLevel(r) * level), Math.round(ledLevel(g) * level), Math.round(ledLevel(b) * level)])
     }
     return out
   }

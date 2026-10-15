@@ -337,12 +337,16 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   const regs = (await vite.ssrLoadModule('/src/hid/streamed.ts')).streamedDefaults()
   const w = keys.find((k) => k.label === 'W')
   regs.colors.set([w.id, 0, 0, 255], w.id * 4)
+  // FCC's red swatch: on LEDs its bit of blue has to shrink as much as a screen shrinks it, or the key looks pink
+  const e = keys.find((k) => k.label === 'E')
+  regs.colors.set([e.id, 0xff, 0x2d, 0x55], e.id * 4)
   regs.led = codec.encodeLed(regs.led, { ...codec.decodeLed(regs.led), effect: 5, brightness: 3 })
   kb.seed({ led: regs.led, colors: regs.colors })
   await kb.readAll()
   await wait(30)
   const frame = mock.sent[1]
   check('F99 frame: report 0x06, 520 bytes, header, W blue at LED 14 (brightness 3/5), Esc white', [frame[0], frame.length, Array.from(frame.slice(0, 8)), Array.from(frame.slice(8 + 14 * 3, 11 + 14 * 3)), Array.from(frame.slice(8, 11))], [0x06, 520, [0x06, 0x08, 0x00, 0x00, 0x01, 0x00, 0x7a, 0x01], [0, 0, 153], [153, 153, 153]])
+  check('F99 frame: colours are made LED-linear (red #ff2d55 → 153, 4, 14 at 3/5, not pink)', Array.from(frame.slice(8 + ledOf('E') * 3, 11 + ledOf('E') * 3)), [153, 4, 14])
   await wait(1150)
   check('a still picture is sent again twice a second (the board drops streamed lighting after ~1 s)', mock.sent.length >= 4, true)
   await kb.close()

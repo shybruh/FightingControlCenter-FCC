@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- **AULA / LEOBOG and SteelSeries lighting:** colours on the keys now match the screen. Reds came out pink (and other
+  mixed colours looked washed out) because LEDs show a small amount of a colour much brighter than a screen does;
+  FCC now corrects for that before sending each frame.
+
 ## 0.3.5
 
 ### New keyboards
