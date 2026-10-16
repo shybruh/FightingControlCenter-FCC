@@ -131,17 +131,65 @@ const str = (v: unknown, max: number): v is string => typeof v === 'string' && v
 const keyOk = (k: unknown) => str(k, 40) && /^(h[0-9a-f]{1,2}|l:.+)$/.test(k as string)
 
 /** The settings in a share code, checked; throws with a readable reason when it isn't one. */
+/** Damaged-looking text: another reading of what was pasted may still work. */
+class DamagedCode extends Error {}
+
+const BODY_CHARS = /^[A-Za-z0-9_-]+$/
+
+/**
+ * The ways the pasted text could hold a code, shortest first. People paste codes the way chat apps hand them over: in
+ * backticks or a code block, in quotes, inside a sentence, with a full stop after, split over lines, with invisible
+ * characters. The code is everything from "FCC1-" on, joined over line breaks while the next piece still looks like
+ * code; which of those readings is the code is settled by trying them (only the whole code unpacks).
+ */
+function candidates(text: string): string[] {
+  const clean = text.replace(/[\u200b-\u200d\u2060\ufeff\u00ad]/g, '')
+  const at = clean.search(/fcc1-/i)
+  if (at < 0) return []
+  const pieces = clean.slice(at + PREFIX.length).split(/\s+/)
+  const out: string[] = []
+  let body = ''
+  for (const raw of pieces) {
+    // a piece ends at the first character a code can't have (a closing quote, backtick, full stop …)
+    const piece = raw.match(/^[A-Za-z0-9_-]*/)![0]
+    if (!piece || /^fcc1-/i.test(piece)) break
+    body += piece
+    out.push(body)
+    if (piece !== raw || body.length > MAX_CODE) break
+  }
+  return out
+}
+
+/** Reads a share code from pasted text (see `candidates`); throws a short, readable reason when there's none. */
 export async function decodeShareCode(text: string): Promise<SharedSettings> {
-  const code = text.replace(/\s+/g, '')
-  if (!code.startsWith(PREFIX)) throw new Error("that isn't an FCC share code (they start with FCC1-)")
-  if (code.length > MAX_CODE) throw new Error('the code is too long')
-  const body = code.slice(PREFIX.length)
-  if (!/^[A-Za-z0-9_-]+$/.test(body)) throw new Error('the code is damaged (unexpected characters)')
+  const tries = candidates(text)
+  if (!tries.length) {
+    if (/fcc1-/i.test(text)) throw new Error('the code is damaged (unexpected characters)')
+    if (/"format"\s*:\s*"fcc-profile"/.test(text)) throw new Error("that's a profile file, not a share code: use Import profile in the sidebar")
+    throw new Error("that isn't an FCC share code (they start with FCC1-)")
+  }
+  let last: Error = new Error('the code is damaged or incomplete')
+  for (const body of tries) {
+    try {
+      return await decodeBody(body)
+    } catch (e) {
+      // the wrong reading: try the next; anything else (a newer format, values out of range) is the answer
+      if (!(e instanceof DamagedCode)) throw e
+      last = e
+    }
+  }
+  throw last
+}
+
+async function decodeBody(body: string): Promise<SharedSettings> {
+  if (body.length > MAX_CODE) throw new Error('the code is too long')
+  if (!BODY_CHARS.test(body)) throw new DamagedCode('the code is damaged (unexpected characters)')
   let data: unknown
   try {
     data = JSON.parse(new TextDecoder().decode(await pipe(fromBase64Url(body), new DecompressionStream('deflate-raw'), MAX_JSON)))
   } catch (e) {
-    throw new Error(e instanceof Error && /unpacks/.test(e.message) ? e.message : 'the code is damaged or incomplete')
+    if (e instanceof Error && /unpacks/.test(e.message)) throw e
+    throw new DamagedCode('the code is damaged or incomplete: make sure all of it was copied')
   }
   const d = data as Partial<SharedSettings>
   if (!d || typeof d !== 'object' || d.v !== 1) throw new Error('this code is from a newer FCC: update the app first')

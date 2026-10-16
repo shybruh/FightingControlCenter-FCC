@@ -396,6 +396,14 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   const onRazer = Sh.planImport(await Sh.decodeShareCode(code), blank(), razer.caps)
   check('board without rapid trigger: lighting applies, RT left out with a reason', ['led' in onRazer.patch, 'rt' in onRazer.patch, onRazer.skipped.some((s) => /rapid trigger/.test(s))], [true, false, true])
 
+  // codes the way chat apps hand them over: in backticks, a code block, quotes, a sentence, split over lines …
+  const wrapped = code.match(/.{1,70}/g).join('\n')
+  const pasted = ['`' + code + '`', '```\n' + code + '\n```', `"${code}"`, `here's mine: ${code} enjoy!`, code + '.', wrapped, 'fcc1-' + code.slice(5),
+    code.slice(0, 40) + '​' + code.slice(40), `<${code}>`, code + '\n' + code]
+  const read = await Promise.all(pasted.map((t) => Sh.decodeShareCode(t).then((x) => x.name, (e) => e.message)))
+  check('pasted codes are found in backticks, code blocks, quotes, sentences, wrapped lines, with invisible characters', read, pasted.map(() => 'My setup'))
+  check('a code cut short says so', await Sh.decodeShareCode(code.slice(0, -10)).then(() => 'accepted', (e) => e.message), 'the code is damaged or incomplete: make sure all of it was copied')
+
   // codes that must be refused
   const reject = async (c) => { try { await Sh.decodeShareCode(c); return 'accepted' } catch (e) { return e.message } }
   const tampered = await Sh.encodeShareCode({ v: 1, name: 'x', from: 'y', rt: { keys: [['h1a', 5000, 10, 10, 0]] } })

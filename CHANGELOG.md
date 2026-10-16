@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Keyboards
+- **AJAZZ AK820 MAX HE** (`0c45:8033`) is **verified**: rapid trigger, lighting and the rest confirmed on real hardware.
+
+### Fixes
+- **Pasting share codes** works the way codes get sent: in backticks or a Discord code block, in quotes, inside a
+  message, with a full stop after, split over lines or with invisible characters. A code cut short says so, and a
+  profile file pasted by mistake points to *Import profile*.
+
 ### Changed
 - **Tidier pages.** *Settings* is now the app's own settings, at the foot of the sidebar: start with Windows, close to
   tray, updates, the settings folder, the intro and Diagnostics. The keyboard's options, model, backup and report moved
