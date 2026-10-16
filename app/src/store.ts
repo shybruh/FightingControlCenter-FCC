@@ -10,7 +10,7 @@ import { MockSinowealthTransport, SinowealthKeyboard, readModel } from './hid/si
 import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
-import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
+import { Cmd, PROFILE_REGIONS, REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
 import { decodeLed, encodeLed } from './hid/codec'
 import { isTauri } from './hid/tauri'
 import type { DeviceIdentity } from './hid/transport'
@@ -175,6 +175,20 @@ function saveProfiles(profiles: Profile[], activeProfileId: string | null) {
 
 function snapshot(regions: RegionData): ProfileData {
   return Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Array.from(regions[r])])) as ProfileData
+}
+
+/**
+ * A profile's regions, ready to write: null when any of them isn't exactly the size the keyboard expects (a damaged or
+ * older profile). Checked before anything is written, so a bad profile is refused instead of half-applied.
+ */
+function profileRegions(p: Profile): Record<ProfileRegion, Uint8Array> | null {
+  const out = {} as Record<ProfileRegion, Uint8Array>
+  for (const r of PROFILE_REGIONS) {
+    const data = p.data?.[r]
+    if (!Array.isArray(data) || data.length !== REGIONS[r].size || data.some((v) => typeof v !== 'number' || v < 0 || v > 255)) return null
+    out[r] = Uint8Array.from(data)
+  }
+  return out
 }
 
 function uid() {
@@ -365,7 +379,9 @@ export const useStore = create<State>((set, get) => {
     // boards that can't report their lighting (RK: anything) start from the saved profile
     if (kb instanceof RkKeyboard || kb instanceof RazerKeyboard || kb instanceof SteelSeriesKeyboard || kb instanceof SinowealthKeyboard) {
       const active = get().profiles.find((p) => p.id === get().activeProfileId)
-      if (active) kb.seed(Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Uint8Array.from(active.data[r])])))
+      const data = active && profileRegions(active)
+      if (data) kb.seed(data)
+      else if (active) log.warn('profile', `profile "${active.name}" is damaged; the keyboard starts from defaults`)
     }
     kb.disconnected.on(() => {
       // unplugged: release what the driver holds (its native listeners, timers, report subscriptions) before the
@@ -503,8 +519,9 @@ export const useStore = create<State>((set, get) => {
     },
 
     async disconnect() {
-      await get().flush()
-      await get().kb?.close()
+      // the app lets go of the keyboard even when closing it fails (e.g. it was unplugged at that moment)
+      await get().flush().catch(() => undefined)
+      await get().kb?.close().catch((e) => log.warn('connect', 'closing the keyboard failed', errorText(e)))
       set({ kb: null, regions: null, status: 'idle', autoConnect: false })
     },
 
@@ -591,11 +608,15 @@ export const useStore = create<State>((set, get) => {
         const { kb, profiles, activeProfileId } = get()
         const p = profiles.find((x) => x.id === id)
         if (!kb || !p || id === activeProfileId || blocked()) return
+        const data = profileRegions(p)
+        if (!data) {
+          set({ error: `Profile “${p.name}” is damaged (made by an older FCC, or edited), so it wasn't sent to the keyboard.` })
+          return
+        }
         await get().flush()
         const current = get().regions
         if (!current) return
-        const next = { ...current }
-        for (const r of PROFILE_REGIONS) next[r] = Uint8Array.from(p.data[r])
+        const next = { ...current, ...data }
         set({ regions: next, activeProfileId: id })
         saveProfiles(get().profiles, id)
         const job = (async () => {

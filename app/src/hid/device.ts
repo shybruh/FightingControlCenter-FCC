@@ -58,7 +58,7 @@ export interface KeyboardDriver {
 /** Sonix HE driver (Fighting68 family). */
 export class Keyboard implements KeyboardDriver {
   private queue: Promise<unknown> = Promise.resolve()
-  private waiter: { cmd: number; resolve: (r: ParsedReply) => void } | null = null
+  private waiter: { cmd: number; offset: number; resolve: (r: ParsedReply) => void } | null = null
   private unsubs: Array<() => void> = []
   readonly sensor = new Emitter<SensorEvent>()
   readonly disconnected = new Emitter<void>()
@@ -115,7 +115,10 @@ export class Keyboard implements KeyboardDriver {
       this.disconnected.emit()
       return
     }
-    if (this.waiter && this.waiter.cmd === reply.cmd) {
+    // a reply echoes the request's command, length and offset (seen on a Fighting68, fw 1.25): matching the offset too
+    // keeps a late reply to an earlier chunk (after a retry) from being taken for the next chunk's, which shifted a
+    // whole region by one chunk
+    if (this.waiter && this.waiter.cmd === reply.cmd && this.waiter.offset === reply.offset) {
       const w = this.waiter
       this.waiter = null
       w.resolve(reply)
@@ -125,6 +128,7 @@ export class Keyboard implements KeyboardDriver {
   /** Send a packet and wait for an echo of its command byte, retrying like the official driver. */
   private async exchange(packet: Uint8Array): Promise<ParsedReply> {
     const cmd = packet[1]
+    const offset = packet[3] | (packet[4] << 8)
     let lastErr: unknown
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
@@ -135,6 +139,7 @@ export class Keyboard implements KeyboardDriver {
           }, REPLY_TIMEOUT_MS)
           this.waiter = {
             cmd,
+            offset,
             resolve: (r) => {
               clearTimeout(t)
               resolve(r)

@@ -506,6 +506,27 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   await wait(200)
   check('live travel FCC started streams, and is ended once (no stray-stop for its own trailing packets)', [seen > 0, sent.filter((c) => c === P.Cmd.CalibrationEnd).length], [true, 1])
   await kb.close()
+
+  // a late reply for the previous chunk (after a retry) must not be taken for the current chunk's
+  const real = new MockTransport()
+  const realSend = real.send.bind(real)
+  const listeners = []
+  const onReport = real.onReport.bind(real)
+  real.onReport = (l) => (listeners.push(l), onReport(l))
+  real.send = async (p) => {
+    const off = p[3] | (p[4] << 8)
+    if (p[1] === 0x17 && off >= 56) {
+      const stale = new Uint8Array(64)
+      stale.set([0x55, 0x17, 56, (off - 56) & 0xff, (off - 56) >> 8])
+      stale.fill(0xee, 8)
+      listeners.forEach((l) => l(stale))
+    }
+    return realSend(p)
+  }
+  const kb2 = new Keyboard(real)
+  const clean = await new Keyboard(new MockTransport()).readRegion('rt')
+  const rt = await kb2.readRegion('rt')
+  check('a stale reply for another chunk is ignored: the region reads back exactly', Array.from(rt).every((v, i) => v === clean[i]), true)
 }
 
 // ---- accent colours stay visible on every theme ----
