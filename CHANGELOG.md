@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- **Sonix boards (Fighting68 …): replies are matched by offset too.** A late reply after a retry could be taken for the
+  next chunk's, shifting a whole region (e.g. the rapid-trigger table) by one chunk, which then got saved to the profile.
+- **A damaged profile is refused before anything is written**, instead of stopping halfway through a profile switch
+  with some regions new, some old and nothing committed.
+- **Quitting and updating finish keyboard writes first**, so a region is never left half written.
+- **Factory reset keeps your settings** as a copy of the active profile (“… (before reset)”).
+- **Sliders**: on a mixed selection, setting the value shown now applies it to every selected key. Edits that change
+  nothing aren't sent to the keyboard (no extra writes or flash commits).
+- **A broken page or a damaged settings file can't take the app down**: a page that fails shows a message (the rest
+  keeps working), and saved profiles, game rules, hotkeys and presets are checked when loaded.
+- Disconnect always lets go of the keyboard, even when closing it fails; the sidebar highlight lines up in compact mode.
+
 ## 0.3.11
 
 ### Fixes
