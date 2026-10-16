@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Tray panel**: click the tray icon for a small panel in FCC's look (your theme and accent): switch profiles, step
+  through effects, set brightness and turn the lights on or off without opening the window. Right-click still shows
+  the menu; double-click opens FCC.
+- **Lights off at night** (Lighting → *Off at night*): pick two times and the lights go off in between, every night
+  while FCC runs. Like the tray's switch, it doesn't touch your profile: the lighting comes back exactly as it was.
+- **Pick your look** in the intro: theme and accent colour on first run.
+
+### Fixes
+- The on-screen popup and the tray panel had a hidden Windows frame (it could show as a title bar); they're frameless
+  now.
+
 ## 0.3.9
 
 ### New

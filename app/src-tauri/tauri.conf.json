@@ -43,6 +43,21 @@
         "focusable": false,
         "shadow": false,
         "backgroundThrottling": "disabled"
+      },
+      {
+        "label": "traypanel",
+        "create": false,
+        "url": "index.html?tray",
+        "title": "FCC",
+        "width": 300,
+        "height": 440,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false,
+        "shadow": false
       }
     ],
     "security": {

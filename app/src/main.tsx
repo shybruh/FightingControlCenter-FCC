@@ -4,14 +4,17 @@ import './index.css'
 import './motion.css'
 import './themes.css'
 import { Osd } from './desktop/Osd'
+import { TrayPanel } from './desktop/TrayPanel'
 import { hideBrowserChrome } from './desktop/browserChrome'
 import { isTauri } from './desktop/env'
 import { restoreSettings } from './desktop/settingsFile'
 import { applyDensity, applyTheme, startTheme, useTheme } from './theme'
 
-// The desktop build loads this bundle twice: the main window and the on-screen popup overlay.
+// The desktop build loads this bundle in three windows: the main one, the on-screen popup overlay and the tray panel.
 const isOsd = new URLSearchParams(location.search).has('osd')
 if (isOsd) document.documentElement.classList.add('osd')
+const isTray = new URLSearchParams(location.search).has('tray')
+if (isTray) document.documentElement.classList.add('traypanel')
 // desktop app: behave like an app, not a web page (no stray text selection)
 if (isTauri()) {
   document.documentElement.classList.add('app')
@@ -20,12 +23,20 @@ if (isTauri()) {
 
 // the theme as last saved here, before anything paints (the popup overlay stays dark)
 if (!isOsd) {
+  // the tray panel takes the main window's theme from the state it's sent (and this saved one until then)
   applyTheme(useTheme.getState().theme)
-  applyDensity(useTheme.getState().density)
+  // the tray panel is small on purpose: Auto would make it compact
+  if (!isTray) applyDensity(useTheme.getState().density)
 }
 
 const root = createRoot(document.getElementById('root')!)
-if (isOsd) {
+if (isTray) {
+  root.render(
+    <StrictMode>
+      <TrayPanel />
+    </StrictMode>,
+  )
+} else if (isOsd) {
   root.render(
     <StrictMode>
       <Osd />

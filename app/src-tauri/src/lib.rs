@@ -34,6 +34,7 @@ pub fn run() {
     .manage(hid::HidState::default())
     .manage(desktop::CloseToTray(AtomicBool::new(true)))
     .manage(osd::OsdGeneration::default())
+    .manage(desktop::PanelHiddenAt::default())
     .manage(rk::RkState::default())
     .manage(razer::RazerState::default())
     .manage(steelseries::SteelSeriesState::default())
@@ -48,6 +49,9 @@ pub fn run() {
       hid::hid_close,
       desktop::set_tray_profiles,
       desktop::set_close_to_tray,
+      desktop::tray_hide,
+      desktop::tray_open_main,
+      desktop::tray_quit,
       desktop::list_window_apps,
       desktop::running_exes,
       config::config_load,
@@ -88,6 +92,12 @@ pub fn run() {
       scan::scan_stop,
     ])
     .on_window_event(|window, event| {
+      if window.label() == desktop::PANEL_LABEL {
+        if let WindowEvent::Focused(false) = event {
+          desktop::panel_blurred(window.app_handle());
+        }
+        return;
+      }
       if window.label() != "main" {
         return;
       }
@@ -107,6 +117,14 @@ pub fn run() {
             .level(log::LevelFilter::Info)
             .build(),
         )?;
+      }
+      // The popup overlay and the tray panel are frameless, but created hidden they kept the frame Windows gave them
+      // (tao only trims it when the frame is recalculated): toggling decorations forces that recalculation.
+      for label in [osd::OSD_LABEL, desktop::PANEL_LABEL] {
+        if let Some(w) = app.get_webview_window(label) {
+          let _ = w.set_decorations(true);
+          let _ = w.set_decorations(false);
+        }
       }
       desktop::setup_tray(app.handle())?;
       desktop::start_foreground_watcher(app.handle().clone());

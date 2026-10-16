@@ -2,15 +2,29 @@
 //! per-game profile switching. Profile logic itself lives in the UI; this side only reports
 //! what's focused and forwards tray clicks.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, Rect, Runtime, State};
 
 pub const TRAY_ID: &str = "main";
+/// The panel by the tray icon (src/desktop/TrayPanel.tsx).
+pub const PANEL_LABEL: &str = "traypanel";
+const PANEL_W: f64 = 300.0;
+const PANEL_H: f64 = 440.0;
+const PANEL_GAP: f64 = 8.0;
+
+/// When the panel last hid because it lost focus: clicking the tray icon takes focus first, so a click right after
+/// that hide is the same click closing the panel, not one opening it again.
+#[derive(Default)]
+pub struct PanelHiddenAt(pub AtomicU64);
+
+fn now_ms() -> u64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
+}
 
 /// Whether closing the window hides it to the tray instead of quitting.
 pub struct CloseToTray(pub AtomicBool);
@@ -75,12 +89,82 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             }
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                show_main(tray.app_handle());
+            match event {
+                // left click: the panel (right click shows the menu)
+                TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, rect, .. } => {
+                    toggle_panel(tray.app_handle(), rect);
+                }
+                TrayIconEvent::DoubleClick { button: MouseButton::Left, .. } => show_main(tray.app_handle()),
+                _ => {}
             }
         })
         .build(app)?;
     Ok(())
+}
+
+/// Opens the panel just above the tray icon (below it when the taskbar is at the top), or closes it.
+fn toggle_panel<R: Runtime>(app: &AppHandle<R>, icon: Rect) {
+    let Some(w) = app.get_webview_window(PANEL_LABEL) else {
+        show_main(app);
+        return;
+    };
+    if w.is_visible().unwrap_or(false) {
+        let _ = w.hide();
+        return;
+    }
+    if now_ms().saturating_sub(app.state::<PanelHiddenAt>().0.load(Ordering::Relaxed)) < 300 {
+        return;
+    }
+    let scale = app.primary_monitor().ok().flatten().map(|m| m.scale_factor()).unwrap_or(1.0);
+    let pos = icon.position.to_physical::<f64>(scale);
+    let size = icon.size.to_physical::<f64>(scale);
+    let monitor = app
+        .monitor_from_point(pos.x, pos.y)
+        .ok()
+        .flatten()
+        .or_else(|| app.primary_monitor().ok().flatten());
+    let Some(monitor) = monitor else { return };
+    let scale = monitor.scale_factor();
+    let area = monitor.work_area();
+    let (ax, ay) = (area.position.x as f64, area.position.y as f64);
+    let (aw, ah) = (area.size.width as f64, area.size.height as f64);
+    let (pw, ph, gap) = (PANEL_W * scale, PANEL_H * scale, PANEL_GAP * scale);
+    // centred on the icon, kept inside the screen's work area (the part the taskbar doesn't cover)
+    let x = (pos.x + size.width / 2.0 - pw / 2.0).clamp(ax + gap, ax + aw - pw - gap);
+    let taskbar_on_top = pos.y < ay + ah / 2.0;
+    let y = if taskbar_on_top { ay + gap } else { ay + ah - ph - gap };
+    let _ = w.set_size(tauri::LogicalSize::new(PANEL_W, PANEL_H));
+    let _ = w.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32));
+    let _ = w.show();
+    let _ = w.set_focus();
+}
+
+/// The panel lost focus (a click anywhere else): it hides, like the system's own tray flyouts.
+pub fn panel_blurred<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(w) = app.get_webview_window(PANEL_LABEL) {
+        if w.is_visible().unwrap_or(false) {
+            let _ = w.hide();
+            app.state::<PanelHiddenAt>().0.store(now_ms(), Ordering::Relaxed);
+        }
+    }
+}
+
+#[tauri::command]
+pub fn tray_hide(app: AppHandle) {
+    if let Some(w) = app.get_webview_window(PANEL_LABEL) {
+        let _ = w.hide();
+    }
+}
+
+#[tauri::command]
+pub fn tray_open_main(app: AppHandle) {
+    tray_hide(app.clone());
+    show_main(&app);
+}
+
+#[tauri::command]
+pub fn tray_quit(app: AppHandle) {
+    app.exit(0);
 }
 
 /// Rebuilds the tray menu with the current profile list (called by the UI whenever profiles change).

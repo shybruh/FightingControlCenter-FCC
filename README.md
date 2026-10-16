@@ -6,7 +6,7 @@
 
 <img src="docs/screenshots/lighting.png" alt="Lighting page with a live wave effect preview" width="820">
 
-Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles
+Rapid trigger · Live key travel · Lighting · Remapping · Advanced keys · Macros · Profiles · Themes
 
 [Download](../../releases/latest) · [Supported keyboards](#supported-keyboards) · [Report your keyboard](#report-your-keyboard) · [Build from source](#build-from-source)
 
@@ -24,7 +24,11 @@ maker's own protocol (reverse-engineered and documented in [docs/](docs/)), and 
 - **Lighting** with a live on-screen preview, per-key painting and 28 built-in designs.
 - **Share codes**: lighting and rapid-trigger setups as one line of text that works on other keyboards too.
 - **Remapping and macros**: keys, combos, media and mouse buttons; macros recorded with real delays and editable.
-- Tray icon, start with Windows, automatic updates. Windows app (~2 MB) or a web version for Chrome / Edge.
+- **Themes**: Dark, Light, OLED, Midnight, Mocha, Matcha, Sakura or System, any accent colour, and a compact mode for
+  laptop screens.
+- **A tray panel** for profiles, effect, brightness and lights on / off without opening the window, and lights off at
+  night on a schedule.
+- Start with Windows, automatic updates. Windows app (~2 MB) or a web version for Chrome / Edge.
 
 <table>
   <tr>

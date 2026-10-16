@@ -11,6 +11,8 @@ import { hidFromCode } from '../data/keycodes'
 import { KEYS, LAYOUT_HEIGHT, LAYOUT_WIDTH } from '../data/layout'
 import { COLOR_PRESETS, presetColors, type ColorPreset } from '../lighting/presets'
 import { REACTIVE, renderEffect, rgbCss, type PressEvent, type RGB } from '../lighting/preview'
+import { inSchedule, useSchedule } from '../lighting/schedule'
+import { isTauri } from '../desktop/env'
 import { useStore } from '../store'
 import { Keyboard, SelectionBar } from './Keyboard'
 import { Field, Segmented, Slider } from './ui'
@@ -105,6 +107,7 @@ export function LightingPanel() {
   const effect = EFFECTS.find((e) => e.id === led.effect)
   const custom = led.effect === CUSTOM_EFFECT
   const set = (patch: Partial<Led>) => update('led', encodeLed(regions.led, { ...led, ...patch }))
+  const lightsOff = useStore((s) => s.lightsOff)
   const paintKeys = (ids: number[], color: string) => ids.length && update('colors', withColor(regions.colors, ids, rgb(color)))
 
   const applyDesign = (p: ColorPreset) =>
@@ -117,7 +120,10 @@ export function LightingPanel() {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="lg:col-span-2">
         <CardContent className="flex flex-col gap-3">
-          <LivePreview led={led} colors={regions.colors} selected={selected} onSelectionChange={setSelected} />
+          {/* dimmed while the lights are off for now: the keyboard is dark, the profile keeps this lighting */}
+          <div className={cn('transition-opacity', lightsOff && 'opacity-35')}>
+            <LivePreview led={led} colors={regions.colors} selected={selected} onSelectionChange={setSelected} />
+          </div>
           {custom ? (
             <SelectionBar selected={selected} onChange={setSelected} />
           ) : (
@@ -136,7 +142,8 @@ export function LightingPanel() {
             <Switch checked={on} onCheckedChange={(v) => set({ effect: v ? lastEffect.current : 0 })} aria-label="Lighting" />
           </CardAction>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-3">
+          <LightsOffNotice />
           <div className={cn('grid grid-cols-2 gap-1.5 sm:grid-cols-3', !on && 'pointer-events-none opacity-40')}>
             {EFFECTS.map((e) => (
               <Button
@@ -149,6 +156,7 @@ export function LightingPanel() {
               </Button>
             ))}
           </div>
+          {isTauri() && <NightSchedule />}
         </CardContent>
       </Card>
 
@@ -450,6 +458,39 @@ function ColorPicker({ value, onChange }: { value: string; onChange(hex: string)
         onChange={(e) => /^#[0-9a-f]{6}$/i.test(e.target.value) && onChange(e.target.value.toLowerCase())}
         spellCheck={false}
       />
+    </div>
+  )
+}
+
+/** While the lights are off for now (tray, night schedule): says so, and turns them back on. */
+function LightsOffNotice() {
+  const lightsOff = useStore((s) => s.lightsOff)
+  const setLightsOff = useStore((s) => s.setLightsOff)
+  const schedule = useSchedule()
+  if (!lightsOff) return null
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+      <span className="text-muted-foreground">
+        Lights are off for now{inSchedule(schedule) ? ` (night schedule, until ${schedule.to})` : ''}. Your lighting is kept.
+      </span>
+      <Button size="sm" variant="outline" onClick={() => setLightsOff(false)}>
+        Turn on
+      </Button>
+    </div>
+  )
+}
+
+/** One line: lights off between two times, every night (desktop app, while FCC runs). */
+function NightSchedule() {
+  const s = useSchedule()
+  const time = 'h-7 w-[5.5rem] rounded-md border bg-transparent px-1.5 text-sm tabular-nums disabled:opacity-50 dark:[color-scheme:dark]'
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t pt-3 text-sm">
+      <span className="mr-auto">Off at night</span>
+      <input type="time" aria-label="Lights off from" className={time} value={s.from} disabled={!s.enabled} onChange={(e) => s.set({ from: e.target.value })} />
+      <span className="text-muted-foreground">to</span>
+      <input type="time" aria-label="Lights on again at" className={time} value={s.to} disabled={!s.enabled} onChange={(e) => s.set({ to: e.target.value })} />
+      <Switch checked={s.enabled} onCheckedChange={(v) => s.set({ enabled: v })} aria-label="Turn the lights off at night" />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
+import { decodeLed, encodeLed } from './hid/codec'
 import { isTauri } from './hid/tauri'
 import type { DeviceIdentity } from './hid/transport'
 import { DEVICES, FIGHTING68, activateDevice, detect, deviceById, type DeviceDef } from './devices/registry'
@@ -61,6 +62,9 @@ interface State {
   deviceChoices: DeviceDef[] | null
   /** untested boards start read-only until the user allows changes */
   readOnly: boolean
+  /** lights turned off for now (tray, night schedule): the board shows "off", the profile keeps its lighting */
+  lightsOff: boolean
+  setLightsOff(off: boolean): void
 
   /** demo: true = demo Fighting68, a device id = demo of that model */
   connect(demo?: boolean | string): Promise<void>
@@ -99,6 +103,21 @@ interface State {
 const PROFILES_KEY = 'fcc.profiles.v1'
 const CHOICES_KEY = 'fcc.deviceChoices.v1'
 const ALLOWED_KEY = 'fcc.allowedDevices.v1'
+/** set while the board shows FCC's temporary "lights off", so reconnecting doesn't take it for the profile's */
+const LIGHTS_OFF_KEY = 'fcc.lightsOffApplied.v1'
+const lightsOffApplied = () => {
+  try {
+    return localStorage.getItem(LIGHTS_OFF_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+const markLightsOffApplied = (on: boolean) => {
+  try {
+    if (on) localStorage.setItem(LIGHTS_OFF_KEY, '1')
+    else localStorage.removeItem(LIGHTS_OFF_KEY)
+  } catch {}
+}
 
 /** Profiles are per keyboard model: key indices differ between boards. The Fighting68 keeps the original key. */
 /** where the connected board's profiles are stored; null in demo mode, whose profiles live in memory only */
@@ -211,11 +230,15 @@ export const useStore = create<State>((set, get) => {
     return p
   }
 
+  /** What a region looks like on the keyboard: with the lights off for now, the lighting goes out as "off". */
+  const onBoard = (region: RegionName, bytes: Uint8Array) =>
+    region === 'led' && get().lightsOff ? encodeLed(bytes, { ...decodeLed(bytes), effect: 0 }) : bytes
+
   const writeNow = async (region: RegionName) => {
     const { kb, regions } = get()
     if (!kb || !regions) return
     try {
-      await kb.writeRegion(region, regions[region])
+      await kb.writeRegion(region, onBoard(region, regions[region]))
       if (region === 'rt') await kb.commit()
     } catch (e) {
       log.error('write', `writing ${region} failed`, errorText(e))
@@ -239,8 +262,11 @@ export const useStore = create<State>((set, get) => {
   }
 
   const adoptKeyboard = (regions: RegionData) => {
-    // The keyboard is the source of truth: the active profile adopts whatever is on it.
+    // The keyboard is the source of truth: the active profile adopts whatever is on it. Except its lighting when FCC
+    // turned the lights off for now (tray, schedule): that "off" isn't the profile's, so the profile's lighting stays.
     let { profiles, activeProfileId } = get()
+    const keptLed = lightsOffApplied() ? profiles.find((p) => p.id === activeProfileId)?.data.led : undefined
+    if (keptLed) regions.led = Uint8Array.from(keptLed)
     if (!profiles.length) {
       const p: Profile = { id: uid(), name: 'Default', data: snapshot(regions), updatedAt: Date.now() }
       profiles = [p]
@@ -377,6 +403,11 @@ export const useStore = create<State>((set, get) => {
       status: 'ready',
       loadProgress: 1,
     })
+    // the board may still show an "off" from before (or should now): put the lighting it ought to show on it
+    if (lightsOffApplied() || get().lightsOff) {
+      markLightsOffApplied(get().lightsOff)
+      if (!get().readOnly) track(kb.writeRegion('led', onBoard('led', regions.led)).catch(() => undefined))
+    }
   }
 
   /** Blocks keyboard writes while read-only; returns true when blocked. */
@@ -402,6 +433,16 @@ export const useStore = create<State>((set, get) => {
     device: null,
     deviceChoices: null,
     readOnly: false,
+    lightsOff: false,
+
+    setLightsOff(off) {
+      if (get().lightsOff === off) return
+      set({ lightsOff: off })
+      markLightsOffApplied(off)
+      log.info('lighting', off ? 'lights off for now (the profile keeps its lighting)' : 'lights back on')
+      const { kb, regions } = get()
+      if (kb && regions && !get().readOnly) track(kb.writeRegion('led', onBoard('led', regions.led)).catch((e) => log.error('write', 'lighting failed', errorText(e))))
+    },
 
     async connect(demo = false) {
       log.info('connect', demo ? `demo: ${demo === true ? 'Fighting68' : demo}` : 'connect requested')
@@ -561,7 +602,7 @@ export const useStore = create<State>((set, get) => {
           try {
             // Only rewrite regions that actually differ: much faster, and less wear on the keyboard.
             const changed = PROFILE_REGIONS.filter((r) => !sameBytes(current[r], next[r]))
-            for (const r of changed) await kb.writeRegion(r, next[r])
+            for (const r of changed) await kb.writeRegion(r, onBoard(r, next[r]))
             if (changed.length) await kb.commit()
             get().showToast(`Switched to “${p.name}”`)
           } catch (e) {
@@ -661,7 +702,7 @@ export const useStore = create<State>((set, get) => {
       await get().flush()
       const job = (async () => {
         try {
-          for (const r of PROFILE_REGIONS) await kb.writeRegion(r, regions[r])
+          for (const r of PROFILE_REGIONS) await kb.writeRegion(r, onBoard(r, regions[r]))
           await kb.commit()
           get().showToast('Profile written to the keyboard')
         } catch (e) {

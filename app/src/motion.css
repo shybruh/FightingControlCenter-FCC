@@ -135,7 +135,10 @@
 /* On-screen popup (overlay window): in, hold, out within the window's ~1.9 s lifetime. */
 html.osd,
 html.osd body,
-html.osd #root {
+html.osd #root,
+html.traypanel,
+html.traypanel body,
+html.traypanel #root {
   background: transparent !important;
   overflow: hidden;
 }
@@ -165,6 +168,17 @@ html.osd #root {
   .osd-card {
     animation: none !important;
   }
+}
+
+/* Tray panel (window by the tray icon): slides up a little each time it opens. */
+@keyframes fcc-tray {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+html.traypanel .tray-card {
+  animation: fcc-tray 180ms var(--ease-out) both;
 }
 
 /* ---------- scrolling ---------- */

@@ -1,11 +1,14 @@
 // Wires the desktop shell (tray, global hotkeys, foreground watcher) to profile switching.
 import { useEffect, useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { listen } from '@tauri-apps/api/event'
+import { emitTo, listen } from '@tauri-apps/api/event'
 import { register, unregisterAll } from '@tauri-apps/plugin-global-shortcut'
 import { create } from 'zustand'
 import { isTauri } from '../hid/tauri'
+import { EFFECTS, decodeLed, encodeLed } from '../hid/codec'
+import { inSchedule, useSchedule } from '../lighting/schedule'
 import { useStore } from '../store'
+import { useTheme } from '../theme'
 import { prettyHotkey, profileHotkey, useDesktop, type GameRule } from './settings'
 
 interface FocusedApp {
@@ -48,6 +51,25 @@ export function useDesktopIntegration() {
   const status = useStore((s) => s.status)
   const d = useDesktop()
   const recording = useDesktopStatus((s) => s.recording)
+
+  // ---- night schedule: lights off between two times ----
+  const schedule = useSchedule()
+  useEffect(() => {
+    if (!isTauri()) return
+    // acts on changes only (entering or leaving the period), so turning the lights on by hand holds until the next start
+    let was: boolean | null = null
+    const tick = () => {
+      const now = inSchedule(useSchedule.getState())
+      if (now !== was) useStore.getState().setLightsOff(now)
+      was = now
+    }
+    tick()
+    const t = setInterval(tick, 30_000)
+    return () => clearInterval(t)
+  }, [schedule.enabled, schedule.from, schedule.to])
+
+  // ---- tray panel (a small window by the tray icon): mirror the state to it, apply what it asks ----
+  useTrayPanelBridge()
 
   // ---- tray menu mirrors the profile list ----
   useEffect(() => {
@@ -216,4 +238,90 @@ async function switchAndNotify(profileId: string, reason: string) {
   const index = profiles.findIndex((p) => p.id === activeProfileId)
   if (index < 0) return
   invoke('show_osd', { title: profiles[index].name, subtitle: reason, index: index + 1, position: osdPosition }).catch(() => undefined)
+}
+
+/** What the tray panel shows (see TrayPanel.tsx). */
+export interface TrayState {
+  connected: boolean
+  keyboard: string | null
+  profiles: { id: string; name: string }[]
+  active: string | null
+  lightsOff: boolean
+  /** lighting can be changed (connected and not read-only) */
+  canLight: boolean
+  effects: { id: number; name: string }[]
+  effect: number
+  brightness: number
+  theme: string
+  accent: string
+}
+
+export type TrayAction =
+  | { kind: 'hello' }
+  | { kind: 'profile'; id: string }
+  | { kind: 'effect'; id: number }
+  | { kind: 'brightness'; value: number }
+  | { kind: 'lights'; on: boolean }
+
+function trayState(): TrayState {
+  const s = useStore.getState()
+  const t = useTheme.getState()
+  const led = s.regions ? decodeLed(s.regions.led) : null
+  return {
+    connected: s.status === 'ready',
+    keyboard: s.device?.name ?? s.kb?.name ?? null,
+    profiles: s.status === 'ready' ? s.profiles.map((p) => ({ id: p.id, name: p.name })) : [],
+    active: s.activeProfileId,
+    lightsOff: s.lightsOff,
+    canLight: s.status === 'ready' && !s.readOnly && !!led,
+    effects: EFFECTS.filter((e) => e.id !== 0).map((e) => ({ id: e.id, name: e.name })),
+    effect: led?.effect ?? 0,
+    brightness: led?.brightness ?? 5,
+    theme: t.theme,
+    accent: t.accent,
+  }
+}
+
+function useTrayPanelBridge() {
+  useEffect(() => {
+    if (!isTauri()) return
+    let last = ''
+    const push = () => {
+      const state = trayState()
+      const json = JSON.stringify(state)
+      if (json === last) return
+      last = json
+      emitTo('traypanel', 'tray-state', state).catch(() => undefined)
+    }
+    const offStore = useStore.subscribe(push)
+    const offTheme = useTheme.subscribe(push)
+    const off = listen<TrayAction>('tray-action', ({ payload: a }) => {
+      const s = useStore.getState()
+      if (a.kind === 'hello') {
+        last = ''
+        push()
+      } else if (a.kind === 'profile') void s.activateProfile(a.id)
+      else if (a.kind === 'lights') {
+        // "on" means lit: lift a temporary off, and if the profile's own effect is off, pick the first one
+        if (!a.on) s.setLightsOff(true)
+        else {
+          s.setLightsOff(false)
+          if (s.regions && decodeLed(s.regions.led).effect === 0 && EFFECTS[0]) {
+            s.update('led', encodeLed(s.regions.led, { ...decodeLed(s.regions.led), effect: EFFECTS.find((e) => e.id !== 0)!.id }))
+          }
+        }
+      }
+      else if (s.regions && (a.kind === 'effect' || a.kind === 'brightness')) {
+        const led = decodeLed(s.regions.led)
+        const next = a.kind === 'effect' ? { ...led, effect: a.id } : { ...led, brightness: Math.min(5, Math.max(1, Math.round(a.value))) }
+        s.update('led', encodeLed(s.regions.led, next))
+      }
+    })
+    push()
+    return () => {
+      offStore()
+      offTheme()
+      void off.then((u) => u())
+    }
+  }, [])
 }

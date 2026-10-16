@@ -145,6 +145,8 @@ export function applyTheme(id: string, accent = readAccent()) {
   if (isTauri()) {
     void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const w = getCurrentWindow()
+      // only the main window has a title bar; on a frameless one (tray panel) this would draw one
+      if (w.label !== 'main') return
       w.setTheme(dark ? 'dark' : 'light').catch(() => undefined)
       // what shows for a moment while the window resizes
       const bg = getComputedStyle(root).getPropertyValue('--background').trim()

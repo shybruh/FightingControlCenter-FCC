@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { FlagIcon, KeyboardIcon, LayersIcon, ShieldCheckIcon, type LucideIcon } from 'lucide-react'
+import { FlagIcon, KeyboardIcon, LayersIcon, PaletteIcon, ShieldCheckIcon, type LucideIcon } from 'lucide-react'
+import { AccentPicker, ThemeTiles } from './Appearance'
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -110,6 +111,18 @@ export function Onboarding({ pages }: { pages: TourPage[] }) {
             </li>
           ))}
         </ul>
+      ),
+    },
+    {
+      id: 'look',
+      icon: PaletteIcon,
+      title: 'Pick your look',
+      body: (
+        <div className="flex flex-col gap-3">
+          <p>Themes and an accent colour, changed any time in Settings → Appearance.</p>
+          <ThemeTiles className="sm:grid-cols-4" />
+          <AccentPicker />
+        </div>
       ),
     },
     {
