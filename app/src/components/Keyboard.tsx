@@ -67,6 +67,8 @@ export function Keyboard({ selected, onSelectionChange, face, single, onKeyClick
   return (
     <div
       className="kb-wrap"
+      // the board's width in keys, for compact mode's size cap (keyboard.css)
+      style={{ '--cols': LAYOUT_WIDTH } as CSSProperties}
       onPointerUp={() => (dragging.current = null)}
       onPointerLeave={() => (dragging.current = null)}
     >

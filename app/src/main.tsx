@@ -7,7 +7,7 @@ import { Osd } from './desktop/Osd'
 import { hideBrowserChrome } from './desktop/browserChrome'
 import { isTauri } from './desktop/env'
 import { restoreSettings } from './desktop/settingsFile'
-import { applyTheme, startTheme, useTheme } from './theme'
+import { applyDensity, applyTheme, startTheme, useTheme } from './theme'
 
 // The desktop build loads this bundle twice: the main window and the on-screen popup overlay.
 const isOsd = new URLSearchParams(location.search).has('osd')
@@ -19,7 +19,10 @@ if (isTauri()) {
 }
 
 // the theme as last saved here, before anything paints (the popup overlay stays dark)
-if (!isOsd) applyTheme(useTheme.getState().theme)
+if (!isOsd) {
+  applyTheme(useTheme.getState().theme)
+  applyDensity(useTheme.getState().density)
+}
 
 const root = createRoot(document.getElementById('root')!)
 if (isOsd) {

@@ -80,6 +80,30 @@ export function accentColors(accent: string, dark: boolean): [string, string] | 
 const ACCENT_VARS = ['--primary', '--sidebar-primary', '--ring', '--sidebar-ring'] as const
 const ACCENT_TEXT_VARS = ['--primary-foreground', '--sidebar-primary-foreground'] as const
 
+/** Density: Compact shrinks text, spacing and the keyboard for laptop screens; Auto picks it for small windows. */
+export const DENSITIES = [
+  { id: 'auto', label: 'Auto' },
+  { id: 'comfortable', label: 'Comfortable' },
+  { id: 'compact', label: 'Compact' },
+] as const
+export type Density = (typeof DENSITIES)[number]['id']
+const DENSITY_KEY = 'fcc.density.v1'
+/** a window smaller than this is a laptop screen (or a small window): Auto goes compact */
+const small = () => typeof window !== 'undefined' && (window.innerHeight < 820 || window.innerWidth < 1200)
+
+function readDensity(): Density {
+  try {
+    const v = localStorage.getItem(DENSITY_KEY)
+    if (v && DENSITIES.some((d) => d.id === v)) return v as Density
+  } catch {}
+  return 'auto'
+}
+
+/** Puts the density on the page (html.compact, see index.css and keyboard.css). */
+export function applyDensity(d: Density) {
+  document.documentElement.classList.toggle('compact', d === 'compact' || (d === 'auto' && small()))
+}
+
 const KEY = 'fcc.theme.v1'
 const ACCENT_KEY = 'fcc.accent.v1'
 
@@ -139,9 +163,24 @@ function cssToRgb(css: string): [number, number, number] {
   return [r, g, b]
 }
 
-export const useTheme = create<{ theme: string; accent: string; set(id: string): void; setAccent(accent: string): void }>((set, get) => ({
+export const useTheme = create<{
+  theme: string
+  accent: string
+  density: Density
+  set(id: string): void
+  setAccent(accent: string): void
+  setDensity(d: Density): void
+}>((set, get) => ({
   theme: read(),
   accent: readAccent(),
+  density: readDensity(),
+  setDensity(d) {
+    try {
+      localStorage.setItem(DENSITY_KEY, d)
+    } catch {}
+    set({ density: d })
+    applyDensity(d)
+  },
   set(id) {
     try {
       localStorage.setItem(KEY, id)
@@ -160,8 +199,13 @@ export const useTheme = create<{ theme: string; accent: string; set(id: string):
 
 /** Applies the saved theme now, and again whenever Windows switches between light and dark ("System"). */
 export function startTheme() {
-  useTheme.setState({ theme: read(), accent: readAccent() })
+  useTheme.setState({ theme: read(), accent: readAccent(), density: readDensity() })
   applyTheme(read(), readAccent())
+  applyDensity(readDensity())
+  // Auto follows the window as it's resized
+  window.addEventListener('resize', () => {
+    if (useTheme.getState().density === 'auto') applyDensity('auto')
+  })
   if (typeof matchMedia !== 'undefined') {
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (useTheme.getState().theme === 'system') applyTheme('system', useTheme.getState().accent)

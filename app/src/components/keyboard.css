@@ -6,6 +6,11 @@
   touch-action: none;
   user-select: none;
 }
+/* compact density: keys at most ~3.25 rem wide, so the board and the cards under it fit a laptop screen */
+.compact .kb-wrap {
+  max-width: calc(var(--cols) * 3.25rem);
+  margin-inline: auto;
+}
 .kb {
   --u: calc(100cqw / var(--cols));
   position: relative;

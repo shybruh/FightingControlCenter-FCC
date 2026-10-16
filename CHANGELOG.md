@@ -9,6 +9,8 @@
   light ones, so text on them stays readable) or any colour from the colour picker.
   A custom colour the theme's background would swallow (near-white on Light, near-black on OLED) is shaded just enough
   to stay visible.
+- **Compact mode** for laptops (Settings → Appearance → Density): smaller text, spacing and keys, so a page fits a
+  1366 × 768 screen without scrolling. *Auto*, the default, uses it whenever the window is small.
 
 ## 0.3.8
 

@@ -134,3 +134,9 @@
     height: 100%;
   }
 }
+
+/* Compact density (laptops): everything sized in rem shrinks with the root size; the keyboard has its own cap in
+   keyboard.css. The on-screen popup keeps its size. */
+html.compact:not(.osd) {
+    font-size: 14px;
+}
