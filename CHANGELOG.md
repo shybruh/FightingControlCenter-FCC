@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- **Key test** left the sidebar: it's a check, not a setting. Open it with **Test keys** on the Keyboard page.
+- **Paste share code** and **Import file** moved into the **+** next to Profiles, with New profile.
+
+### Fixes
+- **Small memory leaks fixed.** Unplugging a keyboard left its connection's listeners behind (one set per unplug), and
+  a board that kept failing to load leaked one connection per auto-connect retry (every 2 s). Each connection is now
+  closed properly whichever way it ends.
+
 ## 0.3.7
 
 ### Keyboards
@@ -14,8 +25,6 @@
 - **Tidier pages.** *Settings* is now the app's own settings, at the foot of the sidebar: start with Windows, close to
   tray, updates, the settings folder, the intro and Diagnostics. The keyboard's options, model, backup and report moved
   to a **Keyboard** page, and hotkeys, game profiles and the switch popup to **Profile switching** (was *Desktop*).
-- **Key test** left the sidebar: it's a check, not a setting. Open it with **Test keys** on the Keyboard page.
-- **Paste share code** and **Import file** moved into the **+** next to Profiles, with New profile.
 
 ## 0.3.6
 
