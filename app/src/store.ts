@@ -156,7 +156,15 @@ function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null }
   if (!profilesKey) return { profiles: [], activeProfileId: null }
   try {
     const raw = localStorage.getItem(profilesKey)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      // saved data (and the settings file it comes from) can be damaged or hand-edited: keep only well-formed profiles
+      const v = JSON.parse(raw)
+      const profiles = Array.isArray(v?.profiles)
+        ? (v.profiles as Profile[]).filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && p.data && typeof p.data === 'object')
+        : []
+      const activeProfileId = typeof v?.activeProfileId === 'string' && profiles.some((p) => p.id === v.activeProfileId) ? v.activeProfileId : (profiles[0]?.id ?? null)
+      return { profiles, activeProfileId }
+    }
   } catch {
     /* ignore */
   }

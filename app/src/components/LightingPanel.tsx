@@ -58,7 +58,10 @@ function presetLed(p: SavedPreset, protocol: string | undefined): Uint8Array {
 
 function loadSaved(): SavedPreset[] {
   try {
-    return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]')
+    const v = JSON.parse(localStorage.getItem(SAVED_KEY) || '[]')
+    // whole and the right size: these bytes go to the keyboard when the preset is applied
+    const bytes = (a: unknown, n: number) => Array.isArray(a) && a.length === n && a.every((x) => Number.isInteger(x) && x >= 0 && x <= 255)
+    return Array.isArray(v) ? v.filter((p) => p && typeof p.id === 'string' && typeof p.name === 'string' && bytes(p.led, 16) && bytes(p.colors, 512)) : []
   } catch {
     return []
   }

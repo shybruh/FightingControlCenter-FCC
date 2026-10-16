@@ -51,7 +51,12 @@ const DEFAULTS: DesktopSettings = {
 
 function load(): DesktopSettings {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+    const v = { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+    // a damaged settings file must not break the app: lists and maps fall back when they aren't what they should be
+    if (!Array.isArray(v.rules)) v.rules = []
+    v.rules = v.rules.filter((r: GameRule) => r && typeof r.id === 'string' && typeof r.exe === 'string' && typeof r.profileId === 'string')
+    if (!v.profileHotkeys || typeof v.profileHotkeys !== 'object' || Array.isArray(v.profileHotkeys)) v.profileHotkeys = {}
+    return v
   } catch {
     return DEFAULTS
   }

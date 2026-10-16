@@ -156,7 +156,8 @@ const HIDDEN_KEY = 'fcc.supportHidden.v1'
 
 export function hiddenIds(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')
+    const v = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
   } catch {
     return []
   }
