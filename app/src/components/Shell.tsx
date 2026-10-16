@@ -98,6 +98,8 @@ const PAGES: Page[] = [
 ]
 
 const COLLAPSED_KEY = 'fcc.sidebar.collapsed'
+/** one sidebar row (h-8) plus the gap (gap-0.5), in rem so the sliding highlight still lines up in compact mode */
+const NAV_ROW_REM = 2.125
 /** In the desktop app the window frame already carries the name, so the in-page branding is web-only. */
 const WEB = !isTauri()
 
@@ -301,7 +303,7 @@ function Sidebar({
         <div
           aria-hidden
           className="nav-indicator absolute top-1 right-0 left-0 h-8 rounded-md bg-sidebar-accent"
-          style={{ transform: `translateY(${Math.max(0, top.findIndex((p) => p.id === page)) * 34}px)`, opacity: top.some((p) => p.id === page) ? 1 : 0 }}
+          style={{ transform: `translateY(${Math.max(0, top.findIndex((p) => p.id === page)) * NAV_ROW_REM}rem)`, opacity: top.some((p) => p.id === page) ? 1 : 0 }}
         />
         {top.map((p) => (
           <RailItem key={p.id} plain collapsed={collapsed} label={p.label} active={page === p.id} onClick={() => setPage(p.id)}>
