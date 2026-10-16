@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.7
 
 ### Keyboards
 - **AJAZZ AK820 MAX HE** (`0c45:8033`) is **verified**: rapid trigger, lighting and the rest confirmed on real hardware.
