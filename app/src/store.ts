@@ -531,7 +531,10 @@ export const useStore = create<State>((set, get) => {
 
     updateMany(patch) {
       const { regions } = get()
-      if (!regions || blocked()) return
+      if (!regions) return
+      // an edit that changes nothing sends nothing: no write, no flash commit
+      patch = Object.fromEntries(Object.entries(patch).filter(([r, bytes]) => bytes && !sameBytes(regions[r as RegionName], bytes)))
+      if (!Object.keys(patch).length || blocked()) return
       const next = { ...regions, ...patch }
       set({ regions: next })
       const names = Object.keys(patch) as RegionName[]

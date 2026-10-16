@@ -44,7 +44,9 @@ export function Slider({
       }}
       onValueCommitted={(v) => {
         setDragging(false)
-        if (num(v) !== value) onChange(num(v))
+        // always reported, even at the value it shows: on a mixed selection that value is only the most common one,
+        // and setting it is how the rest are brought in line (the store skips edits that change nothing)
+        onChange(num(v))
       }}
     />
   )
