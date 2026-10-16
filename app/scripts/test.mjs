@@ -480,6 +480,34 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   )
 }
 
+// ---- calibration mode never runs unless FCC asked for it ----
+{
+  const { Keyboard } = await vite.ssrLoadModule('/src/hid/device.ts')
+  const { MockTransport } = await vite.ssrLoadModule('/src/hid/mock.ts')
+  const P = await vite.ssrLoadModule('/src/hid/protocol.ts')
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+  const mock = new MockTransport()
+  const sent = []
+  const send = mock.send.bind(mock)
+  mock.send = (p) => (sent.push(p[1]), send(p))
+  const kb = new Keyboard(mock)
+  const travel = []
+  kb.sensor.on((e) => travel.push(e))
+  // the board is put in calibration mode behind FCC's back (an earlier session, a crash): FCC ends it
+  await send(P.buildCommand(P.Cmd.CalibrationStart))
+  await wait(120)
+  check('a calibration stream FCC did not start is ended, and none of it is shown as key travel', [sent.includes(P.Cmd.CalibrationEnd), travel.length], [true, 0])
+  // FCC's own live travel still works, and ending it sends exactly what it should
+  sent.length = 0
+  await kb.command(P.Cmd.CalibrationStart)
+  await wait(120)
+  const seen = travel.length
+  await kb.command(P.Cmd.CalibrationEnd)
+  await wait(200)
+  check('live travel FCC started streams, and is ended once (no stray-stop for its own trailing packets)', [seen > 0, sent.filter((c) => c === P.Cmd.CalibrationEnd).length], [true, 1])
+  await kb.close()
+}
+
 // ---- accent colours stay visible on every theme ----
 {
   const T = await vite.ssrLoadModule('/src/theme.ts')

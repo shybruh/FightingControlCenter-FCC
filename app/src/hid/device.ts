@@ -10,6 +10,7 @@ import {
   type ParsedReply,
   type RegionName,
 } from './protocol'
+import { log } from '../diag/log'
 import { Emitter, type DeviceIdentity, type Transport } from './transport'
 
 export type RegionData = Record<RegionName, Uint8Array>
@@ -80,9 +81,25 @@ export class Keyboard implements KeyboardDriver {
     return this.transport.name
   }
 
+  /** FCC asked for calibration mode (live key travel) and hasn't ended it */
+  private calibrating = false
+  private strayStopped = 0
+  private endedAt = 0
+
   private handleReport(raw: Uint8Array) {
     const reply = parseReply(raw)
     if (reply.cmd === Cmd.EventCalibration) {
+      // a calibration stream FCC didn't start (left running by an earlier session, a crash, another app): the board
+      // re-learns keys from every press while it's on, so stop it (at most once every few seconds)
+      if (!this.calibrating) {
+        // packets already on their way when FCC itself ended it aren't stray
+        if (performance.now() - this.strayStopped > 3000 && performance.now() - this.endedAt > 1500) {
+          this.strayStopped = performance.now()
+          log.warn('sonix', 'the keyboard was in calibration mode without FCC asking: ending it')
+          void this.transport.send(buildCommand(Cmd.CalibrationEnd)).catch(() => undefined)
+        }
+        return
+      }
       this.sensor.emit({
         key: raw[2],
         state: raw[3],
@@ -184,6 +201,11 @@ export class Keyboard implements KeyboardDriver {
 
   /** Fire-and-forget single command (calibration, monitor toggles, reset). */
   command(cmd: number, args: number[] = []) {
+    if (cmd === Cmd.CalibrationStart) this.calibrating = true
+    if (cmd === Cmd.CalibrationEnd) {
+      this.calibrating = false
+      this.endedAt = performance.now()
+    }
     return this.run(() => this.transport.send(buildCommand(cmd, args)))
   }
 

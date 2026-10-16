@@ -134,6 +134,12 @@ pub fn run() {
       }
       Ok(())
     })
-    .run(tauri::generate_context!())
-    .expect("error while building tauri application");
+    .build(tauri::generate_context!())
+    .expect("error while building tauri application")
+    .run(|app, event| {
+      // however FCC quits (tray, menu, update), the keyboard is left out of calibration mode
+      if let tauri::RunEvent::Exit = event {
+        hid::finish(&app.state::<hid::HidState>());
+      }
+    });
 }

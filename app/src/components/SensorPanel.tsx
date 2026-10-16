@@ -24,6 +24,8 @@ const BOTTOM_RATIO = 0.9
 const FRAME_MS = 33
 
 const mm = (v: number) => (v / 100).toFixed(2)
+/** live travel (calibration mode) stops by itself after this long without a key moving */
+const IDLE_STOP_MS = 2 * 60_000
 
 /**
  * Live key travel. The firmware only streams sensor data in calibration mode, so this
@@ -59,10 +61,17 @@ export function SensorPanel() {
       })
       if (e.travel > 20 && (!prev || Math.abs(e.travel - prev.travel) > 2)) lastMoved.current = { id: e.key, at: performance.now() }
     })
+    const started = performance.now()
     const timer = setInterval(() => {
       setSnap(new Map(live.current))
       if (lastMoved.current) setFocus(lastMoved.current.id)
+      // calibration mode must not outlive its use: the board keeps re-learning every key from normal typing while
+      // it's on. Stop after a while with no key moving.
+      if (performance.now() - (lastMoved.current?.at ?? started) > IDLE_STOP_MS) setActive(false)
     }, FRAME_MS)
+    // ... and as soon as FCC is hidden (closed to the tray, minimised): nobody's watching, and games would run on it
+    const hidden = () => document.visibilityState === 'hidden' && setActive(false)
+    document.addEventListener('visibilitychange', hidden)
     const block = (ev: KeyboardEvent) => ev.preventDefault()
     window.addEventListener('keydown', block, true)
     const leave = () => kb.command(Cmd.CalibrationEnd)
@@ -73,6 +82,7 @@ export function SensorPanel() {
       clearInterval(timer)
       window.removeEventListener('keydown', block, true)
       window.removeEventListener('pagehide', leave)
+      document.removeEventListener('visibilitychange', hidden)
       kb.command(Cmd.CalibrationEnd)
     }
   }, [kb, active])

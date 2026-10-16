@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- **Keys dying, repeating or actuating wrong after a while (Fighting68 and other Sonix boards).** Live key travel runs
+  the keyboard in calibration mode, where it streams thousands of reports a second and re-learns every key's rest and
+  bottom-out from each press. It could stay on: with FCC closed to the tray while live travel ran, or after quitting
+  FCC during it. Now live travel stops when FCC is hidden or after 2 minutes without a key moving, quitting FCC ends
+  calibration first, and a calibration stream FCC didn't start (left by an earlier session or a crash) is stopped as
+  soon as FCC sees it.
+
 ## 0.3.10
 
 ### New

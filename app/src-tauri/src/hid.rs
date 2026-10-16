@@ -22,14 +22,31 @@ const REPORT_LEN: usize = 64;
 /// Reports are batched to keep IPC overhead low during the sensor stream.
 const BATCH_INTERVAL: Duration = Duration::from_millis(8);
 
+/// Calibration commands (Sonix protocol): start streams ~3.6k reports/s and re-learns each key's rest / bottom from
+/// every press until end; see docs/PROTOCOL.md.
+const MAGIC: u8 = 0xaa;
+const CALIBRATION_START: u8 = 0x64;
+const CALIBRATION_END: u8 = 0x65;
+
 struct Connection {
     writer: HidDevice,
     stop: Arc<AtomicBool>,
     reader: Option<JoinHandle<()>>,
+    /// the UI started calibration and hasn't ended it yet
+    calibrating: bool,
 }
 
 impl Connection {
     fn shutdown(&mut self) {
+        // never leave the board in calibration mode: it would keep streaming, and keep re-learning keys from normal
+        // typing and gaming (keys dying, repeating, wrong actuation), long after FCC is gone
+        if self.calibrating {
+            let mut out = [0u8; REPORT_LEN + 1];
+            out[1] = MAGIC;
+            out[2] = CALIBRATION_END;
+            let _ = self.writer.write(&out);
+            self.calibrating = false;
+        }
         self.stop.store(true, Ordering::Relaxed);
         if let Some(handle) = self.reader.take() {
             let _ = handle.join();
@@ -88,7 +105,7 @@ pub fn hid_open(app: AppHandle, state: State<HidState>, on_report: Channel<Invok
         std::thread::spawn(move || read_loop(reader_dev, stop, on_report, app))
     };
 
-    *slot = Some(Connection { writer, stop, reader: Some(reader) });
+    *slot = Some(Connection { writer, stop, reader: Some(reader), calibrating: false });
     Ok(device)
 }
 
@@ -130,11 +147,16 @@ pub fn hid_write(state: State<HidState>, data: Vec<u8>) -> Result<(), String> {
     if data.len() != REPORT_LEN {
         return Err(format!("report must be {REPORT_LEN} bytes, got {}", data.len()));
     }
-    let slot = state.0.lock().map_err(|e| e.to_string())?;
-    let conn = slot.as_ref().ok_or("Keyboard is not connected")?;
+    let mut slot = state.0.lock().map_err(|e| e.to_string())?;
+    let conn = slot.as_mut().ok_or("Keyboard is not connected")?;
     let mut out = [0u8; REPORT_LEN + 1];
     out[1..].copy_from_slice(&data);
     conn.writer.write(&out).map_err(|e| format!("Write failed: {e}"))?;
+    if data[0] == MAGIC && data[1] == CALIBRATION_START {
+        conn.calibrating = true;
+    } else if data[0] == MAGIC && data[1] == CALIBRATION_END {
+        conn.calibrating = false;
+    }
     Ok(())
 }
 
@@ -145,4 +167,13 @@ pub fn hid_close(state: State<HidState>) -> Result<(), String> {
         conn.shutdown();
     }
     Ok(())
+}
+
+/// FCC is exiting: closes the keyboard properly (ending calibration if it's running).
+pub fn finish(state: &HidState) {
+    if let Ok(mut slot) = state.0.lock() {
+        if let Some(mut conn) = slot.take() {
+            conn.shutdown();
+        }
+    }
 }
