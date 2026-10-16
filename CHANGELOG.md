@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.12
 
 ### Fixes
 - **Sonix boards (Fighting68 …): replies are matched by offset too.** A late reply after a retry could be taken for the
