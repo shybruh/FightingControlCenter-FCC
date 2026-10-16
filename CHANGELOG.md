@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.8
 
 ### Changed
 - **Key test** left the sidebar: it's a check, not a setting. Open it from the keyboard menu in the top bar (**Test keys**).
