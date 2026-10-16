@@ -5,6 +5,8 @@
 ### New
 - **Themes** (Settings → Appearance): Dark, Light, OLED (true black), Midnight, Mocha, Matcha and Sakura, or System to
   follow Windows' light / dark setting as it changes. The window's title bar follows the theme too.
+- **Accent colour** on top of any theme: the theme's own, eight presets (drawn brighter on dark themes and deeper on
+  light ones, so text on them stays readable) or any colour from the colour picker.
 
 ## 0.3.8
 

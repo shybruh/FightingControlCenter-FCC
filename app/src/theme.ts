@@ -24,7 +24,46 @@ export const THEMES: Theme[] = [
   { id: 'sakura', label: 'Sakura', dark: false, swatch: ['oklch(0.985 0.006 350)', 'oklch(0.955 0.012 350)', 'oklch(0.62 0.17 355)'] },
 ]
 
+/** Accent colours: a hue, drawn bright on dark themes and deeper on light ones so text on it stays readable. */
+export const ACCENTS: { id: string; label: string; hue: number; chroma: number }[] = [
+  { id: 'blue', label: 'Blue', hue: 255, chroma: 0.15 },
+  { id: 'violet', label: 'Violet', hue: 295, chroma: 0.17 },
+  { id: 'pink', label: 'Pink', hue: 350, chroma: 0.17 },
+  { id: 'red', label: 'Red', hue: 25, chroma: 0.18 },
+  { id: 'orange', label: 'Orange', hue: 50, chroma: 0.16 },
+  { id: 'amber', label: 'Amber', hue: 80, chroma: 0.15 },
+  { id: 'green', label: 'Green', hue: 150, chroma: 0.16 },
+  { id: 'teal', label: 'Teal', hue: 195, chroma: 0.12 },
+]
+
+/** The colours an accent paints with in a dark or light theme: [colour, text on it]. Custom: "#rrggbb" as picked. */
+export function accentColors(accent: string, dark: boolean): [string, string] | null {
+  if (/^#[0-9a-f]{6}$/i.test(accent)) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16) / 255)
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return [accent, lum > 0.55 ? 'oklch(0.18 0 0)' : 'oklch(0.99 0 0)']
+  }
+  const a = ACCENTS.find((x) => x.id === accent)
+  if (!a) return null
+  return dark
+    ? [`oklch(0.78 ${a.chroma} ${a.hue})`, `oklch(0.2 0.04 ${a.hue})`]
+    : [`oklch(0.56 ${a.chroma} ${a.hue})`, 'oklch(0.99 0 0)']
+}
+
+/** The tokens an accent takes over (everything else stays the theme's). */
+const ACCENT_VARS = ['--primary', '--sidebar-primary', '--ring', '--sidebar-ring'] as const
+const ACCENT_TEXT_VARS = ['--primary-foreground', '--sidebar-primary-foreground'] as const
+
 const KEY = 'fcc.theme.v1'
+const ACCENT_KEY = 'fcc.accent.v1'
+
+function readAccent(): string {
+  try {
+    const v = localStorage.getItem(ACCENT_KEY)
+    if (v && (ACCENTS.some((a) => a.id === v) || /^#[0-9a-f]{6}$/i.test(v))) return v
+  } catch {}
+  return 'default'
+}
 const systemDark = () => typeof matchMedia === 'undefined' || matchMedia('(prefers-color-scheme: dark)').matches
 
 function read(): string {
@@ -41,14 +80,18 @@ export function isDarkTheme(id: string) {
   return t.dark ?? systemDark()
 }
 
-/** Puts the theme on the page, and on the desktop window's title bar. */
-export function applyTheme(id: string) {
+/** Puts the theme (and the accent on top of it) on the page, and on the desktop window's title bar. */
+export function applyTheme(id: string, accent = readAccent()) {
   const dark = isDarkTheme(id)
   const root = document.documentElement
   root.classList.toggle('dark', dark)
   // System shows plain Light or Dark
   root.dataset.theme = id === 'system' ? (dark ? 'dark' : 'light') : id
   root.style.colorScheme = dark ? 'dark' : 'light'
+  // the accent overrides the theme's own highlight colour; "default" leaves it alone
+  const colors = accentColors(accent, dark)
+  for (const v of ACCENT_VARS) colors ? root.style.setProperty(v, colors[0]) : root.style.removeProperty(v)
+  for (const v of ACCENT_TEXT_VARS) colors ? root.style.setProperty(v, colors[1]) : root.style.removeProperty(v)
   if (isTauri()) {
     void import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
       const w = getCurrentWindow()
@@ -70,24 +113,32 @@ function cssToRgb(css: string): [number, number, number] {
   return [r, g, b]
 }
 
-export const useTheme = create<{ theme: string; set(id: string): void }>((set) => ({
+export const useTheme = create<{ theme: string; accent: string; set(id: string): void; setAccent(accent: string): void }>((set, get) => ({
   theme: read(),
+  accent: readAccent(),
   set(id) {
     try {
       localStorage.setItem(KEY, id)
     } catch {}
     set({ theme: id })
-    applyTheme(id)
+    applyTheme(id, get().accent)
+  },
+  setAccent(accent) {
+    try {
+      localStorage.setItem(ACCENT_KEY, accent)
+    } catch {}
+    set({ accent })
+    applyTheme(get().theme, accent)
   },
 }))
 
 /** Applies the saved theme now, and again whenever Windows switches between light and dark ("System"). */
 export function startTheme() {
-  useTheme.setState({ theme: read() })
-  applyTheme(read())
+  useTheme.setState({ theme: read(), accent: readAccent() })
+  applyTheme(read(), readAccent())
   if (typeof matchMedia !== 'undefined') {
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (useTheme.getState().theme === 'system') applyTheme('system')
+      if (useTheme.getState().theme === 'system') applyTheme('system', useTheme.getState().accent)
     })
   }
 }
