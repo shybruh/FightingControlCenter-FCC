@@ -260,15 +260,19 @@ export const useStore = create<State>((set, get) => {
     const id = 'kind' in source ? source.transport.identity : source.identity
     // RY boards say exactly which model they are
     let probe: RyProbe | undefined
-    if ('kind' in source && source.kind === 'ry') probe = await RyKeyboard.probe(source.transport)
-    else if (source instanceof RyKeyboard) probe = source.probe
-    if (probe) log.info('ry', `board reports model id ${probe.deviceId}, firmware 0x${probe.version.toString(16)}`)
     // so do Sinowealth 010c boards, which several brands share
     let swModel: number | null | undefined
-    if ('kind' in source && source.kind === 'sinowealth') {
-      swModel = await readModel(source.transport)
-      log.info('sinowealth', `board reports model 0x${(swModel ?? 0).toString(16).padStart(2, '0')}`)
+    try {
+      if ('kind' in source && source.kind === 'ry') probe = await RyKeyboard.probe(source.transport)
+      else if (source instanceof RyKeyboard) probe = source.probe
+      if ('kind' in source && source.kind === 'sinowealth') swModel = await readModel(source.transport)
+    } catch (e) {
+      // no driver owns the connection yet, so close it here (auto-connect retries every couple of seconds)
+      if ('kind' in source) await source.transport.close().catch(() => undefined)
+      throw e
     }
+    if (probe) log.info('ry', `board reports model id ${probe.deviceId}, firmware 0x${probe.version.toString(16)}`)
+    if (swModel !== undefined) log.info('sinowealth', `board reports model 0x${(swModel ?? 0).toString(16).padStart(2, '0')}`)
     const det = detect(id.vendorId, id.productId, id.productName, probe?.deviceId, swModel)
     const remembered = deviceById(readJson<Record<string, string>>(CHOICES_KEY, {})[identityKey(id)])
     // a Sinowealth board's own model answer decides, never a choice made by hand: frames only go to the model it says it is
@@ -338,6 +342,9 @@ export const useStore = create<State>((set, get) => {
       if (active) kb.seed(Object.fromEntries(PROFILE_REGIONS.map((r) => [r, Uint8Array.from(active.data[r])])))
     }
     kb.disconnected.on(() => {
+      // unplugged: release what the driver holds (its native listeners, timers, report subscriptions) before the
+      // next connection; without this every unplug left them behind
+      void kb.close().catch(() => undefined)
       if (get().kb === kb) {
         set({ kb: null, regions: null, status: 'idle', error: 'Keyboard disconnected.' })
       }
@@ -444,6 +451,8 @@ export const useStore = create<State>((set, get) => {
           // the handle is shared with any newer connection, so a late result is dropped, not closed
           if (opened && get().status === 'idle') await loadDevice(opened, false)
         } catch {
+          // a board that fails while loading is retried every couple of seconds: close each attempt's driver
+          await get().kb?.close().catch(() => undefined)
           set({ status: 'idle', kb: null })
         } finally {
           reconnecting = null
