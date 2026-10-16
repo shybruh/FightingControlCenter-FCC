@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.10
 
 ### New
 - **Tray panel**: click the tray icon for a small panel in FCC's look (your theme and accent): switch profiles, step
