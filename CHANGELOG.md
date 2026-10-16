@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.9
 
 ### New
 - **Themes** (Settings → Appearance): Dark, Light, OLED (true black), Midnight, Mocha, Matcha and Sakura, or System to
