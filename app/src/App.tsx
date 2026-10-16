@@ -17,8 +17,10 @@ import { Main } from './components/Shell'
 import { StatusDot } from './components/StatusDot'
 import { SupportRequestDialog, UnsupportedNotice, openSupportRequest } from './components/SupportRequest'
 import { WhatsNewDialog, useWhatsNewAfterUpdate } from './components/WhatsNew'
+import { isDarkTheme, useTheme } from './theme'
 
 export default function App() {
+  const theme = useTheme((s) => s.theme)
   const status = useStore((s) => s.status)
   const tryReconnect = useStore((s) => s.tryReconnect)
   useDesktopIntegration()
@@ -36,7 +38,7 @@ export default function App() {
       <Diagnostics />
       <SupportRequestDialog />
       <WhatsNewDialog />
-      <Toaster theme="dark" position="bottom-right" />
+      <Toaster theme={isDarkTheme(theme) ? 'dark' : 'light'} position="bottom-right" />
     </TooltipProvider>
   )
 }

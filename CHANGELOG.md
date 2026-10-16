@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Themes** (Settings → Appearance): Dark, Light, OLED (true black), Midnight, Mocha, Matcha and Sakura, or System to
+  follow Windows' light / dark setting as it changes. The window's title bar follows the theme too.
+
 ## 0.3.8
 
 ### Changed

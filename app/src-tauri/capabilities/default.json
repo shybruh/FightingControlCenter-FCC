@@ -8,6 +8,8 @@
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-set-theme",
+    "core:window:allow-set-background-color",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
     "global-shortcut:allow-unregister-all",
