@@ -15,6 +15,7 @@
   tray, updates, the settings folder, the intro and Diagnostics. The keyboard's options, model, backup and report moved
   to a **Keyboard** page, and hotkeys, game profiles and the switch popup to **Profile switching** (was *Desktop*).
 - **Key test** left the sidebar: it's a check, not a setting. Open it with **Test keys** on the Keyboard page.
+- **Paste share code** and **Import file** moved into the **+** next to Profiles, with New profile.
 
 ## 0.3.6
 

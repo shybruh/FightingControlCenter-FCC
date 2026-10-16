@@ -172,6 +172,12 @@ try {
   await page('Settings')
   await shot('11-app-settings.png')
 
+  if (process.env.SHOT_MENU) {
+    await evaluate(`document.querySelector('aside [aria-label="Add a profile"]').click(); await new Promise((r) => setTimeout(r, 600))`)
+    const { result } = await send('Page.captureScreenshot', { format: 'png' })
+    fs.writeFileSync(path.join(out, 'profile-menu.png'), Buffer.from(result.data, 'base64'))
+  }
+
   if (errors.length) console.log('page errors:', errors)
   ws.close()
 } finally {

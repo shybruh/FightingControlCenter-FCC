@@ -165,7 +165,7 @@ export async function decodeShareCode(text: string): Promise<SharedSettings> {
   const tries = candidates(text)
   if (!tries.length) {
     if (/fcc1-/i.test(text)) throw new Error('the code is damaged (unexpected characters)')
-    if (/"format"\s*:\s*"fcc-profile"/.test(text)) throw new Error("that's a profile file, not a share code: use Import profile in the sidebar")
+    if (/"format"\s*:\s*"fcc-profile"/.test(text)) throw new Error("that's a profile file, not a share code: use + → Import file… next to Profiles")
     throw new Error("that isn't an FCC share code (they start with FCC1-)")
   }
   let last: Error = new Error('the code is damaged or incomplete')

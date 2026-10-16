@@ -292,9 +292,25 @@ function Sidebar({
               <LayersIcon className="size-3.5" />
               Profiles
             </span>
-            <Button variant="ghost" size="icon-xs" title="New profile from current settings" onClick={() => createProfile(`Profile ${profiles.length + 1}`)}>
-              <PlusIcon />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" aria-label="Add a profile" />}>
+                <PlusIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => createProfile(`Profile ${profiles.length + 1}`)}>
+                  <PlusIcon />
+                  New profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={openPasteCode}>
+                  <PasteIcon />
+                  Paste share code…
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileRef.current?.click()}>
+                  <UploadIcon />
+                  Import file…
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 
@@ -381,18 +397,6 @@ function Sidebar({
           })}
         </ul>
 
-        {!collapsed && (
-          <>
-            <RailItem collapsed={false} label="Paste share code" className="text-muted-foreground" onClick={openPasteCode}>
-              <PasteIcon className="size-4 shrink-0" />
-              <span>Paste share code</span>
-            </RailItem>
-            <RailItem collapsed={false} label="Import profile" className="text-muted-foreground" onClick={() => fileRef.current?.click()}>
-              <UploadIcon className="size-4 shrink-0" />
-              <span>Import profile</span>
-            </RailItem>
-          </>
-        )}
         <ShareDialogs />
         <input
           ref={fileRef}
