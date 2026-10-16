@@ -53,7 +53,7 @@ copy keeps them. An empty `portable.txt` next to the exe keeps everything beside
 
 | | Boards | What works |
 |---|---|---|
-| ✅ Verified | **Fighting68 HE** (`0c45:8030`) | Everything, tested end to end |
+| ✅ Verified | **Fighting68 HE** (`0c45:8030`), **AJAZZ AK820 MAX HE** (`0c45:8033`) | Everything, tested end to end |
 | ⚠️ Untested | ~135 **Sonix** boards: AULA F65, Ajazz AK820 MAX, EWEADN BAT68, MCHOSE, Looting, Epomaker HE80, LEOBOG… | Everything; same firmware family as the Fighting68 |
 | ⚠️ Untested | ~285 **RongYuan RY5088** boards: MonsGeek FUN60 / FUN68 / M1 V5 HE, Akko MOD007B HE… | Everything, over MonsGeek's own protocol |
 | ⚠️ Untested | 28 **MCHOSE** boards: ACE 60 / 68 / 75, JET 75, ZERO 75X, MIX 87… | All but DKS, SOCD and live travel (for now) |

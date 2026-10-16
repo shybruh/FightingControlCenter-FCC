@@ -5,15 +5,16 @@ FCC talks to keyboards that use the Sonix-based HE firmware behind the VTER / dr
 It also supports some Royal Kludge boards over RK's own protocol and the Razer Huntsman V2 over Razer's; see
 [Royal Kludge](#royal-kludge) and [Razer](#razer) at the end.
 
-## Verified (1)
+## Verified (2)
 
 Tested end to end on real hardware.
 
 | Model | USB id | Travel | Rapid trigger |
 |---|---|---|---|
 | Fighting68 | `0c45:8030` | 3.30 mm | 0.08–2.40 mm |
+| AJAZZ AK820 MAX HE | `0c45:8033` | 3.30 mm | 0.01–3.30 mm |
 
-## Untested (135)
+## Untested (134)
 
 Wired boards that speak the same protocol. FCC detects them, reads and backs up their settings, and opens them **read-only** until you choose *Allow changes*. If yours works (or doesn't), send a report from the app (*Keyboard → Report this keyboard*) so it can be marked verified.
 
@@ -26,7 +27,6 @@ Wired boards that speak the same protocol. FCC detects them, reads and backs up 
 | A80RT | `0c45:80a2` | 3.30 mm | 0.01–3.30 mm |
 | A80RT U | `0c45:80a1` | 3.30 mm | 0.01–3.30 mm |
 | AJAZZ AK680 MAX | `0c45:80b2` | 3.40 mm | 0.01–3.40 mm |
-| AK820MAX | `0c45:8033` | 3.30 mm | 0.01–3.30 mm |
 | AK820MAX | `0c45:8044` | 3.30 mm | 0.01–3.30 mm |
 | AK820MAX | `0c45:8070` | 4.00 mm | 0.08–4.00 mm |
 | AK820MAX | `0c45:809b` | 3.30 mm | 0.01–3.30 mm |
