@@ -164,7 +164,10 @@ try {
   await shot('07-settings.png')
   await page('Profile switching')
   await shot('08-desktop.png')
-  await page('Key test')
+  // not in the sidebar: opened from the Keyboard page
+  await page('Keyboard')
+  await click('Test keys')
+  await wait(1000)
   await shot('09-keytest.png')
   await page('Settings')
   await shot('11-app-settings.png')

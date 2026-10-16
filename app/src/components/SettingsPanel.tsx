@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { DownloadIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, KeySquareIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +25,7 @@ import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
 import { ReportButton } from './ReportDialog'
+import { useNav } from './nav'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
@@ -93,6 +94,7 @@ function RkSettingsPanel() {
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
+            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -174,6 +176,7 @@ function RazerSettingsPanel() {
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
+            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -234,6 +237,7 @@ function SteelSeriesSettingsPanel() {
           </Stat>
           <Separator />
           <div className="flex flex-wrap gap-2">
+            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -270,6 +274,7 @@ function SinowealthSettingsPanel() {
           </Stat>
           <Separator />
           <div className="flex flex-wrap gap-2">
+            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -360,6 +365,7 @@ function DeviceCard({ children }: { children: ReactNode }) {
             <RefreshCwIcon data-icon="inline-start" />
             Re-read from keyboard
           </Button>
+          <TestKeysButton />
           <ReportButton variant="ghost" />
         </div>
       </CardContent>
@@ -547,5 +553,16 @@ function ModelPicker() {
         wrong; each model keeps its own profiles.
       </p>
     </div>
+  )
+}
+
+/** Opens the key test (it isn't in the sidebar: it's a check, not a setting). */
+function TestKeysButton() {
+  const go = useNav((s) => s.go)
+  return (
+    <Button variant="ghost" onClick={() => go('keytest')}>
+      <KeySquareIcon data-icon="inline-start" />
+      Test keys
+    </Button>
   )
 }

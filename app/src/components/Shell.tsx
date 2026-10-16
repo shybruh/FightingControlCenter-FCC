@@ -1,5 +1,6 @@
 import { Suspense, lazy, useRef, useState, type ReactNode } from 'react'
 import {
+  ArrowLeftIcon,
   GaugeIcon,
   KeyboardIcon,
   KeySquareIcon,
@@ -39,6 +40,7 @@ import { StatusDot } from './StatusDot'
 import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
 import { Onboarding } from './Onboarding'
 import { PasteIcon, ShareDialogs, openPasteCode, openShareCode } from './ShareDialogs'
+import { useNav } from './nav'
 
 // pages load separately so the start screen doesn't wait for them; they're fetched in the background shortly after
 // start-up, so opening one never shows a blank moment
@@ -72,6 +74,8 @@ interface Page {
   icon: LucideIcon
   /** shown at the foot of the sidebar instead of with the keyboard pages */
   bottom?: boolean
+  /** not in the sidebar: opened from a button on this page, with a way back to it */
+  parent?: string
   /** one line for the intro tour */
   blurb: string
   render(): ReactNode
@@ -83,7 +87,7 @@ const PAGES: Page[] = [
   { id: 'keymap', label: 'Keymap', icon: KeyboardIcon, needs: 'keymap', blurb: 'Remap keys, media keys and shortcuts', render: () => <KeymapPanel /> },
   { id: 'advanced', label: 'Advanced', icon: ZapIcon, needs: 'advancedKeys', blurb: 'DKS, mod-tap, toggle and SOCD', render: () => <AdvancedPanel /> },
   { id: 'macros', label: 'Macros', icon: ListVideoIcon, needs: 'macros', blurb: 'Record and edit macros', render: () => <MacroPanel /> },
-  { id: 'keytest', label: 'Key test', icon: KeySquareIcon, blurb: 'Check that every key and switch registers', render: () => <KeyTestPanel /> },
+  { id: 'keytest', label: 'Key test', icon: KeySquareIcon, parent: 'keyboard', blurb: 'Check that every key and switch registers (Keyboard → Test keys)', render: () => <KeyTestPanel /> },
   { id: 'keyboard', label: 'Keyboard', icon: SlidersHorizontalIcon, blurb: 'Keyboard options, model, backup and reports', render: () => <SettingsPanel /> },
   ...(isTauri() ? [{ id: 'switching', label: 'Profile switching', icon: RepeatIcon, blurb: 'Hotkeys and per-game profiles', render: () => <SwitchingPanel /> }] : []),
   { id: 'app', label: 'Settings', icon: SettingsIcon, bottom: true, blurb: isTauri() ? 'Start with Windows, tray, updates and help' : 'Intro and diagnostics', render: () => <AppSettingsPanel /> },
@@ -104,7 +108,7 @@ function readCollapsed() {
 export function Main() {
   const caps = useStore((s) => s.device?.caps)
   const pages = PAGES.filter((p) => !p.needs || caps?.[p.needs] !== false)
-  const [page, setPage] = useState(PAGES[0].id)
+  const { page, go: setPage } = useNav()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const current = pages.find((p) => p.id === page) ?? pages[0]
 
@@ -119,9 +123,9 @@ export function Main() {
 
   return (
     <div className="flex h-full">
-      <Sidebar pages={pages} page={current.id} setPage={setPage} collapsed={collapsed} onToggle={toggle} />
+      <Sidebar pages={pages} page={current.parent ?? current.id} setPage={setPage} collapsed={collapsed} onToggle={toggle} />
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <TopBar title={current.label} />
+        <TopBar title={current.label} back={current.parent ? pages.find((p) => p.id === current.parent) : undefined} onBack={() => current.parent && setPage(current.parent)} />
         <ReadOnlyBanner />
         <DeviceChoiceDialog />
       <Onboarding pages={pages} />
@@ -135,7 +139,7 @@ export function Main() {
   )
 }
 
-function TopBar({ title }: { title: string }) {
+function TopBar({ title, back, onBack }: { title: string; back?: Page; onBack(): void }) {
   const pending = useStore((s) => s.pendingWrites)
   const demo = useStore((s) => s.demo)
   const kbName = useStore((s) => s.device?.name ?? s.kb?.name)
@@ -145,7 +149,18 @@ function TopBar({ title }: { title: string }) {
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4 md:px-6">
-      <h1 className="text-sm font-medium">{title}</h1>
+      <div className="flex items-center gap-1">
+        {back && (
+          <>
+            <Button variant="ghost" size="sm" className="-ml-2 text-muted-foreground" onClick={onBack}>
+              <ArrowLeftIcon data-icon="inline-start" />
+              {back.label}
+            </Button>
+            <span className="text-muted-foreground">/</span>
+          </>
+        )}
+        <h1 className={cn('text-sm font-medium', back && 'pl-2')}>{title}</h1>
+      </div>
       <div className="flex items-center gap-3">
         <UpdateButton />
         <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
@@ -233,7 +248,7 @@ function Sidebar({
   const { activateProfile, createProfile, duplicateProfile, renameProfile, deleteProfile, exportProfile, importProfile } = useStore.getState()
   const [editing, setEditing] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const top = pages.filter((p) => !p.bottom)
+  const top = pages.filter((p) => !p.bottom && !p.parent)
 
   return (
     <aside
