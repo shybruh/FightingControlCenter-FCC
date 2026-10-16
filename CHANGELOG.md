@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.11
 
 ### Fixes
 - **Keys dying, repeating or actuating wrong after a while (Fighting68 and other Sonix boards).** Live key travel runs
