@@ -52,6 +52,7 @@ pub fn run() {
       desktop::tray_hide,
       desktop::tray_open_main,
       desktop::tray_quit,
+      desktop::quit_now,
       desktop::list_window_apps,
       desktop::running_exes,
       config::config_load,

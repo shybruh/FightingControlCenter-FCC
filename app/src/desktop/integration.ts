@@ -68,6 +68,16 @@ export function useDesktopIntegration() {
     return () => clearInterval(t)
   }, [schedule.enabled, schedule.from, schedule.to])
 
+  // ---- quitting (tray menu, tray panel): finish writes in progress first, then quit ----
+  useEffect(() => {
+    if (!isTauri()) return
+    const off = listen('quit-requested', async () => {
+      await Promise.race([useStore.getState().flush(), new Promise((r) => setTimeout(r, 2500))]).catch(() => undefined)
+      void invoke('quit_now')
+    })
+    return () => void off.then((u) => u())
+  }, [])
+
   // ---- tray panel (a small window by the tray icon): mirror the state to it, apply what it asks ----
   useTrayPanelBridge()
 

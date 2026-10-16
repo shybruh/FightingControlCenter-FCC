@@ -5,6 +5,7 @@ import './motion.css'
 import './themes.css'
 import { Osd } from './desktop/Osd'
 import { TrayPanel } from './desktop/TrayPanel'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { hideBrowserChrome } from './desktop/browserChrome'
 import { isTauri } from './desktop/env'
 import { restoreSettings } from './desktop/settingsFile'
@@ -50,7 +51,9 @@ if (isTray) {
     .then(({ default: App }) =>
       root.render(
         <StrictMode>
-          <App />
+          <ErrorBoundary where="app" full>
+            <App />
+          </ErrorBoundary>
         </StrictMode>,
       ),
     )

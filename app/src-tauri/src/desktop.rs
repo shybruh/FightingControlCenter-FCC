@@ -80,7 +80,7 @@ pub fn setup_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
             let id = event.id().as_ref();
             match id {
                 "show" => show_main(app),
-                "quit" => app.exit(0),
+                "quit" => request_quit(app),
                 _ => {
                     if let Some(profile) = id.strip_prefix("profile:") {
                         let _ = app.emit("tray-profile", profile.to_string());
@@ -164,6 +164,25 @@ pub fn tray_open_main(app: AppHandle) {
 
 #[tauri::command]
 pub fn tray_quit(app: AppHandle) {
+    request_quit(&app);
+}
+
+/// Quitting: the main window first finishes any write in progress (a region cut off halfway, with no commit, leaves the
+/// keyboard half old and half new), then calls `quit_now`. If it doesn't answer in a few seconds, FCC quits anyway.
+pub fn request_quit<R: Runtime>(app: &AppHandle<R>) {
+    if app.emit_to("main", "quit-requested", ()).is_err() {
+        app.exit(0);
+        return;
+    }
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(3));
+        handle.exit(0);
+    });
+}
+
+#[tauri::command]
+pub fn quit_now(app: AppHandle) {
     app.exit(0);
 }
 

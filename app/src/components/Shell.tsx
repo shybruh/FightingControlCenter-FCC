@@ -44,6 +44,7 @@ import { DeviceChoiceDialog, ReadOnlyBanner } from './DeviceGate'
 import { Onboarding } from './Onboarding'
 import { PasteIcon, ShareDialogs, openPasteCode, openShareCode } from './ShareDialogs'
 import { useNav } from './nav'
+import { ErrorBoundary } from './ErrorBoundary'
 
 // pages load separately so the start screen doesn't wait for them; they're fetched in the background shortly after
 // start-up, so opening one never shows a blank moment
@@ -134,7 +135,9 @@ export function Main() {
       <Onboarding pages={pages} />
         <PageScroll resetKey={current.id}>
           <div key={current.id} className="page-enter mx-auto w-full max-w-6xl p-4 pb-16 md:p-6 md:pb-16">
-            <Suspense fallback={null}>{current.render()}</Suspense>
+            <ErrorBoundary where={`page ${current.label}`} resetKey={current.id}>
+              <Suspense fallback={null}>{current.render()}</Suspense>
+            </ErrorBoundary>
           </div>
         </PageScroll>
       </main>

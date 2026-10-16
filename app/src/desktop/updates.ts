@@ -85,6 +85,8 @@ export async function installUpdate() {
   let total = 0
   let got = 0
   try {
+    // the installer closes FCC: finish any write to the keyboard first
+    await (await import('../store')).useStore.getState().flush().catch(() => undefined)
     await pending.downloadAndInstall((e) => {
       if (e.event === 'Started') total = e.data.contentLength ?? 0
       if (e.event === 'Progress') {
