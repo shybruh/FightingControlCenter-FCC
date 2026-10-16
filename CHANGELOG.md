@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Changed
-- **Key test** left the sidebar: it's a check, not a setting. Open it with **Test keys** on the Keyboard page.
+- **Key test** left the sidebar: it's a check, not a setting. Open it from the keyboard menu in the top bar (**Test keys**).
 - **Paste share code** and **Import file** moved into the **+** next to Profiles, with New profile.
 - **The keyboard's name in the top bar is a menu**: Test keys, Re-read from keyboard and Disconnect. The Keyboard
   page keeps its settings, the backup and the report.
