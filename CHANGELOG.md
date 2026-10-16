@@ -7,6 +7,8 @@
   follow Windows' light / dark setting as it changes. The window's title bar follows the theme too.
 - **Accent colour** on top of any theme: the theme's own, eight presets (drawn brighter on dark themes and deeper on
   light ones, so text on them stays readable) or any colour from the colour picker.
+  A custom colour the theme's background would swallow (near-white on Light, near-black on OLED) is shaded just enough
+  to stay visible.
 
 ## 0.3.8
 

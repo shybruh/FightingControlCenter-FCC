@@ -36,12 +36,38 @@ export const ACCENTS: { id: string; label: string; hue: number; chroma: number }
   { id: 'teal', label: 'Teal', hue: 195, chroma: 0.12 },
 ]
 
+type RGB = [number, number, number]
+
+/** WCAG relative luminance of an sRGB colour (0–255 channels). */
+function luminance([r, g, b]: RGB) {
+  const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+}
+
+/**
+ * A custom accent the theme's background would swallow (near-white on Light, near-black on OLED) is darkened or
+ * lightened just enough to stand out at 3:1, the usual minimum for controls; what was picked stays saved as it is.
+ */
+export function visibleOn(rgb: RGB, dark: boolean): RGB {
+  // the themes' backgrounds: about #0a0a0a or darker, about white
+  const bg = dark ? 0.004 : 0.97
+  const contrast = (c: RGB) => {
+    const l = luminance(c)
+    return (Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05)
+  }
+  let c = rgb
+  for (let step = 1; contrast(c) < 3 && step <= 20; step++) {
+    const t = step / 20
+    c = rgb.map((v) => Math.round(dark ? v + (255 - v) * t : v * (1 - t))) as RGB
+  }
+  return c
+}
+
 /** The colours an accent paints with in a dark or light theme: [colour, text on it]. Custom: "#rrggbb" as picked. */
 export function accentColors(accent: string, dark: boolean): [string, string] | null {
   if (/^#[0-9a-f]{6}$/i.test(accent)) {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16) / 255)
-    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-    return [accent, lum > 0.55 ? 'oklch(0.18 0 0)' : 'oklch(0.99 0 0)']
+    const rgb = visibleOn([1, 3, 5].map((i) => parseInt(accent.slice(i, i + 2), 16)) as RGB, dark)
+    return [`rgb(${rgb.join(' ')})`, luminance(rgb) > 0.4 ? 'oklch(0.18 0 0)' : 'oklch(0.99 0 0)']
   }
   const a = ACCENTS.find((x) => x.id === accent)
   if (!a) return null

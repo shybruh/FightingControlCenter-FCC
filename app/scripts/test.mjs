@@ -480,6 +480,14 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   )
 }
 
+// ---- accent colours stay visible on every theme ----
+{
+  const T = await vite.ssrLoadModule('/src/theme.ts')
+  check('accent: white on a light theme is darkened until it stands out', T.visibleOn([255, 255, 255], false).every((v) => v < 160), true)
+  check('accent: black on a dark theme is lightened until it stands out', T.visibleOn([0, 0, 0], true).every((v) => v > 80), true)
+  check('accent: a colour that already stands out is used exactly as picked', [T.visibleOn([37, 99, 235], false), T.visibleOn([37, 99, 235], true)], [[37, 99, 235], [37, 99, 235]])
+}
+
 await vite.close()
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

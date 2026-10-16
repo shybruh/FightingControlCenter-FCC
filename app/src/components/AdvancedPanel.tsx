@@ -433,7 +433,7 @@ function DksEditor({ slot, onChange }: { slot: DksSlot; onChange(s: DksSlot): vo
                 title={a === 'hold' ? 'Held until the next stage' : a === 'tap' ? 'Tapped at this stage' : 'No action'}
                 className={cn(
                   'relative mx-3 flex h-9 items-center justify-center rounded-md border text-sm transition-colors disabled:opacity-30',
-                  a === 'none' && 'border-dashed text-muted-foreground hover:bg-muted/50',
+                  a === 'none' && 'border-dashed border-foreground/20 text-muted-foreground hover:bg-muted/50',
                   a === 'tap' && 'border-primary text-foreground',
                   a === 'hold' && 'border-primary bg-primary',
                   // holds visually bridge into the next stage
