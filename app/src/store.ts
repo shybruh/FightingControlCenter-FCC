@@ -755,10 +755,19 @@ export const useStore = create<State>((set, get) => {
       const { kb } = get()
       if (!kb || blocked()) return
       await get().flush()
+      // after the reset the active profile takes on the keyboard's factory settings (the keyboard is the source of
+      // truth), so it's kept as a copy first: "profiles in this app are kept" holds for its settings too
+      const { profiles, activeProfileId } = get()
+      const active = profiles.find((p) => p.id === activeProfileId)
+      if (active) {
+        const copy: Profile = { ...structuredClone(active), id: uid(), name: `${active.name} (before reset)`.slice(0, 60), updatedAt: Date.now() }
+        set({ profiles: [...profiles, copy] })
+        saveProfiles(get().profiles, activeProfileId)
+      }
       await kb.command(Cmd.Reset, [ResetArg.FactoryAll])
       await new Promise((r) => setTimeout(r, 1500))
       await get().refresh()
-      get().showToast('Keyboard reset to factory settings')
+      get().showToast(active ? `Keyboard reset. Your settings are saved as “${active.name} (before reset)”.` : 'Keyboard reset to factory settings')
     },
 
     dismissError() {

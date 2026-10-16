@@ -376,8 +376,8 @@ function FactoryResetButton() {
         <AlertDialogHeader>
           <AlertDialogTitle>Factory reset the keyboard?</AlertDialogTitle>
           <AlertDialogDescription>
-            This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your profiles in this app stay, so you can
-            re-apply one afterwards.
+            This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your current settings are kept as a
+            copy of this profile (“… (before reset)”), so you can apply them again afterwards.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -43,7 +43,10 @@ pub(crate) fn feature_reports(desc: &[u8]) -> Vec<(u8, usize)> {
 /// `data` (report id + payload) laid out for a collection that declares `declared`: the payload cut or padded to the
 /// report's size, and the whole buffer as long as the collection's longest feature report (what Windows expects).
 pub(crate) fn sized_for(data: &[u8], declared: &[(u8, usize)]) -> Result<Vec<u8>, String> {
-    let id = data[0];
+    // an empty report from the UI is an error, not a crash of the whole app
+    let Some(&id) = data.first() else {
+        return Err("empty report".into());
+    };
     let list = || declared.iter().map(|(r, n)| format!("0x{r:02x}({n}B)")).collect::<Vec<_>>().join(", ");
     let Some(&(_, n)) = declared.iter().find(|(r, _)| *r == id) else {
         return Err(if declared.is_empty() {
