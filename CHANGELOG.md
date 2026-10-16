@@ -8,7 +8,8 @@
   bottom-out from each press. It could stay on: with FCC closed to the tray while live travel ran, or after quitting
   FCC during it. Now live travel stops when FCC is hidden or after 2 minutes without a key moving, quitting FCC ends
   calibration first, and a calibration stream FCC didn't start (left by an earlier session or a crash) is stopped as
-  soon as FCC sees it.
+  soon as FCC sees it. Replugging the keyboard no longer resumes live travel (it put the fresh board straight back
+  into calibration mode).
 
 ## 0.3.10
 

@@ -39,6 +39,13 @@ export function SensorPanel() {
   const calibrates = useStore((s) => s.device?.protocol !== 'ry')
   const rt = useStore((s) => s.regions!.rt)
   const [active, setActive] = useState(false)
+  // a new connection (replug, reconnect) never resumes live travel by itself: it would put the fresh board straight
+  // back into calibration mode
+  const [activeFor, setActiveFor] = useState(kb)
+  if (activeFor !== kb) {
+    setActiveFor(kb)
+    if (active) setActive(false)
+  }
   const [snap, setSnap] = useState<Map<number, KeyLive>>(new Map())
   const [focus, setFocus] = useState<number | null>(null)
   const [pinned, setPinned] = useState<number | null>(null)
