@@ -265,9 +265,7 @@ function GamesCard() {
       </CardHeader>
       <CardContent className={cn('flex flex-col gap-4', !d.rulesEnabled && 'opacity-50')}>
         {d.rules.length === 0 ? (
-          <p className="rounded-md border border-dashed py-6 text-center text-sm text-muted-foreground">
-            No games yet. Start your game, then add it here.
-          </p>
+          <p className="text-sm text-muted-foreground">No games yet. Start your game, then add it here.</p>
         ) : (
           <ul className="flex flex-col divide-y rounded-md border">
             {d.rules.map((r) => (
@@ -300,59 +298,63 @@ function GamesCard() {
 
         <AddGame onAdd={addRule} />
 
-        <div className="flex flex-col border-t pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Use the game profile</span>
-              <span className="text-xs text-muted-foreground">
-                {d.switchWhile === 'running' ? 'From launch until the game closes, even when you alt-tab.' : 'Only while the game window is focused.'}
-              </span>
+        {d.rules.length > 0 && (
+          <>
+            <div className="flex flex-col border-t pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">Use the game profile</span>
+                  <span className="text-xs text-muted-foreground">
+                    {d.switchWhile === 'running' ? 'From launch until the game closes, even when you alt-tab.' : 'Only while the game window is focused.'}
+                  </span>
+                </div>
+                <Segmented
+                  value={d.switchWhile}
+                  options={[
+                    { value: 'focused', label: 'While focused' },
+                    { value: 'running', label: 'While running' },
+                  ]}
+                  onChange={(v) => d.set({ switchWhile: v })}
+                />
+              </div>
+              {d.switchWhile === 'focused' && (
+                <SwitchRow
+                  label="Opening FCC counts as leaving the game"
+                  hint="Turn off to keep the game profile while you tweak it in FCC."
+                  checked={d.fccLeavesGame}
+                  onChange={(v) => d.set({ fccLeavesGame: v })}
+                />
+              )}
             </div>
-            <Segmented
-              value={d.switchWhile}
-              options={[
-                { value: 'focused', label: 'While focused' },
-                { value: 'running', label: 'While running' },
-              ]}
-              onChange={(v) => d.set({ switchWhile: v })}
-            />
-          </div>
-          {d.switchWhile === 'focused' && (
-            <SwitchRow
-              label="Opening FCC counts as leaving the game"
-              hint="Turn off to keep the game profile while you tweak it in FCC."
-              checked={d.fccLeavesGame}
-              onChange={(v) => d.set({ fccLeavesGame: v })}
-            />
-          )}
-        </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-          <span className="text-sm">{d.switchWhile === 'running' ? 'When the game closes' : 'When you leave the game'}</span>
-          <Select
-            items={revertItems}
-            value={revertValue}
-            onValueChange={(v) => {
-              const s = v as string
-              d.set({ revert: s.startsWith('profile:') ? { profileId: s.slice(8) } : (s as 'previous' | 'stay') })
-            }}
-          >
-            <SelectTrigger className="w-56">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(revertItems).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Focused now: <span className="font-mono">{focused?.exe ?? '—'}</span>
-          {focused?.title && <span> · {focused.title}</span>}
-        </p>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+              <span className="text-sm">{d.switchWhile === 'running' ? 'When the game closes' : 'When you leave the game'}</span>
+              <Select
+                items={revertItems}
+                value={revertValue}
+                onValueChange={(v) => {
+                  const s = v as string
+                  d.set({ revert: s.startsWith('profile:') ? { profileId: s.slice(8) } : (s as 'previous' | 'stay') })
+                }}
+              >
+                <SelectTrigger className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(revertItems).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Focused now: <span className="font-mono">{focused?.exe ?? '—'}</span>
+              {focused?.title && <span> · {focused.title}</span>}
+            </p>
+          </>
+        )}
       </CardContent>
     </Card>
   )

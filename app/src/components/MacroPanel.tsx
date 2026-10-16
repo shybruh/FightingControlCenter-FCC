@@ -147,6 +147,26 @@ export function MacroPanel() {
     setSel(draft.length)
   }
 
+  // nothing recorded (and nothing unsaved): one invitation instead of an empty list, editor and keyboard
+  if (draft.length === 0 && !dirty && !error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center gap-4 py-14 text-center">
+          <div className="flex flex-col gap-1">
+            <span className="font-medium">No macros yet</span>
+            <span className="max-w-md text-sm text-muted-foreground">
+              Record a sequence of key presses, then bind it to a key to play it back. This keyboard has {capacity} bytes of macro memory.
+            </span>
+          </div>
+          <Button onClick={add}>
+            <PlusIcon data-icon="inline-start" />
+            Record a macro
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="grid gap-4 lg:grid-cols-[17rem_1fr]">
       <Card>

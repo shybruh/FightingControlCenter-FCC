@@ -263,14 +263,12 @@ export function AdvancedPanel() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>On this profile</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {entries.length === 0 ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">No advanced keys yet.</p>
-              ) : (
+          {entries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>On this profile</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <ul className="flex flex-col divide-y">
                   {entries.map((e) => (
                     <li key={e.ids.join('-')} className="flex items-center gap-3 py-2">
@@ -287,9 +285,9 @@ export function AdvancedPanel() {
                     </li>
                   ))}
                 </ul>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

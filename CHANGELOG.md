@@ -5,6 +5,11 @@
 ### Changed
 - **Key test** left the sidebar: it's a check, not a setting. Open it with **Test keys** on the Keyboard page.
 - **Paste share code** and **Import file** moved into the **+** next to Profiles, with New profile.
+- **The keyboard's name in the top bar is a menu**: Test keys, Re-read from keyboard and Disconnect. The Keyboard
+  page keeps its settings, the backup and the report.
+- **Factory reset** is a button at the end of the Device card (still asking first) instead of a Danger zone card.
+- **Quieter empty pages**: Macros shows one *Record a macro* card until there's a macro, Advanced only lists the
+  profile's advanced keys once there are some, and game profiles show their options once a game is added.
 
 ### Fixes
 - **Small memory leaks fixed.** Unplugging a keyboard left its connection's listeners behind (one set per unplug), and

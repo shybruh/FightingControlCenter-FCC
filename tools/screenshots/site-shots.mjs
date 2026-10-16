@@ -164,10 +164,18 @@ try {
   await shot('07-settings.png')
   await page('Profile switching')
   await shot('08-desktop.png')
-  // not in the sidebar: opened from the Keyboard page
-  await page('Keyboard')
-  await click('Test keys')
-  await wait(1000)
+  // not in the sidebar: opened from the keyboard menu in the top bar
+  await evaluate(`
+    const name = [...document.querySelectorAll('header button')].find((b) => b.querySelector('svg.lucide-chevron-down'))
+    name.click()
+    await new Promise((r) => setTimeout(r, 500))`)
+  if (process.env.SHOT_MENU) {
+    const { result } = await send('Page.captureScreenshot', { format: 'png' })
+    fs.writeFileSync(path.join(out, 'keyboard-menu.png'), Buffer.from(result.data, 'base64'))
+  }
+  await evaluate(`
+    [...document.querySelectorAll('[role=menuitem]')].find((i) => i.textContent.trim() === 'Test keys').click()
+    await new Promise((r) => setTimeout(r, 1000))`)
   await shot('09-keytest.png')
   await page('Settings')
   await shot('11-app-settings.png')

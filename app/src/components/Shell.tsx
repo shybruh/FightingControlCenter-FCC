@@ -1,6 +1,9 @@
 import { Suspense, lazy, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowLeftIcon,
+  ChevronDownIcon,
+  RefreshCwIcon,
+  UnplugIcon,
   GaugeIcon,
   KeyboardIcon,
   KeySquareIcon,
@@ -145,7 +148,8 @@ function TopBar({ title, back, onBack }: { title: string; back?: Page; onBack():
   const kbName = useStore((s) => s.device?.name ?? s.kb?.name)
   const info = decodeInfo(useStore((s) => s.regions)!.info)
   const readBack = useStore((s) => s.device?.caps.readBack !== false)
-  const disconnect = useStore((s) => s.disconnect)
+  const { disconnect, refresh } = useStore.getState()
+  const go = useNav((s) => s.go)
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4 md:px-6">
@@ -168,12 +172,33 @@ function TopBar({ title, back, onBack }: { title: string; back?: Page; onBack():
             state={pending ? 'busy' : 'ok'}
             label={pending ? 'Saving to keyboard…' : readBack ? `Synced · firmware ${info.firmware}` : 'Changes sent to the keyboard'}
           />
-          <span className="hidden sm:inline">{kbName}</span>
           {demo && <Badge variant="secondary">demo</Badge>}
         </div>
-        <Button variant="ghost" size="sm" onClick={disconnect}>
-          Disconnect
-        </Button>
+        {/* the connected keyboard: things done to the board itself, not settings */}
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="max-w-56" />}>
+            <KeyboardIcon data-icon="inline-start" />
+            <span className="truncate">{kbName ?? 'Keyboard'}</span>
+            <ChevronDownIcon className="text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={() => go('keytest')}>
+              <KeySquareIcon />
+              Test keys
+            </DropdownMenuItem>
+            {readBack && (
+              <DropdownMenuItem onClick={() => void refresh()}>
+                <RefreshCwIcon />
+                Re-read from keyboard
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => void disconnect()}>
+              <UnplugIcon />
+              Disconnect
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   )

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { DownloadIcon, KeySquareIcon, RefreshCwIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,6 @@ import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
 import { ReportButton } from './ReportDialog'
-import { useNav } from './nav'
 import { Field, Segmented, Slider, Stat, SwitchRow } from './ui'
 
 export function SettingsPanel() {
@@ -94,7 +93,6 @@ function RkSettingsPanel() {
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
-            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -176,7 +174,6 @@ function RazerSettingsPanel() {
               <UploadIcon data-icon="inline-start" />
               Write profile to keyboard
             </Button>
-            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -237,7 +234,6 @@ function SteelSeriesSettingsPanel() {
           </Stat>
           <Separator />
           <div className="flex flex-wrap gap-2">
-            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -274,7 +270,6 @@ function SinowealthSettingsPanel() {
           </Stat>
           <Separator />
           <div className="flex flex-wrap gap-2">
-            <TestKeysButton />
             <ReportButton variant="ghost" />
           </div>
         </CardContent>
@@ -336,7 +331,6 @@ function SonixSettingsPanel() {
           </Stat>
           <Stat label="Macro memory">{info.macroCapacity} bytes</Stat>
         </DeviceCard>
-        <DangerCard />
       </div>
     </div>
   )
@@ -345,7 +339,6 @@ function SonixSettingsPanel() {
 /** Model, identity and the keyboard-wide actions. */
 function DeviceCard({ children }: { children: ReactNode }) {
   const downloadBackup = useStore((s) => s.downloadBackup)
-  const refresh = useStore((s) => s.refresh)
   return (
     <Card>
       <CardHeader>
@@ -361,57 +354,46 @@ function DeviceCard({ children }: { children: ReactNode }) {
             <DownloadIcon data-icon="inline-start" />
             Download full backup
           </Button>
-          <Button variant="ghost" onClick={refresh}>
-            <RefreshCwIcon data-icon="inline-start" />
-            Re-read from keyboard
-          </Button>
-          <TestKeysButton />
           <ReportButton variant="ghost" />
+          <FactoryResetButton />
         </div>
       </CardContent>
     </Card>
   )
 }
 
-function DangerCard() {
+/** Wipes the keyboard's settings, after asking; kept quiet at the end of the Device card's actions. */
+function FactoryResetButton() {
   const factoryReset = useStore((s) => s.factoryReset)
   const [confirmOpen, setConfirmOpen] = useState(false)
   return (
-    <Card className="border-destructive/40">
-      <CardHeader>
-        <CardTitle className="text-destructive">Danger zone</CardTitle>
-        <CardDescription>Wipes every setting on the keyboard: keymap, lighting, RT, macros. Saved profiles in this app are kept.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogTrigger render={<Button variant="destructive" />}>
-            <TriangleAlertIcon data-icon="inline-start" />
-            Factory reset keyboard
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Factory reset the keyboard?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your profiles in this app stay, so you can
-                re-apply one afterwards.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  setConfirmOpen(false)
-                  factoryReset()
-                }}
-              >
-                Factory reset
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogTrigger render={<Button variant="ghost" className="ml-auto text-destructive hover:text-destructive" />}>
+        <TriangleAlertIcon data-icon="inline-start" />
+        Factory reset…
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Factory reset the keyboard?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This wipes the keymap, lighting, rapid trigger, advanced keys and macros on the keyboard. Your profiles in this app stay, so you can
+            re-apply one afterwards.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              setConfirmOpen(false)
+              factoryReset()
+            }}
+          >
+            Factory reset
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
@@ -459,7 +441,6 @@ function RySettingsPanel() {
           </Stat>
           {probe && <Stat label="Model ID">{probe.deviceId}</Stat>}
         </DeviceCard>
-        <DangerCard />
       </div>
     </div>
   )
@@ -500,7 +481,6 @@ function McSettingsPanel() {
             {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
           </Stat>
         </DeviceCard>
-        <DangerCard />
       </div>
     </div>
   )
@@ -553,16 +533,5 @@ function ModelPicker() {
         wrong; each model keeps its own profiles.
       </p>
     </div>
-  )
-}
-
-/** Opens the key test (it isn't in the sidebar: it's a check, not a setting). */
-function TestKeysButton() {
-  const go = useNav((s) => s.go)
-  return (
-    <Button variant="ghost" onClick={() => go('keytest')}>
-      <KeySquareIcon data-icon="inline-start" />
-      Test keys
-    </Button>
   )
 }
