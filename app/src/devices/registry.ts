@@ -43,6 +43,8 @@ export interface Capabilities {
   /** the sleep timer travels in the lighting packet (RK) */
   sleepInLighting: boolean
   mouseBindings: boolean
+  /** media keys in the keymap (default: yes) */
+  mediaBindings?: boolean
   perKeyRgb: boolean
   /** continuous RT, bottom optimisation and rampage switches */
   rtFlags: boolean
@@ -107,6 +109,9 @@ const RAZER_CAPS: Capabilities = {
   macroModes: [],
 }
 /** SteelSeries: lighting only, streamed by FCC; the profile is the source of truth. */
+/** Razer boards whose key remapping is known (from a Synapse capture of the Huntsman V2): keys and modifier combos */
+const RAZER_REMAP_CAPS: Capabilities = { ...RAZER_CAPS, keymap: true, mediaBindings: false }
+const RAZER_REMAP_IDS = new Set(['razer-huntsman-v2'])
 const STEELSERIES_CAPS: Capabilities = { ...RAZER_CAPS }
 /** boards whose lighting FCC streams (SteelSeries, Sinowealth 010c): lighting only */
 const STREAMED_CAPS: Capabilities = { ...RAZER_CAPS }
@@ -426,7 +431,7 @@ export const RAZER_DEVICES: DeviceDef[] = RAZER_MODELS.map((m) => ({
   // optical switches: no travel settings
   limits: { travel: 0, actuationMin: 0, actuationMax: 0, actuationDefault: 0, sensMin: 0, sensMax: 0, sensDefault: 0 },
   protocol: 'razer' as const,
-  caps: RAZER_CAPS,
+  caps: RAZER_REMAP_IDS.has(m.id) ? RAZER_REMAP_CAPS : RAZER_CAPS,
   razer: m.razer,
 }))
 

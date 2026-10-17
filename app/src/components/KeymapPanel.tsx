@@ -3,6 +3,7 @@ import { clearAdvanced } from '../hid/advanced'
 import { bindingLabel, decodeBinding, withBinding, type Binding } from '../hid/codec'
 import { KEY_GROUPS, modifierNames } from '../data/keycodes'
 import { HAS_FN_LAYER, KEY_BY_ID, isFnKey } from '../data/layout'
+import { RAZER_KEY_NUMBER } from '../hid/razer'
 import { useStore } from '../store'
 import { Keyboard } from './Keyboard'
 import { RotateCcwIcon } from 'lucide-react'
@@ -24,14 +25,18 @@ export function KeymapPanel() {
   const [group, setGroup] = useState(KEY_GROUPS[0].name)
   const [mods, setMods] = useState(0)
   const mouseOk = useStore((s) => s.device?.caps.mouseBindings !== false)
+  const mediaOk = useStore((s) => s.device?.caps.mediaBindings !== false)
+  const razer = useStore((s) => s.device?.protocol === 'razer')
 
   const id = selected.size === 1 ? [...selected][0] : null
   const key = id != null ? KEY_BY_ID.get(id) : null
   const binding = id != null ? decodeBinding(regions.keys, id) : null
   const locked = id != null && isFnKey(KEY_BY_ID.get(id))
+  // Razer: only keys with a known Razer key number (not lights, media keys or the Fn key)
+  const unsupported = !!key && razer && (key.light || RAZER_KEY_NUMBER[key.hid] === undefined)
 
   const assign = (b: Binding) => {
-    if (id == null || locked) return
+    if (id == null || locked || unsupported) return
     // replacing an advanced key also frees its pair partner / DKS slot
     const cleared = clearAdvanced(regions.keys, regions.dks, [id])
     updateMany({ dks: cleared.dks, keys: withBinding(cleared.keys, [id], b) })
@@ -52,7 +57,7 @@ export function KeymapPanel() {
     }
   }
 
-  const groups = KEY_GROUPS.filter((x) => mouseOk || (x.kind !== 'mouse' && x.kind !== 'wheel'))
+  const groups = KEY_GROUPS.filter((x) => (mouseOk || (x.kind !== 'mouse' && x.kind !== 'wheel')) && (mediaOk || x.kind !== 'media'))
   const g = groups.find((x) => x.name === group) ?? groups[0]
 
   return (
@@ -95,6 +100,8 @@ export function KeymapPanel() {
             <CardContent className="py-6 text-center text-sm text-muted-foreground">Select a key to remap it.</CardContent>
           ) : locked ? (
             <CardContent className="py-6 text-center text-sm text-muted-foreground">The Fn key can't be remapped — it's your way into the Fn layer.</CardContent>
+          ) : unsupported ? (
+            <CardContent className="py-6 text-center text-sm text-muted-foreground">This key can't be remapped on this keyboard yet.</CardContent>
           ) : (
             <>
               <CardHeader>

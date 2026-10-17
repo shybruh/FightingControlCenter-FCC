@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Razer Huntsman V2: key remapping** (experimental). Remap any key to another key or a modifier combo on the Keymap
+  page; reset puts it back. It's saved on the keyboard, the way Razer Synapse saves it (worked out from a Synapse capture
+  a tester made). Media keys, mouse buttons and macros aren't offered yet.
+
 ## 0.3.12
 
 ### Fixes

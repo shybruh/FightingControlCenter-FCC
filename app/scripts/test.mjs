@@ -91,7 +91,7 @@ check('reply for another command rejected', err.includes('not 0x0f 0x02'), true)
 
 // ---- driver with the mock board ----
 const dev = DEVICES.find((d) => d.id === 'razer-huntsman-v2')
-check('Huntsman V2 registered as untested razer board, keymap off', [dev?.protocol, dev?.status, dev?.caps.keymap, dev?.caps.perKeyRgb], ['razer', 'untested', false, true])
+check('Huntsman V2 registered as untested razer board, keymap on (from the Synapse capture)', [dev?.protocol, dev?.status, dev?.caps.keymap, dev?.caps.perKeyRgb], ['razer', 'untested', true, true])
 activateDevice(dev)
 const KEYS = layout.KEYS
 check('layout has 108 keys, ids under 128', [KEYS.length, Math.max(...KEYS.map((k) => k.id)) < 128], [108, true])
@@ -237,6 +237,41 @@ activateDevice(DEVICES.find((d) => d.id === 'razer-huntsman-v2'))
 const huntsmanPace = codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed
 activateDevice(DEVICES.find((d) => d.id === 'razer-blackwidow-v3-tkl'))
 check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [huntsmanPace, codec.EFFECTS.find((e) => e.name === 'Spectrum cycle').previewSpeed], [1, 3])
+
+// ---- Razer key remapping (Huntsman V2, from a Synapse capture) ----
+{
+  const d = DEVICES.find((x) => x.id === 'razer-huntsman-v2')
+  activateDevice(d)
+  const args = (p) => Array.from(p.slice(5, 18))
+  // the exact packets Synapse sent: size 10, class 02 id 0D, storage 01, key number, 00, keyboard 02 02, mods, hid
+  check('remap packets match Synapse: Caps Lock -> F1, and back', [args(R.remapPacket(30, 0, 0x3a)), args(R.remapPacket(30, 0, 0x39))], [
+    [10, 0x02, 0x0d, 0x01, 0x1e, 0x00, 0x02, 0x02, 0x00, 0x3a, 0, 0, 0],
+    [10, 0x02, 0x0d, 0x01, 0x1e, 0x00, 0x02, 0x02, 0x00, 0x39, 0, 0, 0],
+  ])
+  check('key numbers: the two seen in the capture (Caps 30, F12 123) and the IBM positions around them', [0x39, 0x45, 0x29, 0x3a, 0x14, 0x04, 0x1d, 0x2c, 0x2a, 0x2b].map((h) => R.RAZER_KEY_NUMBER[h]), [30, 123, 110, 112, 17, 31, 46, 61, 15, 16])
+  check('Huntsman V2 offers remapping (keys only), other Razer boards not yet', [d.caps.keymap, d.caps.mediaBindings, DEVICES.find((x) => x.id === 'razer-blackwidow-v3-tkl').caps.keymap], [true, false, false])
+
+  const m = new R.MockRazerTransport(d)
+  const k = new R.RazerKeyboard(m, d)
+  await k.readAll()
+  const caps = layout.KEYS.find((x) => x.hid === 0x39)
+  const a = layout.KEYS.find((x) => x.hid === 0x04)
+  const keys0 = await k.readRegion('keys')
+  m.sent.length = 0
+  // Caps Lock -> Esc, A -> Ctrl+C
+  let keys1 = codec.withBinding(keys0, [caps.id], { type: 'key', mods: 0, code: 0x29 })
+  keys1 = codec.withBinding(keys1, [a.id], { type: 'key', mods: 0x01, code: 0x06 })
+  await k.writeRegion('keys', keys1)
+  const remaps = m.sent.filter((p) => p[6] === 0x02 && p[7] === 0x0d).map((p) => [p[9], p[13], p[14]])
+  check('changing two keys sends exactly two remaps: Caps (30) -> Esc, A (31) -> Ctrl+C', remaps, [[30, 0x00, 0x29], [31, 0x01, 0x06]])
+  m.sent.length = 0
+  const keys2 = codec.withBinding(keys1, [caps.id], { type: 'default' })
+  await k.writeRegion('keys', keys2)
+  check('reset sends the key back to its own function (Caps Lock), nothing for unchanged keys', m.sent.filter((p) => p[6] === 0x02).map((p) => [p[9], p[14]]), [[30, 0x39]])
+  m.sent.length = 0
+  await k.writeRegion('keys', codec.withBinding(keys2, [a.id], { type: 'key', mods: 0x02, code: 0 }))
+  check('a modifier on its own goes as that modifier key (Left Shift, E1)', m.sent.filter((p) => p[6] === 0x02).map((p) => [p[9], p[13], p[14]]), [[31, 0, 0xe1]])
+}
 
 // ---- SteelSeries: FCC streams the lighting frames ----
 {

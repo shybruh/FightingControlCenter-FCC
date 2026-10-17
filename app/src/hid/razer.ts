@@ -10,7 +10,7 @@
 
 import { KEYS } from '../data/layout'
 import type { DeviceDef } from '../devices/registry'
-import { decodeLed, encodeLed } from './codec'
+import { decodeBinding, decodeLed, encodeLed } from './codec'
 import type { KeyboardDriver, RegionData, SensorEvent } from './device'
 import { REGIONS, type RegionName } from './protocol'
 import { Emitter, type DeviceIdentity } from './transport'
@@ -65,6 +65,45 @@ export function withTransaction(r: Uint8Array, tid: number): Uint8Array {
   out[1] = tid
   out[88] = razerCrc(out)
   return out
+}
+
+// ---------- key remapping (from a Synapse capture: docs/PROTOCOL-RAZER.md) ----------
+
+/**
+ * Razer numbers keys by the classic IBM PC key positions (Caps Lock 30 and F12 123 were seen in the capture; the rest
+ * follow that numbering). HID usage of the key's own function -> its number.
+ */
+export const RAZER_KEY_NUMBER: Record<number, number> = (() => {
+  const m: Record<number, number> = {}
+  const put = (hids: number[], first: number) => hids.forEach((h, i) => (m[h] = first + i))
+  // ` 1 2 3 4 5 6 7 8 9 0 - =   (Backspace is 15)
+  put([0x35, 0x1e, 0x1f, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2d, 0x2e], 1)
+  m[0x2a] = 15
+  // Tab Q W E R T Y U I O P [ ] and backslash
+  put([0x2b, 0x14, 0x1a, 0x08, 0x15, 0x17, 0x1c, 0x18, 0x0c, 0x12, 0x13, 0x2f, 0x30, 0x31], 16)
+  // Caps A S D F G H J K L ; '  (ISO #~ 42) Enter
+  put([0x39, 0x04, 0x16, 0x07, 0x09, 0x0a, 0x0b, 0x0d, 0x0e, 0x0f, 0x33, 0x34, 0x32, 0x28], 30)
+  // LShift (ISO extra key 45) Z X C V B N M , . /  (56 unused) RShift
+  put([0xe1, 0x64, 0x1d, 0x1b, 0x06, 0x19, 0x05, 0x11, 0x10, 0x36, 0x37, 0x38], 44)
+  m[0xe5] = 57
+  // LCtrl 58, LAlt 60, Space 61, RAlt 62, RCtrl 64
+  Object.assign(m, { 0xe0: 58, 0xe2: 60, 0x2c: 61, 0xe6: 62, 0xe4: 64 })
+  // Insert Delete, arrows and navigation
+  Object.assign(m, { 0x49: 75, 0x4c: 76, 0x50: 79, 0x4a: 80, 0x4d: 81, 0x52: 83, 0x51: 84, 0x4b: 85, 0x4e: 86, 0x4f: 89 })
+  // numpad
+  Object.assign(m, { 0x53: 90, 0x5f: 91, 0x5c: 92, 0x59: 93, 0x54: 95, 0x60: 96, 0x5d: 97, 0x5a: 98, 0x62: 99, 0x55: 100 })
+  Object.assign(m, { 0x61: 101, 0x5e: 102, 0x5b: 103, 0x63: 104, 0x56: 105, 0x57: 106, 0x58: 108 })
+  // Esc, F1–F12, Print Screen, Scroll Lock, Pause
+  m[0x29] = 110
+  put([0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48], 112)
+  // Windows keys and Menu (the usual extension of the numbering)
+  Object.assign(m, { 0xe3: 127, 0xe7: 128, 0x65: 129 })
+  return m
+})()
+
+/** Key remap: storage 01 (kept on the keyboard), key number, then what it sends: `mods hid`. */
+export function remapPacket(keyNumber: number, mods: number, hid: number) {
+  return razerPacket(0x02, 0x0d, 10, [0x01, keyNumber, 0x00, 0x02, 0x02, mods & 0xff, hid & 0xff, 0, 0, 0])
 }
 
 const rgb = (c: [number, number, number]) => c.map((v) => Math.min(255, Math.max(0, Math.round(v))))
@@ -302,7 +341,8 @@ export class RazerKeyboard implements KeyboardDriver {
       if (name === 'led') await this.send(this.lightingReports())
       else if (name === 'colors' && this.customActive()) await this.send(this.frameReports())
       else if (name === 'settings') await this.send(this.settingsReports(decodeRazerSettings(before), decodeRazerSettings(data)))
-      // keymap, macros and the rest have no Razer command FCC knows; they stay in the profile only
+      else if (name === 'keys' && this.device.caps.keymap) await this.send(this.remapReports(before, data))
+      // macros and the rest have no Razer command FCC uses yet; they stay in the profile only
     })
   }
 
@@ -353,6 +393,28 @@ export class RazerKeyboard implements KeyboardDriver {
       for (const [row, col] of cells) grid[row]?.set([this.state.colors[o + 1], this.state.colors[o + 2], this.state.colors[o + 3]], col * 3)
     }
     return [...grid.map((row, i) => frameRow(i, 0, rz.cols - 1, row)), effect.custom()]
+  }
+
+  /**
+   * One remap command per key whose binding changed. A key back on "default" is remapped to its own function, which is
+   * how Synapse resets it. Only keys and modifier combos are sent; keys without a Razer number are left alone.
+   */
+  remapReports(before: Uint8Array, after: Uint8Array): Uint8Array[] {
+    const out: Uint8Array[] = []
+    for (const k of KEYS) {
+      const o = k.id * 4
+      if (before[o] === after[o] && before[o + 1] === after[o + 1] && before[o + 2] === after[o + 2] && before[o + 3] === after[o + 3]) continue
+      const num = RAZER_KEY_NUMBER[k.hid]
+      if (num === undefined) continue
+      const b = decodeBinding(after, k.id)
+      if (b.type === 'default') out.push(remapPacket(num, 0, k.hid))
+      else if (b.type === 'key') {
+        // a modifier on its own goes as the modifier's own key (Left Ctrl is HID E0 …)
+        const lone = b.code === 0 && b.mods ? 0xe0 + Math.log2(b.mods & -b.mods) : 0
+        out.push(lone ? remapPacket(num, 0, lone) : remapPacket(num, b.mods, b.code))
+      }
+    }
+    return out
   }
 
   /** Only what changed: each setting is its own command. */
