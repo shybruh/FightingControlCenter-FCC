@@ -80,7 +80,40 @@ Reads on connect: polling rate `00 C0` (answer argument 1 = code), game mode `03
 Per-key colours: the Huntsman V2 matrix is 6 rows × 22 columns. FCC sends all six rows (columns 0–21) and then the
 custom-frame effect. Key positions are in `app/src/devices/razer.ts`.
 
+## From a Synapse capture (Huntsman V2, fw as shipped, 2026-10-17)
+
+Not used by FCC yet. Synapse streams the per-key row command (`0F 03`) about 20 times a second the whole time it runs,
+and rolls the transaction id through `0x80`–`0x9F` (FCC's fixed `0x1F` works too).
+
+**Key remapping**: `02 0D`, size 10: `01 key 00 type len data…` (storage `01`, then the key's number, then the binding).
+
+| Binding | type | len | data |
+|---|---|---|---|
+| a keyboard key (also the reset: the key's own HID code) | `02` | `02` | `mods hid` |
+| a macro | `03` | `03` | `id_hi id_lo mode` (`01` = play once) |
+
+Key numbers are the classic IBM PC key positions: Caps Lock = 30 (`0x1E`), F12 = 123 (`0x7B`), and by that numbering
+Esc = 110, F1–F11 = 112–122, `1`–`0` = 2–11, Q–P = 17–26, A–L = 31–39 (two keys seen so far; check others before relying
+on it). Seen: Caps Lock → F1 (`01 1E 00 02 02 00 3A`), back to Caps Lock (`… 00 39`); F12 → macro `7D05`, back to F12
+(`01 7B 00 02 02 00 45`).
+
+**Macros** (class `06`), in the order Synapse sends them:
+
+| What | Class / id | Arguments |
+|---|---|---|
+| macro memory (read) | `06 8E` | 14 zeros; answer: three u32 (big endian) sizes, the last one free bytes |
+| create | `06 08` | `id_hi id_lo 00 00 00 size` |
+| name / Synapse's id, 64 bytes per packet | `06 0C` | `id_hi id_lo offset(u16 BE) 00 FA data…` (holds "Macro 1" and a GUID string) |
+| events | `06 09` | `id_hi id_lo offset(u32 BE) len events…` |
+| delete | `06 03` | `id_hi id_lo` |
+
+Events: `01 kk` key down, `02 kk` key up (HID codes), `11 dd` delay in ms (1 byte), `12 dd dd` delay (2 bytes, BE).
+
+**Profile settings re-sent** (Synapse applying a profile): brightness `0F 04 01 00 FF` (LED `00`), game mode `03 00 00 08 00`,
+polling read `00 C0`, keyswitch `02 02 00 14 00 28` (typing) or `02 02 00 00 00 00` (gaming), and a read `00 86` (answer
+`01 80`, meaning unknown). No Snap Tap command appeared; the Huntsman V2 may not have it in Synapse.
+
 ## Not covered
 
-The lighting effect can't be read back, so FCC keeps lighting in the profile. Key remapping and on-board macros have no
-documented command and aren't offered.
+The lighting effect can't be read back, so FCC keeps lighting in the profile. Key remapping and macros are decoded above
+but not offered yet.
