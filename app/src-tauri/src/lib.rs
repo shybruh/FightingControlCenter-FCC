@@ -58,6 +58,8 @@ pub fn run() {
       config::config_load,
       config::config_save,
       config::config_open_folder,
+      config::log_append,
+      config::log_open_folder,
       config::is_installed,
       desktop::open_project_page,
       osd::show_osd,

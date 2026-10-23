@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### New
+- **Log files.** Everything Diagnostics shows is also written to a file per day (the last 7 days kept), so what
+  happened to the keyboard can be looked up after FCC was closed. Diagnostics → Log files opens the folder.
+- **Restore a backup.** The backups FCC takes when the keyboard connects are listed on the Keyboard page; Restore adds
+  one as a profile and switches to it. They're now the last five *different* states of the keyboard, so reconnecting
+  never pushes out the one worth having.
+- **Calibration check on connect** (Fighting68 and other Sonix boards): FCC reads which keys are calibrated (a second in
+  calibration mode, nothing changes) and says when some aren't, e.g. after a firmware update.
+
 ## 0.3.13
 
 ### New

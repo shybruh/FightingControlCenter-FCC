@@ -8,6 +8,8 @@ import { TrayPanel } from './desktop/TrayPanel'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { hideBrowserChrome } from './desktop/browserChrome'
 import { isTauri } from './desktop/env'
+import { getVersion } from '@tauri-apps/api/app'
+import { startLogFile } from './desktop/logFile'
 import { restoreSettings } from './desktop/settingsFile'
 import { applyDensity, applyTheme, startTheme, useTheme } from './theme'
 
@@ -46,6 +48,8 @@ if (isTray) {
 } else {
   // the settings file must be in place before the app (and its stores) read anything
   void restoreSettings()
+    // from here on the log also goes to a file per day (desktop app)
+    .then(() => (isTauri() ? getVersion().catch(() => '?').then(startLogFile) : undefined))
     .then(() => startTheme())
     .then(() => import('./App.tsx'))
     .then(({ default: App }) =>

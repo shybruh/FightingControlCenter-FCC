@@ -41,6 +41,8 @@ const IDLE_STOP_MS = 2 * 60_000
 export function SensorPanel() {
   const kb = useStore((s) => s.kb)
   const readOnly = useStore((s) => s.readOnly)
+  // the calibration check on connect uses calibration mode for a second
+  const checking = useStore((s) => s.checkingCalibration)
   // RY boards report travel without entering calibration
   const calibrates = useStore((s) => s.device?.protocol !== 'ry')
   const rt = useStore((s) => s.regions!.rt)
@@ -132,7 +134,7 @@ export function SensorPanel() {
               Stop &amp; save
             </Button>
           ) : (
-            <Button variant="outline" disabled={readOnly} onClick={() => setActive(true)}>
+            <Button variant="outline" disabled={readOnly || checking} onClick={() => setActive(true)}>
               <ActivityIcon data-icon="inline-start" />
               Start
             </Button>

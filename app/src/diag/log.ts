@@ -18,6 +18,8 @@ export interface LogEntry {
 const MAX = 5000
 const entries: LogEntry[] = []
 const listeners = new Set<() => void>()
+/** every entry as it's added (the log file) */
+const sinks = new Set<(e: LogEntry) => void>()
 let notifyQueued = false
 
 /** Packets of the live travel stream etc.; off by default so they don't drown everything else. */
@@ -33,7 +35,9 @@ function notify() {
 }
 
 function push(level: Level, area: string, msg: string, data?: unknown) {
-  entries.push({ t: performance.now(), at: Date.now(), level, area, msg, data })
+  const e: LogEntry = { t: performance.now(), at: Date.now(), level, area, msg, data }
+  entries.push(e)
+  sinks.forEach((s) => s(e))
   if (entries.length > MAX) entries.splice(0, entries.length - MAX)
   notify()
 }
@@ -74,11 +78,21 @@ export function onLog(l: () => void) {
   return () => void listeners.delete(l)
 }
 
-const stamp = (e: LogEntry) => `${new Date(e.at).toISOString().slice(11, 23)} +${(e.t / 1000).toFixed(3)}s`
+export function onEntry(s: (e: LogEntry) => void) {
+  sinks.add(s)
+  return () => void sinks.delete(s)
+}
 
-export function formatEntry(e: LogEntry) {
+const stamp = (e: LogEntry) => `${new Date(e.at).toISOString().slice(11, 23)} +${(e.t / 1000).toFixed(3)}s`
+/** local wall clock (the log files are per local day) */
+const localStamp = (e: LogEntry) => {
+  const d = new Date(e.at)
+  return `${d.toTimeString().slice(0, 8)}.${String(d.getMilliseconds()).padStart(3, '0')} +${(e.t / 1000).toFixed(3)}s`
+}
+
+export function formatEntry(e: LogEntry, local = false) {
   const data = e.data === undefined ? '' : `\n    ${(typeof e.data === 'string' ? e.data : JSON.stringify(e.data, null, 1)).replace(/\n/g, '\n    ')}`
-  return `${stamp(e)} ${e.level.toUpperCase().padEnd(5)} [${e.area}] ${e.msg}${data}`
+  return `${local ? localStamp(e) : stamp(e)} ${e.level.toUpperCase().padEnd(5)} [${e.area}] ${e.msg}${data}`
 }
 
 /** Plain-text export with what's needed to read it later. */
@@ -86,7 +100,7 @@ export function logText(header: Record<string, string>) {
   const head = Object.entries({ ...header, exported: new Date().toISOString(), userAgent: navigator.userAgent })
     .map(([k, v]) => `${k}: ${v}`)
     .join('\n')
-  return `FCC diagnostic log\n${head}\n${'-'.repeat(60)}\n${entries.map(formatEntry).join('\n')}\n`
+  return `FCC diagnostic log\n${head}\n${'-'.repeat(60)}\n${entries.map((e) => formatEntry(e)).join('\n')}\n`
 }
 
 // errors that escape everything else

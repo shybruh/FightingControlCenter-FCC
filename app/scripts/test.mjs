@@ -540,6 +540,18 @@ check('spectrum preview: Huntsman V2 slow (1), BlackWidow V3 TKL faster (3)', [h
   await kb.command(P.Cmd.CalibrationEnd)
   await wait(200)
   check('live travel FCC started streams, and is ended once (no stray-stop for its own trailing packets)', [seen > 0, sent.filter((c) => c === P.Cmd.CalibrationEnd).length], [true, 1])
+  // the calibration check on connect: one short session, every key's flag, ended exactly once
+  sent.length = 0
+  const flags = await kb.readCalibration(150)
+  await wait(100)
+  check(
+    'the calibration check reads every key and starts and ends calibration mode once',
+    [flags.size >= 60, [...flags.values()].every(Boolean), sent.filter((c) => c === P.Cmd.CalibrationStart).length, sent.filter((c) => c === P.Cmd.CalibrationEnd).length],
+    [true, true, 1, 1],
+  )
+  await kb.command(P.Cmd.CalibrationStart)
+  check('the calibration check stays out of a live travel session that is running', await kb.readCalibration(50), null)
+  await kb.command(P.Cmd.CalibrationEnd)
   await kb.close()
 
   // a late reply for the previous chunk (after a retry) must not be taken for the current chunk's

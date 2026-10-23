@@ -214,6 +214,25 @@ export class Keyboard implements KeyboardDriver {
     return this.run(() => this.transport.send(buildCommand(cmd, args)))
   }
 
+  /**
+   * Which keys have a calibration (the stream's status flag), from a short calibration session: start, about a second
+   * of the stream, end. Ending saves, but only what was pressed during it, and a press only ever deepens a key's bottom
+   * (fw 1.25), so a check changes nothing. null while FCC already has calibration mode on (live travel).
+   */
+  async readCalibration(ms = 1000): Promise<Map<number, boolean> | null> {
+    if (this.calibrating) return null
+    const flags = new Map<number, boolean>()
+    const off = this.sensor.on((e) => flags.set(e.key, e.state === 1))
+    try {
+      await this.command(Cmd.CalibrationStart)
+      await new Promise((r) => setTimeout(r, ms))
+    } finally {
+      off()
+      await this.command(Cmd.CalibrationEnd)
+    }
+    return flags
+  }
+
   async close() {
     this.unsubs.forEach((u) => u())
     await this.transport.close()

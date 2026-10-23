@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { DownloadIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
+import { DownloadIcon, HistoryIcon, TriangleAlertIcon, UploadIcon } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,8 @@ import { RY_POLLING, RyKeyboard, decodeRySettings, encodeRySettings, type RySett
 import { decodeMcSettings, encodeMcSettings, type McSettings } from '../hid/mc'
 import { RAZER_POLLING, decodeRazerSettings, encodeRazerSettings, type RazerSettings } from '../hid/razer'
 import { SS_SETTING } from '../hid/steelseries'
-import { useStore } from '../store'
+import { useStore, type Backup } from '../store'
+import { PROFILE_REGIONS } from '../hid/protocol'
 import { DEVICES } from '../devices/registry'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { StatusBadge } from './DeviceGate'
@@ -331,8 +332,53 @@ function SonixSettingsPanel() {
           </Stat>
           <Stat label="Macro memory">{info.macroCapacity} bytes</Stat>
         </DeviceCard>
+        <BackupsCard />
       </div>
     </div>
+  )
+}
+
+/**
+ * The backups FCC takes when it connects (the last five different states of the keyboard). Restoring one adds it as a
+ * profile and switches to it, so nothing is lost either way, e.g. after the keyboard was reset.
+ */
+function BackupsCard() {
+  const listBackups = useStore((s) => s.listBackups)
+  const restoreBackup = useStore((s) => s.restoreBackup)
+  const regions = useStore((s) => s.regions)
+  const readOnly = useStore((s) => s.readOnly)
+  // re-read after a restore or a reconnect
+  useStore((s) => s.profiles)
+  const backups = listBackups()
+  if (!backups.length || !regions) return null
+  const same = (b: Backup) => PROFILE_REGIONS.every((r) => b.regions[r].every((v, i) => v === regions[r][i]))
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Backups</CardTitle>
+        <CardDescription>
+          Taken each time the keyboard connects with something new on it. Restoring one adds it as a profile and switches to it.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-1">
+        {backups.map((b) => (
+          <div key={b.at} className="flex items-center gap-3 py-1 text-sm">
+            <span className="whitespace-nowrap tabular-nums">
+              {new Date(b.at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              fw {b.firmware}
+              {b.regions.rt.every((v) => v === 0) && ' · factory settings'}
+              {same(b) && ' · same as now'}
+            </span>
+            <Button size="sm" variant="outline" className="ml-auto" disabled={readOnly || same(b)} onClick={() => void restoreBackup(b.at)}>
+              <HistoryIcon data-icon="inline-start" />
+              Restore
+            </Button>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -441,6 +487,7 @@ function RySettingsPanel() {
           </Stat>
           {probe && <Stat label="Model ID">{probe.deviceId}</Stat>}
         </DeviceCard>
+        <BackupsCard />
       </div>
     </div>
   )
@@ -481,6 +528,7 @@ function McSettingsPanel() {
             {info.vid.toString(16).padStart(4, '0')}:{info.pid.toString(16).padStart(4, '0')}
           </Stat>
         </DeviceCard>
+        <BackupsCard />
       </div>
     </div>
   )

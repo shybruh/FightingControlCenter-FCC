@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { create } from 'zustand'
-import { CopyIcon, DownloadIcon, EarIcon, PlusIcon, RadarIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react'
+import { CopyIcon, DownloadIcon, EarIcon, FolderOpenIcon, PlusIcon, RadarIcon, SquareIcon, Trash2Icon, XIcon } from 'lucide-react'
 import { AlertDialog, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -12,6 +12,7 @@ import { usageName } from '../diag/descriptor'
 import { clearLog, formatEntry, hex, logEntries, logSettings, logText, onLog, type Level } from '../diag/log'
 import { listenTo, pickAnyDevice, scanDevices, scanText, type LiveReport, type ScannedCollection } from '../diag/scan'
 import { isTauri } from '../hid/tauri'
+import { openLogFolder } from '../desktop/logFile'
 import { useStore } from '../store'
 
 export const useDiagnostics = create<{ open: boolean; tab: 'devices' | 'log'; show(tab?: 'devices' | 'log'): void; hide(): void }>((set) => ({
@@ -320,6 +321,12 @@ function LogTab() {
             <DownloadIcon data-icon="inline-start" />
             Save log
           </Button>
+          {isTauri() && (
+            <Button size="sm" variant="ghost" onClick={() => void openLogFolder()} title="A log file per day, the last 7 days">
+              <FolderOpenIcon data-icon="inline-start" />
+              Log files
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={clearLog}>
             <Trash2Icon data-icon="inline-start" />
             Clear

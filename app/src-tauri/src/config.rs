@@ -88,3 +88,58 @@ pub fn config_open_folder(app: AppHandle) -> Result<(), String> {
 pub fn is_installed() -> bool {
     std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("uninstall.exe").is_file())).unwrap_or(false)
 }
+
+/// Log files: one per day in a `logs` folder beside the settings file (or in the portable data folder), the newest
+/// `LOG_DAYS` kept. They hold what Diagnostics shows, so a problem can be traced after the app was closed.
+const LOG_DAYS: usize = 7;
+const LOG_MAX_BYTES: u64 = 5 * 1024 * 1024;
+
+fn log_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let base = if crate::portable::is_portable() { crate::portable::data_dir().ok_or("no portable folder")? } else { dir(app)? };
+    Ok(base.join("logs"))
+}
+
+/// Appends `text` to the log of `day` (YYYY-MM-DD, the UI's local date). A day past `LOG_MAX_BYTES` stops growing.
+#[tauri::command]
+pub fn log_append(app: AppHandle, day: String, text: String) -> Result<(), String> {
+    use std::io::Write;
+    if day.len() != 10 || !day.bytes().all(|b| b.is_ascii_digit() || b == b'-') {
+        return Err(format!("bad log day: {day}"));
+    }
+    let dir = log_dir(&app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("create {}: {e}", dir.display()))?;
+    let path = dir.join(format!("fcc-{day}.log"));
+    let fresh = !path.exists();
+    if path.metadata().map(|m| m.len() > LOG_MAX_BYTES).unwrap_or(false) {
+        return Ok(());
+    }
+    let mut file = std::fs::OpenOptions::new().create(true).append(true).open(&path).map_err(|e| format!("open {}: {e}", path.display()))?;
+    file.write_all(text.as_bytes()).map_err(|e| format!("write {}: {e}", path.display()))?;
+    if fresh {
+        prune_logs(&dir);
+    }
+    Ok(())
+}
+
+fn prune_logs(dir: &std::path::Path) {
+    let Ok(read) = std::fs::read_dir(dir) else { return };
+    let mut logs: Vec<PathBuf> = read
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("fcc-") && n.ends_with(".log")))
+        .collect();
+    // the date in the name sorts the files oldest first
+    logs.sort();
+    let extra = logs.len().saturating_sub(LOG_DAYS);
+    for old in &logs[..extra] {
+        let _ = std::fs::remove_file(old);
+    }
+}
+
+/// Opens the log folder in Explorer.
+#[tauri::command]
+pub fn log_open_folder(app: AppHandle) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let dir = log_dir(&app)?;
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    app.opener().open_path(dir.to_string_lossy(), None::<&str>).map_err(|e| e.to_string())
+}

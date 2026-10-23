@@ -11,9 +11,10 @@ import { errorText, log } from './diag/log'
 import { withLogging } from './diag/wrap'
 import { openDesktop, reconnectKeyboard, requestKeyboard, type Opened } from './hid/connect'
 import { Cmd, PROFILE_REGIONS, REGIONS, ResetArg, type ProfileRegion, type RegionName } from './hid/protocol'
-import { decodeLed, encodeLed } from './hid/codec'
+import { decodeInfo, decodeLed, encodeLed } from './hid/codec'
 import { isTauri } from './hid/tauri'
 import type { DeviceIdentity } from './hid/transport'
+import { KEYS } from './data/layout'
 import { DEVICES, FIGHTING68, activateDevice, detect, deviceById, type DeviceDef } from './devices/registry'
 
 export type ProfileData = Record<ProfileRegion, number[]>
@@ -27,9 +28,11 @@ export interface Profile {
   updatedAt: number
 }
 
-interface Backup {
+export interface Backup {
   at: number
   firmware: string
+  /** the model it was read from (older backups don't say: they're from a Fighting68) */
+  device?: string
   regions: Record<string, number[]>
 }
 
@@ -68,6 +71,11 @@ interface State {
   /** the keyboard came back reset to factory settings: the profile it had, kept as a copy that can be put back */
   boardReset: { profileId: string; name: string } | null
   dismissBoardReset(): void
+  /** keys the calibration check on connect found without a calibration (cleared once reported) */
+  uncalibrated: number[] | null
+  dismissUncalibrated(): void
+  /** the calibration check on connect is running (it uses calibration mode, like live travel) */
+  checkingCalibration: boolean
 
   /** demo: true = demo Fighting68, a device id = demo of that model */
   connect(demo?: boolean | string): Promise<void>
@@ -98,6 +106,10 @@ interface State {
   allowWrites(): void
 
   downloadBackup(): void
+  /** The connected model's automatic backups (one per connect that found something new), newest first. */
+  listBackups(): Backup[]
+  /** Adds the backup's settings as a profile and switches to it (the current profile stays as it is). */
+  restoreBackup(at: number): Promise<void>
   factoryReset(): Promise<void>
   dismissError(): void
   showToast(msg: string): void
@@ -154,6 +166,9 @@ const introSeen = () => {
   }
 }
 const WRITE_DEBOUNCE_MS = 120
+/** each calibration check ends with a save on the keyboard: don't repeat it on every quick reconnect */
+const CALIBRATION_CHECK_EVERY_MS = 10 * 60_000
+const lastCalibrationCheck = new Map<string, number>()
 
 function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null } {
   if (!profilesKey) return { profiles: [], activeProfileId: null }
@@ -210,6 +225,12 @@ function profileRegions(p: Profile): Record<ProfileRegion, Uint8Array> | null {
 function cameBackReset(regions: RegionData, profile: Profile | undefined) {
   const rt = profile?.data.rt
   return regions.rt.every((v) => v === 0) && Array.isArray(rt) && rt.some((v) => v !== 0)
+}
+
+/** A backup's profile part, or null when it doesn't fit the connected model (sizes differ) */
+function backupProfile(b: Backup): ProfileData | null {
+  const data = Object.fromEntries(PROFILE_REGIONS.map((r) => [r, b.regions?.[r]])) as ProfileData
+  return profileRegions({ id: '', name: '', data, updatedAt: 0 }) ? data : null
 }
 
 function uid() {
@@ -423,14 +444,16 @@ export const useStore = create<State>((set, get) => {
       const backup: Backup = {
         at: Date.now(),
         firmware: `${regions.info[9]}.${regions.info[8].toString(16)}`,
+        device: device?.id,
         regions: Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, Array.from(v)])),
       }
       try {
         const list: Backup[] = JSON.parse(localStorage.getItem(BACKUPS_KEY) || '[]')
-        // reconnecting a board that didn't change replaces its last backup, so the five kept are five different states
-        // (an older one is often the one worth having, like the settings from before a reset)
-        const same = list[0] && JSON.stringify(list[0].regions) === JSON.stringify(backup.regions)
-        localStorage.setItem(BACKUPS_KEY, JSON.stringify([backup, ...list.slice(same ? 1 : 0)].slice(0, 5)))
+        // a state that's already kept is replaced, not added again, so the five kept are five different states (an older
+        // one is often the one worth having, like the settings from before a reset)
+        const state = JSON.stringify(backup.regions)
+        const others = list.filter((b) => JSON.stringify(b.regions) !== state)
+        localStorage.setItem(BACKUPS_KEY, JSON.stringify([backup, ...others].slice(0, 5)))
       } catch {
         /* ignore */
       }
@@ -457,6 +480,32 @@ export const useStore = create<State>((set, get) => {
     if (lightsOffApplied() || get().lightsOff) {
       markLightsOffApplied(get().lightsOff)
       if (!get().readOnly) track(kb.writeRegion('led', onBoard('led', regions.led)).catch(() => undefined))
+    }
+    // a reset or a firmware update can erase the calibration without anything else showing it (a reset board was
+    // already reported above)
+    if (!demo && !resetCopy && kb instanceof Keyboard && !get().readOnly && device?.caps.liveTravel !== false) void checkCalibration(kb)
+  }
+
+  /** Reads which keys are calibrated and reports the ones that aren't (at most every few minutes per keyboard). */
+  const checkCalibration = async (kb: Keyboard) => {
+    const id = identityKey(kb.identity)
+    if (Date.now() - (lastCalibrationCheck.get(id) ?? 0) < CALIBRATION_CHECK_EVERY_MS) return
+    lastCalibrationCheck.set(id, Date.now())
+    set({ checkingCalibration: true })
+    try {
+      const flags = await kb.readCalibration()
+      if (!flags || get().kb !== kb) return
+      const missing = KEYS.filter((k) => flags.get(k.id) === false)
+      if (!flags.size) log.warn('calibration', 'no calibration data came back: not checked')
+      else if (!missing.length) log.info('calibration', `all ${flags.size} keys are calibrated`)
+      else {
+        log.warn('calibration', `${missing.length} keys aren't calibrated`, missing.map((k) => `${k.label || 'Space'} (${k.id})`).join(', '))
+        set({ uncalibrated: missing.map((k) => k.id) })
+      }
+    } catch (e) {
+      log.warn('calibration', 'checking calibration failed', errorText(e))
+    } finally {
+      set({ checkingCalibration: false })
     }
   }
 
@@ -485,6 +534,12 @@ export const useStore = create<State>((set, get) => {
     readOnly: false,
     lightsOff: false,
     boardReset: null,
+    uncalibrated: null,
+    checkingCalibration: false,
+
+    dismissUncalibrated() {
+      set({ uncalibrated: null })
+    },
 
     dismissBoardReset() {
       set({ boardReset: null })
@@ -791,6 +846,39 @@ export const useStore = create<State>((set, get) => {
         version: 1,
         regions: Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, Array.from(v)])),
       })
+    },
+
+    listBackups() {
+      const { device, regions } = get()
+      if (!device || !regions) return []
+      // older backups don't name their model: those must at least come from the same USB id
+      const usbId = (info: ArrayLike<number> | undefined) => {
+        const i = info && decodeInfo(Uint8Array.from(info))
+        return i ? `${i.vid}:${i.pid}` : ''
+      }
+      const list = readJson<Backup[]>(BACKUPS_KEY, [])
+      return Array.isArray(list)
+        ? list.filter(
+            (b) =>
+              b &&
+              typeof b.at === 'number' &&
+              (b.device ? b.device === device.id : usbId(b.regions?.info) === usbId(regions.info)) &&
+              backupProfile(b) !== null,
+          )
+        : []
+    },
+
+    async restoreBackup(at) {
+      const b = get().listBackups().find((x) => x.at === at)
+      const data = b && backupProfile(b)
+      if (!data || blocked()) return
+      const when = new Date(at).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      const p: Profile = { id: uid(), name: `Backup ${when}`, data, updatedAt: Date.now() }
+      const next = [...get().profiles, p]
+      set({ profiles: next })
+      saveProfiles(next, get().activeProfileId)
+      log.info('profile', `backup from ${new Date(at).toISOString()} restored as "${p.name}"`)
+      await get().activateProfile(p.id)
     },
 
     async factoryReset() {

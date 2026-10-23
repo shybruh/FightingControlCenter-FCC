@@ -10,6 +10,7 @@ import { inSchedule, useSchedule } from '../lighting/schedule'
 import { useStore } from '../store'
 import { useTheme } from '../theme'
 import { prettyHotkey, profileHotkey, useDesktop, type GameRule } from './settings'
+import { flushLogFile } from './logFile'
 
 interface FocusedApp {
   exe: string
@@ -73,6 +74,7 @@ export function useDesktopIntegration() {
     if (!isTauri()) return
     const off = listen('quit-requested', async () => {
       await Promise.race([useStore.getState().flush(), new Promise((r) => setTimeout(r, 2500))]).catch(() => undefined)
+      await Promise.race([flushLogFile(), new Promise((r) => setTimeout(r, 500))])
       void invoke('quit_now')
     })
     return () => void off.then((u) => u())
