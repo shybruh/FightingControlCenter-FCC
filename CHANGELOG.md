@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.13
 
 ### New
 - **Razer Huntsman V2: key remapping** (experimental). Remap any key to another key or a modifier combo on the Keymap
