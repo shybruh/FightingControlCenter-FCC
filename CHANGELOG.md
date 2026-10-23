@@ -6,6 +6,19 @@
 - **Razer Huntsman V2: key remapping** (experimental). Remap any key to another key or a modifier combo on the Keymap
   page; reset puts it back. It's saved on the keyboard, the way Razer Synapse saves it (worked out from a Synapse capture
   a tester made). Media keys, mouse buttons and macros aren't offered yet.
+- **Live key travel shows which keys are calibrated** (Fighting68 and other Sonix boards): green keys have a
+  calibration, red ones don't, with a count and what to do. An uncalibrated key counts half a press as a full one, so its
+  actuation and rapid trigger come far too early: that's the "keys feel calibrated to a half press" problem.
+
+### Fixes
+- **A keyboard that was reset no longer wipes your profile.** When the board comes back with factory settings (its own
+  Fn + Backspace reset, a firmware update), FCC used to take those over into the active profile. It now keeps the profile
+  as a copy (“… (before keyboard reset)”) and says so, with buttons to put your settings back and to recalibrate (a
+  reset erases the calibration too).
+- **A reset board's actuation shows its real default** (1.20 mm on the Fighting68) instead of 0.00 mm.
+- **Key colours on the keyboard pictures are true to the colour picked**: they were mixed in a way that bent the hue
+  towards the theme's grey (green showed as brown in Live key travel, and per-key lighting was slightly off).
+- Reconnecting a board that didn't change no longer pushes older backups out of the five FCC keeps.
 
 ## 0.3.12
 

@@ -56,7 +56,7 @@ a bulk "write all" routine, is never called). The region was restored to all zer
 |---|---|---|
 | `0x00` | `[0,0,0,0]` bulk | sent after write batches (RT, profile apply) — commit/apply |
 | `0x0F` | `[0xFF]` | **factory reset all** |
-| `0x0F` | `[0x05]` | close key-check / reset key state |
+| `0x0F` | `[0x05]` | "Clear calibration" (`rt_close`): the button next to "Save" in the official calibration dialog. Not used by FCC. |
 | `0x62` | — | status |
 | `0x64` (100) | — | start travel calibration — device streams `0xFB` sensor packets (see below) |
 | `0x65` (101) | — | end/save calibration |
@@ -81,6 +81,23 @@ config interface, round-robin over all 68 keys, until `0x65`. Replies use `0x55`
 
 Ending calibration (`0x65`) saves; keys not pressed during the session keep their previous bottom.
 No stream exists outside calibration mode (`0x66` only gets an ACK, nothing else).
+
+Starting a session doesn't touch the stored calibration: right after a full recalibration, a new session reported every
+key with status 1 and its real bottom (2026-10-24). The official calibration dialog colours a key green from `[3]`.
+
+### A reset erases calibration
+
+Seen on fw 1.25 (2026-10-24): the board came back with every key at status 0 and bottom `1700` without the flag (real
+bottoms are ~1230, rest ~2200), and at the same time with a factory configuration: rapid-trigger table, key bindings, DKS
+and per-key colours all zeros, LED effect `0x0B`. Settings (`0x11`) were unchanged. FCC hadn't sent `0x0F` (its factory
+reset leaves a profile copy, and none existed), so the board was reset on its own side: the Fn layer has `RESET` on
+Backspace (Fn + Backspace), and a firmware update needs a recalibration too (official driver: "After the firmware update,
+the keyboard must be recalibrated manually").
+
+An uncalibrated key uses the placeholder bottom, so it reaches "full travel" at about half its real travel: actuation
+points and rapid trigger act far too early ("keys feel calibrated to a half press"). Pressing it fully in a session sets
+status 1. An actuation of `0` in the RT table is the board's default (1.2 mm on the Fighting68), not 0.00 mm: keys don't
+fire at rest after a reset.
 
 ## Key binding (4 bytes per key index)
 

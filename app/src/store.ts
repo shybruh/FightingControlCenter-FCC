@@ -65,6 +65,9 @@ interface State {
   /** lights turned off for now (tray, night schedule): the board shows "off", the profile keeps its lighting */
   lightsOff: boolean
   setLightsOff(off: boolean): void
+  /** the keyboard came back reset to factory settings: the profile it had, kept as a copy that can be put back */
+  boardReset: { profileId: string; name: string } | null
+  dismissBoardReset(): void
 
   /** demo: true = demo Fighting68, a device id = demo of that model */
   connect(demo?: boolean | string): Promise<void>
@@ -197,6 +200,16 @@ function profileRegions(p: Profile): Record<ProfileRegion, Uint8Array> | null {
     out[r] = Uint8Array.from(data)
   }
   return out
+}
+
+/**
+ * A Sonix board whose rapid-trigger table is all zeros while its profile had one was reset: by its own Fn + Backspace,
+ * a firmware update, or the firmware restoring itself. FCC never writes an actuation of 0. Seen on a Fighting68
+ * (fw 1.25), where the reset also erased the calibration.
+ */
+function cameBackReset(regions: RegionData, profile: Profile | undefined) {
+  const rt = profile?.data.rt
+  return regions.rt.every((v) => v === 0) && Array.isArray(rt) && rt.some((v) => v !== 0)
 }
 
 function uid() {
@@ -414,10 +427,22 @@ export const useStore = create<State>((set, get) => {
       }
       try {
         const list: Backup[] = JSON.parse(localStorage.getItem(BACKUPS_KEY) || '[]')
-        localStorage.setItem(BACKUPS_KEY, JSON.stringify([backup, ...list].slice(0, 5)))
+        // reconnecting a board that didn't change replaces its last backup, so the five kept are five different states
+        // (an older one is often the one worth having, like the settings from before a reset)
+        const same = list[0] && JSON.stringify(list[0].regions) === JSON.stringify(backup.regions)
+        localStorage.setItem(BACKUPS_KEY, JSON.stringify([backup, ...list.slice(same ? 1 : 0)].slice(0, 5)))
       } catch {
         /* ignore */
       }
+    }
+
+    // a board that was reset would turn the profile into factory settings as it's adopted: keep the profile as a copy
+    const before = get().profiles.find((p) => p.id === get().activeProfileId)
+    let resetCopy: Profile | null = null
+    if (!demo && kb instanceof Keyboard && before && cameBackReset(regions, before)) {
+      resetCopy = { ...structuredClone(before), id: uid(), name: `${before.name} (before keyboard reset)`.slice(0, 60), updatedAt: Date.now() }
+      set({ profiles: [...get().profiles, resetCopy] })
+      log.warn('connect', `the keyboard came back with factory settings (it was reset): "${before.name}" is kept as "${resetCopy.name}"`)
     }
 
     adoptKeyboard(regions)
@@ -426,6 +451,7 @@ export const useStore = create<State>((set, get) => {
       readAtConnect: device?.caps.readBack === false ? null : Object.fromEntries(Object.entries(regions).map(([k, v]) => [k, v.slice()])) as RegionData,
       status: 'ready',
       loadProgress: 1,
+      boardReset: resetCopy && { profileId: resetCopy.id, name: resetCopy.name },
     })
     // the board may still show an "off" from before (or should now): put the lighting it ought to show on it
     if (lightsOffApplied() || get().lightsOff) {
@@ -458,6 +484,11 @@ export const useStore = create<State>((set, get) => {
     deviceChoices: null,
     readOnly: false,
     lightsOff: false,
+    boardReset: null,
+
+    dismissBoardReset() {
+      set({ boardReset: null })
+    },
 
     setLightsOff(off) {
       if (get().lightsOff === off) return

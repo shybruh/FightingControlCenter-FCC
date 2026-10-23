@@ -168,7 +168,8 @@ export function decodeRT(rt: Uint8Array, id: number): KeyRT {
   return {
     switchType: rt[o],
     flags: rt[o + 1],
-    actuation: u16(rt, o + 2),
+    // a reset board holds 0 (as the official driver writes after a reset) and actuates at its default, not at 0.00 mm
+    actuation: u16(rt, o + 2) || RT_LIMITS.actuationDefault,
     press: u16(rt, o + 4),
     release: u16(rt, o + 6),
   }

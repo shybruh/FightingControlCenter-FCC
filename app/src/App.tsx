@@ -14,6 +14,7 @@ import { Diagnostics, useDiagnostics } from './components/Diagnostics'
 import { useDesktopIntegration } from './desktop/integration'
 import { useUpdateChecks } from './desktop/updates'
 import { Main } from './components/Shell'
+import { useNav } from './components/nav'
 import { StatusDot } from './components/StatusDot'
 import { SupportRequestDialog, UnsupportedNotice, openSupportRequest } from './components/SupportRequest'
 import { WhatsNewDialog, useWhatsNewAfterUpdate } from './components/WhatsNew'
@@ -123,6 +124,8 @@ function Notices() {
   const error = useStore((s) => s.error)
   const message = useStore((s) => s.toast)
   const dismiss = useStore((s) => s.dismissError)
+  const reset = useStore((s) => s.boardReset)
+  const dismissReset = useStore((s) => s.dismissBoardReset)
   useEffect(() => {
     if (!error) return
     toast.error(error, { duration: 8000 })
@@ -131,5 +134,24 @@ function Notices() {
   useEffect(() => {
     if (message) toast.success(message)
   }, [message])
+  // stays until answered: the board runs on factory settings and without calibration until then
+  useEffect(() => {
+    if (!reset) return
+    toast.warning('The keyboard was reset to factory settings', {
+      description: `A reset erases the calibration too: keys then act fully pressed at about half travel until they're recalibrated (Performance → Live key travel). Your settings are kept as “${reset.name}”.`,
+      duration: Infinity,
+      action: { label: 'Restore settings', onClick: () => void useStore.getState().activateProfile(reset.profileId) },
+      cancel: { label: 'Recalibrate', onClick: () => useNav.getState().go('performance') },
+      // the buttons go under the text: beside it they squeeze it into a narrow column
+      classNames: {
+        toast: 'flex-wrap! items-start!',
+        content: 'basis-[calc(100%-28px)]',
+        icon: 'mt-0.5',
+        cancelButton: 'ml-auto! mt-1.5',
+        actionButton: 'ml-0! mt-1.5',
+      },
+    })
+    dismissReset()
+  }, [reset, dismissReset])
   return null
 }

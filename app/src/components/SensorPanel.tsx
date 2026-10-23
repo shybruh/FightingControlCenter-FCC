@@ -17,9 +17,15 @@ interface KeyLive {
   rest: number
   bottom: number
   adc: number
+  /**
+   * the board's own flag (status byte of the stream): the key has a calibration, stored or from a full press now.
+   * Without one it uses a placeholder bottom (1700 on a Fighting68, real ones are ~1230), so half a press counts as a
+   * full one: actuation and rapid trigger come far too early
+   */
+  calibrated: boolean
 }
 
-/** Keys that reached this share of full travel this session count as calibrated. */
+/** Keys that reached this share of full travel this session count as bottomed out (boards without calibration flags). */
 const BOTTOM_RATIO = 0.9
 const FRAME_MS = 33
 
@@ -65,6 +71,7 @@ export function SensorPanel() {
         rest: e.rest,
         bottom: e.bottom,
         adc: e.adc,
+        calibrated: e.state === 1,
       })
       if (e.travel > 20 && (!prev || Math.abs(e.travel - prev.travel) > 2)) lastMoved.current = { id: e.key, at: performance.now() }
     })
@@ -99,10 +106,13 @@ export function SensorPanel() {
   const keyRt = shown != null ? decodeRT(rt, shown) : null
   const full = cur?.full || RT_LIMITS.travel
   const pct = (v: number) => `${Math.min(100, (v / full) * 100)}%`
-  const bottomed = KEYS.filter((k) => {
+  // calibrating boards say which keys have a calibration; elsewhere a key counts once pressed to the bottom
+  const done = (s: KeyLive) => (calibrates ? s.calibrated : s.peak >= s.full * BOTTOM_RATIO)
+  const doneCount = KEYS.filter((k) => {
     const s = snap.get(k.id)
-    return s && s.peak >= s.full * BOTTOM_RATIO
+    return s && done(s)
   }).length
+  const uncalibrated = calibrates ? KEYS.filter((k) => snap.get(k.id)?.calibrated === false) : []
 
   return (
     <Card className="lg:col-span-2">
@@ -113,7 +123,7 @@ export function SensorPanel() {
             ? 'Live per-key travel in 0.01 mm. Press keys to see how far they go.'
             : active
               ? 'Press keys to see their travel. Press each key fully to recalibrate it.'
-              : 'Live per-key travel in 0.01 mm. Runs in calibration mode, so it also recalibrates the keys you press fully.'}
+              : 'Live per-key travel in 0.01 mm, and which keys are calibrated. Runs in calibration mode, so it also recalibrates the keys you press fully.'}
         </CardDescription>
         <CardAction>
           {active ? (
@@ -193,9 +203,24 @@ export function SensorPanel() {
                     {cur.rest} / {cur.bottom}
                   </Stat>
                   <Stat label="Full travel">{mm(cur.full)} mm</Stat>
+                  {calibrates && <Stat label="Calibrated">{cur.calibrated ? 'Yes' : 'No'}</Stat>}
                 </div>
               )}
             </div>
+
+            {uncalibrated.length > 0 && (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm">
+                <p className="font-medium">
+                  {uncalibrated.length === 1 ? '1 key isn’t calibrated' : `${uncalibrated.length} keys aren’t calibrated`}
+                  {uncalibrated.length <= 8 && `: ${uncalibrated.map((k) => k.label || 'Space').join(', ')}`}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  They count half a press as a full one, so actuation and rapid trigger come far too early. Press each red key
+                  slowly all the way down until it turns green, then Stop &amp; save. A keyboard reset or a firmware update
+                  erases calibration.
+                </p>
+              </div>
+            )}
 
             <Keyboard
               selected={new Set(pinned != null ? [pinned] : [])}
@@ -204,20 +229,24 @@ export function SensorPanel() {
               face={(k) => {
                 const s = snap.get(k.id)
                 if (!s) return { sub: '—' }
-                const done = s.peak >= s.full * BOTTOM_RATIO
+                const ok = done(s)
                 return {
                   sub: mm(s.travel),
                   fill: s.travel / (s.full || RT_LIMITS.travel),
                   fillColor: s.travel >= decodeRT(rt, k.id).actuation ? 'rgb(251 191 36 / 0.55)' : undefined,
-                  marked: done,
-                  tint: done ? '#22c55e' : undefined,
+                  marked: ok,
+                  tint: ok ? '#22c55e' : calibrates ? '#ef4444' : undefined,
                 }
               }}
             />
             <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
-              <span>Click a key to pin it. Green = pressed to the bottom this session (recalibrated).</span>
+              <span>
+                {calibrates
+                  ? 'Click a key to pin it. Green = calibrated, red = not calibrated (press it slowly all the way down).'
+                  : 'Click a key to pin it. Green = pressed to the bottom this session.'}
+              </span>
               <span className="tabular-nums">
-                {bottomed} / {KEYS.length} bottomed out
+                {doneCount} / {KEYS.length} {calibrates ? 'calibrated' : 'bottomed out'}
               </span>
             </div>
           </div>
