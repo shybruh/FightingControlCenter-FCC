@@ -134,7 +134,15 @@ export interface RtLimits {
   sensMin: number
   sensMax: number
   sensDefault: number
+  /** what the board uses for an actuation of 0 (a reset board's table), when that differs from actuationDefault */
+  zeroActuation?: number
 }
+
+/**
+ * Sonix boards treat a stored actuation of 0 as 1.50 mm: the firmware (Fighting68 V1.25) substitutes 0x96. The official
+ * driver's default for new values is 1.20 mm, which is what actuationDefault holds.
+ */
+export const SONIX_ZERO_ACTUATION = 150
 
 /** Live binding: replaced with the connected board's limits by setRtLimits(). Fighting68 by default. */
 export let RT_LIMITS: RtLimits = {
@@ -145,6 +153,7 @@ export let RT_LIMITS: RtLimits = {
   sensMin: 8,
   sensMax: 240,
   sensDefault: 16,
+  zeroActuation: SONIX_ZERO_ACTUATION,
 }
 
 export function setRtLimits(l: RtLimits) {
@@ -169,7 +178,7 @@ export function decodeRT(rt: Uint8Array, id: number): KeyRT {
     switchType: rt[o],
     flags: rt[o + 1],
     // a reset board holds 0 (as the official driver writes after a reset) and actuates at its default, not at 0.00 mm
-    actuation: u16(rt, o + 2) || RT_LIMITS.actuationDefault,
+    actuation: u16(rt, o + 2) || (RT_LIMITS.zeroActuation ?? RT_LIMITS.actuationDefault),
     press: u16(rt, o + 4),
     release: u16(rt, o + 6),
   }

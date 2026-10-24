@@ -215,11 +215,12 @@ export class Keyboard implements KeyboardDriver {
   }
 
   /**
-   * Which keys have a calibration (the stream's status flag), from a short calibration session: start, about a second
-   * of the stream, end. Ending saves, but only what was pressed during it, and a press only ever deepens a key's bottom
-   * (fw 1.25), so a check changes nothing. null while FCC already has calibration mode on (live travel).
+   * Which keys have a calibration (the stream's status flag), from a short calibration session: start, a moment of the
+   * stream (every key comes by within ~20 ms), end. Ending saves, but in calibration mode a key's rest and bottom only
+   * ever widen and calibrated keys keep theirs (fw 1.25), so a check changes nothing. The board doesn't type while in
+   * calibration mode, hence short. null while FCC already has calibration mode on (live travel).
    */
-  async readCalibration(ms = 1000): Promise<Map<number, boolean> | null> {
+  async readCalibration(ms = 400): Promise<Map<number, boolean> | null> {
     if (this.calibrating) return null
     const flags = new Map<number, boolean>()
     const off = this.sensor.on((e) => flags.set(e.key, e.state === 1))

@@ -60,7 +60,7 @@ a bulk "write all" routine, is never called). The region was restored to all zer
 | `0x62` | — | status |
 | `0x64` (100) | — | start travel calibration — device streams `0xFB` sensor packets (see below) |
 | `0x65` (101) | — | end/save calibration |
-| `0x66` / `0x67` | — | **unknown** — sent by an unlabeled toggle next to "Selectable Axles". Not a travel monitor (the driver never displays any travel). Not used by FCC. |
+| `0x66` / `0x67` | — | sent by an unlabeled toggle next to "Selectable Axles". In fw 1.25 they only set / clear a flag (`0x2000030F`) that nothing reads: no effect. Not used by FCC. |
 | in `0xFC` | `[2]=4` | device disconnect notice |
 | `0x32` / `0x42` | region-style (offset, 56-byte chunks) | "ReadMusic" / "WriteMusic" in the official driver (dead code there: no tab opens its music page). Not handled by fw 1.25 at all (see Firmware). Tested 2026-10-24 on fw 1.25: `0x32` reads 512 zero bytes; `0x42` writes are echoed but read back as zeros, and frames of `[index, r, g, b]` × 128 (with or without a `0x00` commit) or `[r, g, b]` × 128 changed no LED, in effect `0x0B` or `0x14`. Not used by FCC. |
 
@@ -87,6 +87,29 @@ nothing on this firmware.
 | `0x17` / `0x27` RT | `0xB400`, `0xB600` |
 | `0x18` / `0x28` DKS | `0xB000`, `0xB200` |
 | calibration | `0x8400`, `0x8500` |
+
+What else the V1.25 firmware shows (Ghidra decompile):
+
+- **Settings (`0x9200`) are never read by the firmware**: only the `0x11` / `0x21` commands touch that page. Polling rate,
+  sleep, stability, adaptive calibration and wake-on-any-key are stored and read back, but the keyboard doesn't act on
+  them in this build.
+- **Calibration** (`0x8400` rest, `0x8500` bottom, 128 × u16 each, loaded at start-up). Only in calibration mode: rest
+  becomes the highest reading seen, bottom the lowest (both only widen). A key gets the calibrated flag (bottom bit 15,
+  stream status 1) when rest > 2000, bottom < 1700 and rest − bottom > 699. `0x65` gives every key without the flag the
+  defaults (rest 2000, bottom 1700) and saves all 128. Outside calibration mode nothing adjusts rest or bottom, so drift
+  (a key reading > 0 at rest) stays until the next calibration.
+- **Keys don't type in calibration mode**: key processing is skipped while it's on.
+- **After a firmware flash** `0x9003` holds `0x12`; the first `0x10` (info) read changes it to `0x92` and resets every
+  key's calibration to the defaults.
+- **`0x8200`** is the LED runtime state Fn shortcuts change: `[0]` `0xA5` (valid), `[1]` internal effect, `[2]` colour
+  slot (< 8 a preset colour, `0xFF` the LED page's RGB), `[3]` ?, `[4]` brightness, `[5]` speed, `[7]` direction, `[8]` ?.
+  Without `0xA5` at start-up the firmware writes factory defaults to every page.
+- **Effects**: the stored effect `n` runs internal effect `n − 1`, `0x80` runs 19 and `0` runs 24 (off), so **`0x14` and
+  `0x80` are the same custom per-key mode** (the official driver writes `0x14`).
+- **Fn + X** toggles a flag that makes A (49) and D (51) run as SOCD with the binding `0B 03 04 07` (mode 3, A ↔ D),
+  whatever their key binding is, still with their own RT values.
+- **RT**: actuation 0 → 1.50 mm. For 3 s after a reset every key uses 2.00 mm with RT off. SOCD keys count as released
+  below 0.30 mm of travel and fully reset below 0.10 mm.
 
 Writes go through one flash routine page by page, so every region write erases and reprograms flash: software
 animation by rewriting colours would wear it out. `0x0F` arguments: `1` keys + RT + DKS, `2` LED + colours (+ `0x8200`),
@@ -125,7 +148,7 @@ the keyboard must be recalibrated manually").
 
 An uncalibrated key uses the placeholder bottom, so it reaches "full travel" at about half its real travel: actuation
 points and rapid trigger act far too early ("keys feel calibrated to a half press"). Pressing it fully in a session sets
-status 1. An actuation of `0` in the RT table is the board's default (1.2 mm on the Fighting68), not 0.00 mm: keys don't
+status 1. An actuation of `0` in the RT table is **1.50 mm** (the firmware substitutes `0x96`; the official driver's 1.2 mm is only its default for new values), not 0.00 mm: keys don't
 fire at rest after a reset.
 
 ## Key binding (4 bytes per key index)

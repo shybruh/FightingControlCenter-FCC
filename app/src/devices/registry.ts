@@ -7,7 +7,7 @@
 
 import { hidFromCode, hidName } from '../data/keycodes'
 import { FIGHTING68_KEYS, setLayout, type KeyDef } from '../data/layout'
-import { SONIX_CUSTOM, SONIX_EFFECTS, setEffects, setRtLimits, type EffectDef, type RtLimits } from '../hid/codec'
+import { SONIX_CUSTOM, SONIX_EFFECTS, SONIX_ZERO_ACTUATION, setEffects, setRtLimits, type EffectDef, type RtLimits } from '../hid/codec'
 import catalog from './catalog.json'
 import rkCatalog from './rk-catalog.json'
 import ryCatalog from './ry-catalog.json'
@@ -709,7 +709,7 @@ export function activateDevice(device: DeviceDef) {
   } else if (device.protocol === 'steelseries' || device.protocol === 'sinowealth') {
     setEffects(STEELSERIES_EFFECTS, STEELSERIES_CUSTOM)
   } else {
-    setRtLimits(device.limits)
+    setRtLimits({ ...device.limits, zeroActuation: SONIX_ZERO_ACTUATION })
     setEffects(SONIX_EFFECTS, SONIX_CUSTOM)
   }
 }
