@@ -62,6 +62,7 @@ a bulk "write all" routine, is never called). The region was restored to all zer
 | `0x65` (101) | — | end/save calibration |
 | `0x66` / `0x67` | — | **unknown** — sent by an unlabeled toggle next to "Selectable Axles". Not a travel monitor (the driver never displays any travel). Not used by FCC. |
 | in `0xFC` | `[2]=4` | device disconnect notice |
+| `0x32` / `0x42` | region-style (offset, 56-byte chunks) | "ReadMusic" / "WriteMusic" in the official driver (its music-rhythm mode, fed by a separate helper over a local socket, so the frame format isn't in the driver). Tested 2026-10-24 on fw 1.25: `0x32` reads 512 zero bytes; `0x42` writes are echoed but read back as zeros, and frames of `[index, r, g, b]` × 128 (with or without a `0x00` commit) or `[r, g, b]` × 128 changed no LED, in effect `0x0B` or `0x14`. Not used by FCC. |
 
 ## Live sensor stream (calibration mode)
 
