@@ -62,7 +62,35 @@ a bulk "write all" routine, is never called). The region was restored to all zer
 | `0x65` (101) | — | end/save calibration |
 | `0x66` / `0x67` | — | **unknown** — sent by an unlabeled toggle next to "Selectable Axles". Not a travel monitor (the driver never displays any travel). Not used by FCC. |
 | in `0xFC` | `[2]=4` | device disconnect notice |
-| `0x32` / `0x42` | region-style (offset, 56-byte chunks) | "ReadMusic" / "WriteMusic" in the official driver (its music-rhythm mode, fed by a separate helper over a local socket, so the frame format isn't in the driver). Tested 2026-10-24 on fw 1.25: `0x32` reads 512 zero bytes; `0x42` writes are echoed but read back as zeros, and frames of `[index, r, g, b]` × 128 (with or without a `0x00` commit) or `[r, g, b]` × 128 changed no LED, in effect `0x0B` or `0x14`. Not used by FCC. |
+| `0x32` / `0x42` | region-style (offset, 56-byte chunks) | "ReadMusic" / "WriteMusic" in the official driver (dead code there: no tab opens its music page). Not handled by fw 1.25 at all (see Firmware). Tested 2026-10-24 on fw 1.25: `0x32` reads 512 zero bytes; `0x42` writes are echoed but read back as zeros, and frames of `[index, r, g, b]` × 128 (with or without a `0x00` commit) or `[r, g, b]` × 128 changed no LED, in effect `0x0B` or `0x14`. Not used by FCC. |
+
+## Firmware (V1.25, read from the official updater)
+
+The updater (`VTER-Fighting68-…_0x7462_V1.25_20241220.exe`, Sonix "USB MCU ISP Tool") carries the firmware as a plain,
+unencrypted resource (RCDATA 4000): a Cortex-M image for a **SN34F280** loaded at 0, `bcdDevice 0x0125`, checksum
+`0x7462`. A zip resource holds an older 1.00 build (`SN34F280_User.hex`). Read only, never flashed.
+
+Command handler (`0x0CE50`): every packet starting `0xAA` is copied to the reply with byte 0 set to `0x55` **before** the
+command is looked at, so unknown commands are echoed too. Handled: `0x1X` reads and `0x2X` writes of the regions below,
+`0x00`, `0x0F`, `0x60`–`0x67`. There is no `0x3X` / `0x4X` group: `0x32` / `0x42` ("Music" in the official driver) do
+nothing on this firmware.
+
+| region | flash page(s) |
+|---|---|
+| `0x10` info | `0x9000` |
+| `0x11` / `0x21` settings | `0x9200` |
+| `0x12` / `0x22` keys | `0x9400` |
+| `0x13` / `0x23` LED | `0x9600` (read is built from the live LED state) |
+| `0x14` / `0x24` colours | `0x9800` |
+| `0x15` / `0x25` macros | `0x9A00` … (9 pages = the 4608-byte macro memory) |
+| `0x16` / `0x26` Fn | `0xAE00` |
+| `0x17` / `0x27` RT | `0xB400`, `0xB600` |
+| `0x18` / `0x28` DKS | `0xB000`, `0xB200` |
+| calibration | `0x8400`, `0x8500` |
+
+Writes go through one flash routine page by page, so every region write erases and reprograms flash: software
+animation by rewriting colours would wear it out. `0x0F` arguments: `1` keys + RT + DKS, `2` LED + colours (+ `0x8200`),
+`4` macros, `5` calibration only ("Clear calibration"), `0xFF` everything **including calibration**.
 
 ## Live sensor stream (calibration mode)
 
