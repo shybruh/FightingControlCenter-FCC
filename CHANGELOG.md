@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.14
 
 ### New
 - **Log files.** Everything Diagnostics shows is also written to a file per day (the last 7 days kept), so what
