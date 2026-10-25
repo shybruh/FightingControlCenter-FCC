@@ -99,6 +99,14 @@ What else the V1.25 firmware shows (Ghidra decompile):
   defaults (rest 2000, bottom 1700) and saves all 128. Outside calibration mode nothing adjusts rest or bottom, so drift
   (a key reading > 0 at rest) stays until the next calibration.
 - **Keys don't type in calibration mode**: key processing is skipped while it's on.
+- **Travel outside calibration mode is tracked in steps** (RAM, `0x20003AEC` steps of 0.02 mm, `0x2000496C` reference
+  reading, step sizes from a table at `0x13A5C`): each scan moves the travel up or down by whole steps as the reading
+  changes. It snaps to 0 only when the reading is within **8 counts** of the stored rest, and to 3.30 mm at the stored
+  bottom. A key that rests more than 8 counts below its stored rest never re-zeroes: on release the tracking stops at
+  a floor before the key is back up, leaving a dead zone that grows with drift until the actuation point can't be
+  reached. Unplugging clears the tracking. Measured on a Fighting68 (2026-10-25): all 68 keys rested 40–82 counts below
+  their stored rest after weeks of sessions (calibration only raises rest); after `0x0F 05` and a full calibration,
+  every key was within 4–6.
 - **After a firmware flash** `0x9003` holds `0x12`; the first `0x10` (info) read changes it to `0x92` and resets every
   key's calibration to the defaults.
 - **`0x8200`** is the LED runtime state Fn shortcuts change: `[0]` `0xA5` (valid), `[1]` internal effect, `[2]` colour

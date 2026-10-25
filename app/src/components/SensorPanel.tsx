@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { RT_LIMITS, decodeRT, rtEnabled } from '../hid/codec'
-import { Cmd } from '../hid/protocol'
+import { Cmd, ResetArg } from '../hid/protocol'
 import { KEY_BY_ID, KEYS } from '../data/layout'
 import { useStore } from '../store'
-import { ActivityIcon, SquareIcon } from 'lucide-react'
+import { ActivityIcon, RotateCcwIcon, SquareIcon } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -30,23 +41,31 @@ const BOTTOM_RATIO = 0.9
 const FRAME_MS = 33
 
 const mm = (v: number) => (v / 100).toFixed(2)
+/**
+ * Outside calibration mode the firmware (Fighting68 V1.25) tracks each key's travel in steps and only re-zeroes it when
+ * the reading is back within this many counts of the stored rest. A key that rests further below never re-zeroes: its
+ * travel drifts until it fires early or can't reach its actuation point (replugging resets the tracking for a while).
+ * Calibration only ever raises rest, so the cure is clearing it first, then calibrating.
+ */
+const REZERO_COUNTS = 8
+/** below this many counts under rest a key at rest counts as pressed, not drifted */
+const PRESSED_COUNTS = 150
 /** live travel (calibration mode) stops by itself after this long without a key moving */
 const IDLE_STOP_MS = 2 * 60_000
 
 /**
- * Live key travel. The firmware only streams sensor data in calibration mode, so this
- * view doubles as calibration: stopping it sends "end calibration", which saves the
- * deepest press seen per key (it can only improve the bottom reading).
+ * Live key travel. The firmware only streams sensor data in calibration mode, so this view doubles as calibration:
+ * stopping it sends "end calibration", which saves each key's widest range seen (deepest bottom, highest rest).
  */
 export function SensorPanel() {
   const kb = useStore((s) => s.kb)
   const readOnly = useStore((s) => s.readOnly)
-  // the calibration check on connect uses calibration mode for a second
-  const checking = useStore((s) => s.checkingCalibration)
   // RY boards report travel without entering calibration
   const calibrates = useStore((s) => s.device?.protocol !== 'ry')
   const rt = useStore((s) => s.regions!.rt)
   const [active, setActive] = useState(false)
+  // the next start clears every key's calibration first ("Recalibrate from scratch")
+  const fresh = useRef(false)
   // a new connection (replug, reconnect) never resumes live travel by itself: it would put the fresh board straight
   // back into calibration mode
   const [activeFor, setActiveFor] = useState(kb)
@@ -92,6 +111,10 @@ export function SensorPanel() {
     window.addEventListener('keydown', block, true)
     const leave = () => kb.command(Cmd.CalibrationEnd)
     window.addEventListener('pagehide', leave)
+    if (fresh.current) {
+      fresh.current = false
+      kb.command(Cmd.Reset, [ResetArg.ClearCalibration])
+    }
     kb.command(Cmd.CalibrationStart)
     return () => {
       off()
@@ -115,6 +138,17 @@ export function SensorPanel() {
     return s && done(s)
   }).length
   const uncalibrated = calibrates ? KEYS.filter((k) => snap.get(k.id)?.calibrated === false) : []
+  // calibrated keys resting too far below their rest point (not pressed this session, so the gap is the rest position)
+  const drifted = calibrates
+    ? KEYS.filter((k) => {
+        const s = snap.get(k.id)
+        return s && s.calibrated && s.peak < 30 && s.rest - s.adc > REZERO_COUNTS && s.rest - s.adc < PRESSED_COUNTS
+      })
+    : []
+  const startFresh = () => {
+    fresh.current = true
+    setActive(true)
+  }
 
   return (
     <Card className="lg:col-span-2">
@@ -134,10 +168,13 @@ export function SensorPanel() {
               Stop &amp; save
             </Button>
           ) : (
-            <Button variant="outline" disabled={readOnly || checking} onClick={() => setActive(true)}>
-              <ActivityIcon data-icon="inline-start" />
-              Start
-            </Button>
+            <div className="flex gap-2">
+              {calibrates && <FromScratchButton disabled={readOnly} onConfirm={startFresh} />}
+              <Button variant="outline" disabled={readOnly} onClick={() => setActive(true)}>
+                <ActivityIcon data-icon="inline-start" />
+                Start
+              </Button>
+            </div>
           )}
         </CardAction>
       </CardHeader>
@@ -146,7 +183,7 @@ export function SensorPanel() {
         {!active ? (
           <p className="text-xs text-muted-foreground">
             {calibrates
-              ? "The keyboard only reports travel in calibration mode. Stopping saves calibration, which only ever keeps the deepest press per key, so just looking can't make it worse. Typing in this window is paused while it runs."
+              ? "The keyboard only reports travel in calibration mode, and doesn't type while it's on. Stopping saves calibration, which only ever widens a key's range (a deeper bottom, a higher rest point). If keys lose their actuation point until you replug, use Recalibrate from scratch."
               : 'Typing in this window is paused while it runs.'}
           </p>
         ) : (
@@ -224,6 +261,20 @@ export function SensorPanel() {
               </div>
             )}
 
+            {drifted.length > 0 && uncalibrated.length === 0 && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+                <p className="font-medium">
+                  {drifted.length === 1 ? '1 key rests' : `${drifted.length} keys rest`} below its calibrated rest point
+                  {drifted.length <= 8 && `: ${drifted.map((k) => k.label || 'Space').join(', ')}`}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  The keyboard can then lose track of where they are: a key fires early or stops reaching its actuation point
+                  until you replug. Calibrating again can't fix it (it only ever raises the rest point). Stop, then use
+                  Recalibrate from scratch.
+                </p>
+              </div>
+            )}
+
             <Keyboard
               selected={new Set(pinned != null ? [pinned] : [])}
               onSelectionChange={() => {}}
@@ -255,5 +306,39 @@ export function SensorPanel() {
         )}
       </CardContent>
     </Card>
+  )
+}
+
+/** Clears every key's calibration, then starts a calibration session: the only way to lower a rest point. */
+function FromScratchButton({ disabled, onConfirm }: { disabled: boolean; onConfirm(): void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger render={<Button variant="ghost" disabled={disabled} />}>
+        <RotateCcwIcon data-icon="inline-start" />
+        Recalibrate from scratch
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Recalibrate every key from scratch?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This clears the calibration of all keys, then starts calibrating. Keep your hands off for a second, then press every
+            key slowly all the way down until all of them are green, and Stop &amp; save. A key you skip stays uncalibrated and
+            counts half a press as a full one.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => {
+              setOpen(false)
+              onConfirm()
+            }}
+          >
+            Clear and start
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

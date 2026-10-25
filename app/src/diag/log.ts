@@ -13,6 +13,8 @@ export interface LogEntry {
   area: string
   msg: string
   data?: unknown
+  /** a stream packet (live travel): shown in Diagnostics when enabled, never written to the log files */
+  noisy?: boolean
 }
 
 const MAX = 5000
@@ -34,8 +36,8 @@ function notify() {
   })
 }
 
-function push(level: Level, area: string, msg: string, data?: unknown) {
-  const e: LogEntry = { t: performance.now(), at: Date.now(), level, area, msg, data }
+function push(level: Level, area: string, msg: string, data?: unknown, noisy?: boolean) {
+  const e: LogEntry = { t: performance.now(), at: Date.now(), level, area, msg, data, ...(noisy && { noisy }) }
   entries.push(e)
   sinks.forEach((s) => s(e))
   if (entries.length > MAX) entries.splice(0, entries.length - MAX)
@@ -60,7 +62,7 @@ export const log = {
   /** one packet; `noisy` ones (streams) are only kept when enabled */
   packet(area: string, dir: 'out' | 'in', bytes: ArrayLike<number>, note?: string, noisy = false) {
     if (noisy && !logSettings.noisy) return
-    push('debug', area, `${dir === 'out' ? '→' : '←'} ${hex(bytes)}${note ? `  (${note})` : ''}`)
+    push('debug', area, `${dir === 'out' ? '→' : '←'} ${hex(bytes)}${note ? `  (${note})` : ''}`, undefined, noisy)
   },
 }
 

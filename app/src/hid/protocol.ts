@@ -19,7 +19,8 @@ export const Cmd = {
 
 export const ResetArg = {
   FactoryAll: 0xff,
-  KeyCheck: 0x05,
+  /** erases the calibration only ("Clear calibration" in the official driver) */
+  ClearCalibration: 0x05,
 } as const
 
 export type RegionName =

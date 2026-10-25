@@ -126,8 +126,6 @@ function Notices() {
   const dismiss = useStore((s) => s.dismissError)
   const reset = useStore((s) => s.boardReset)
   const dismissReset = useStore((s) => s.dismissBoardReset)
-  const uncalibrated = useStore((s) => s.uncalibrated)
-  const dismissUncalibrated = useStore((s) => s.dismissUncalibrated)
   useEffect(() => {
     if (!error) return
     toast.error(error, { duration: 8000 })
@@ -155,16 +153,5 @@ function Notices() {
     })
     dismissReset()
   }, [reset, dismissReset])
-  useEffect(() => {
-    if (!uncalibrated) return
-    const n = uncalibrated.length
-    toast.warning(n === 1 ? '1 key isn’t calibrated' : `${n} keys aren’t calibrated`, {
-      description:
-        'They count half a press as a full one, so actuation and rapid trigger come far too early. A keyboard reset or a firmware update does this. Recalibrate them on Performance → Live key travel.',
-      duration: Infinity,
-      action: { label: 'Recalibrate', onClick: () => useNav.getState().go('performance') },
-    })
-    dismissUncalibrated()
-  }, [uncalibrated, dismissUncalibrated])
   return null
 }

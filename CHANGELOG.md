@@ -8,11 +8,14 @@
 - **Restore a backup.** The backups FCC takes when the keyboard connects are listed on the Keyboard page; Restore adds
   one as a profile and switches to it. They're now the last five *different* states of the keyboard, so reconnecting
   never pushes out the one worth having.
-- **Calibration check on connect** (Fighting68 and other Sonix boards): FCC reads which keys are calibrated (under half
-  a second in calibration mode, nothing changes; the keys don't type for that moment) and says when some aren't, e.g.
-  after a firmware update.
+- **Recalibrate from scratch** (Live key travel, Fighting68 and other Sonix boards): clears every key's calibration, then
+  calibrates. Fixes keys that lose their actuation point (Space not pressing) until the keyboard is replugged: the
+  firmware only re-zeroes a key's travel when it rests within 8 sensor counts of its calibrated rest point, and
+  calibrating again can only ever raise that point, so keys drift away from it over time. Clearing first resets it.
+- **Live key travel warns about keys resting below their rest point**, the ones that can lose their actuation point.
 
 ### Fixes
+- **The log files no longer fill up with live-travel packets** (a few seconds of them reached the 5 MB daily limit).
 - **A reset board's actuation shows 1.50 mm**, what the firmware really uses for an empty rapid-trigger table (0.3.13
   said 1.20 mm, the official driver's default for new values).
 

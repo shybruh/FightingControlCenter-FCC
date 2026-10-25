@@ -40,6 +40,8 @@ export function startLogFile(version: string) {
   started = true
   pending.push({ t: performance.now(), at: Date.now(), level: 'info', area: 'app', msg: `---- FCC ${version} started ${new Date().toString()}` })
   onEntry((e) => {
+    // a few seconds of live travel is thousands of packets: they'd fill the day's file
+    if (e.noisy) return
     pending.push(e)
     timer ??= setTimeout(() => void flushLogFile(), FLUSH_MS)
   })

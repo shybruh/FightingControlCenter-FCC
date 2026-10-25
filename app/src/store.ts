@@ -14,7 +14,6 @@ import { Cmd, PROFILE_REGIONS, REGIONS, ResetArg, type ProfileRegion, type Regio
 import { decodeInfo, decodeLed, encodeLed } from './hid/codec'
 import { isTauri } from './hid/tauri'
 import type { DeviceIdentity } from './hid/transport'
-import { KEYS } from './data/layout'
 import { DEVICES, FIGHTING68, activateDevice, detect, deviceById, type DeviceDef } from './devices/registry'
 
 export type ProfileData = Record<ProfileRegion, number[]>
@@ -71,11 +70,6 @@ interface State {
   /** the keyboard came back reset to factory settings: the profile it had, kept as a copy that can be put back */
   boardReset: { profileId: string; name: string } | null
   dismissBoardReset(): void
-  /** keys the calibration check on connect found without a calibration (cleared once reported) */
-  uncalibrated: number[] | null
-  dismissUncalibrated(): void
-  /** the calibration check on connect is running (it uses calibration mode, like live travel) */
-  checkingCalibration: boolean
 
   /** demo: true = demo Fighting68, a device id = demo of that model */
   connect(demo?: boolean | string): Promise<void>
@@ -166,9 +160,6 @@ const introSeen = () => {
   }
 }
 const WRITE_DEBOUNCE_MS = 120
-/** each calibration check ends with a save on the keyboard: don't repeat it on every quick reconnect */
-const CALIBRATION_CHECK_EVERY_MS = 10 * 60_000
-const lastCalibrationCheck = new Map<string, number>()
 
 function loadProfiles(): { profiles: Profile[]; activeProfileId: string | null } {
   if (!profilesKey) return { profiles: [], activeProfileId: null }
@@ -481,32 +472,6 @@ export const useStore = create<State>((set, get) => {
       markLightsOffApplied(get().lightsOff)
       if (!get().readOnly) track(kb.writeRegion('led', onBoard('led', regions.led)).catch(() => undefined))
     }
-    // a reset or a firmware update can erase the calibration without anything else showing it (a reset board was
-    // already reported above)
-    if (!demo && !resetCopy && kb instanceof Keyboard && !get().readOnly && device?.caps.liveTravel !== false) void checkCalibration(kb)
-  }
-
-  /** Reads which keys are calibrated and reports the ones that aren't (at most every few minutes per keyboard). */
-  const checkCalibration = async (kb: Keyboard) => {
-    const id = identityKey(kb.identity)
-    if (Date.now() - (lastCalibrationCheck.get(id) ?? 0) < CALIBRATION_CHECK_EVERY_MS) return
-    lastCalibrationCheck.set(id, Date.now())
-    set({ checkingCalibration: true })
-    try {
-      const flags = await kb.readCalibration()
-      if (!flags || get().kb !== kb) return
-      const missing = KEYS.filter((k) => flags.get(k.id) === false)
-      if (!flags.size) log.warn('calibration', 'no calibration data came back: not checked')
-      else if (!missing.length) log.info('calibration', `all ${flags.size} keys are calibrated`)
-      else {
-        log.warn('calibration', `${missing.length} keys aren't calibrated`, missing.map((k) => `${k.label || 'Space'} (${k.id})`).join(', '))
-        set({ uncalibrated: missing.map((k) => k.id) })
-      }
-    } catch (e) {
-      log.warn('calibration', 'checking calibration failed', errorText(e))
-    } finally {
-      set({ checkingCalibration: false })
-    }
   }
 
   /** Blocks keyboard writes while read-only; returns true when blocked. */
@@ -534,12 +499,6 @@ export const useStore = create<State>((set, get) => {
     readOnly: false,
     lightsOff: false,
     boardReset: null,
-    uncalibrated: null,
-    checkingCalibration: false,
-
-    dismissUncalibrated() {
-      set({ uncalibrated: null })
-    },
 
     dismissBoardReset() {
       set({ boardReset: null })
